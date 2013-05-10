@@ -1,0 +1,55 @@
+tokens: 
+    leter: a...zA...Z
+    digit: 0...9
+    nonwhitespacechar: self-explanatory
+    \|
+    \€
+    *
+    +
+    ?
+    EOL (attribute for whitespace)
+
+<start>=>
+    <keywords>
+    <tokens>
+
+<keywords>=>
+    id <keywords>
+    |
+    €
+
+<tokens>=>
+    <texp> <tokens'>
+<tokens'>=>
+    EOL <texp> <tokens'>
+    |
+    €
+
+<texp>=>
+    <tid> prodsym <expression>
+
+<expression>=>
+    <term> <closure> <expression'>
+<expression'>=>
+    <term> <closure> <expression'>
+    |
+    \| <term>
+    |
+    €
+
+<term>=>
+    ( <expression> )
+    |
+    \€
+    |
+    id <term'>
+    |
+    \ id <term'>
+<term'>=>
+    <expression>
+    |
+    €
+
+<closure>=>
+    * | + | ? | €
+    

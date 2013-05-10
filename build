@@ -1,0 +1,1 @@
+gcc -ggdb main.c lex.c -o pc
