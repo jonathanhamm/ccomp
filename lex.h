@@ -9,7 +9,6 @@
 
 #define MAX_LEXLEN 31
 #define UEOF (u_char)EOF
-#define EPSILON 219
 
 #ifndef u_char
 typedef unsigned char u_char;

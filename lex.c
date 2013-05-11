@@ -15,21 +15,35 @@
 #define LEXTYPE_KLEENE      4
 #define LEXTYPE_POSITIVE    5
 #define LEXTYPE_ORNULL      6
-#define LEXTYPE_ESCAPE      7
 #define LEXTYPE_RANDCHAR    8
-#define LEXTYPE_NID         10
 #define LEXTYPE_EPSILON     11
 #define LEXTYPE_PRODSYM     12
 #define LEXTYPE_NONTERM     13
+#define LEXTYPE_OPENPAREN   14
+#define LEXTYPE_CLOSEPAREN  15
 
 #define LEXATTR_DEFAULT     0
 #define LEXATTR_WSPACEEOL   1
 #define LEXATTR_ERRTOOLONG  0
+#define LEXATTR_CHARDIG     0
+#define LEXATTR_NCHARDIG    1
+#define LEXATTR_BEGINDIG    2
 
 #define INITFBUF_SIZE 128
 
 static void printlist (token_s *list);
 static u_char *readfile (const char *file);
+
+static void parseregex (token_s *curr);
+static void prx_keywords (token_s *curr);
+static void prx_tokens (token_s *curr);
+static void prx_tokens_ (token_s *curr);
+static void prx_texp (token_s *curr);
+static void prx_expression (token_s *curr);
+static void prx_expression_ (token_s *curr);
+static void prx_term (token_s *curr);
+static void prx_term_ (token_s *curr);
+static void prx_closure (token_s *curr);
 
 token_s *buildlex (const char *file)
 {
@@ -44,14 +58,29 @@ token_s *buildlex (const char *file)
     if (!buf)
         return NULL;
     for (i = 0, bpos = 0; buf[i] != UEOF; i++) {
-        if (head == NULL)
+        if (!head)
             head = curr;
         switch (buf[i]) {
             case '|':
                 addtok (&curr, "|", LEXTYPE_UNION, LEXATTR_DEFAULT);
                 break;
+            case '(':
+                addtok (&curr, "(", LEXTYPE_OPENPAREN, LEXATTR_DEFAULT);
+                break;
+            case ')':
+                addtok (&curr, ")", LEXTYPE_CLOSEPAREN, LEXATTR_DEFAULT);
+                break;
             case '\\':
-                addtok (&curr, "\\", LEXTYPE_ESCAPE, LEXATTR_DEFAULT);
+                if (buf[i + 1] != UEOF) {
+                    i++;
+                    if (buf[i] == 'E')
+                        addtok (&curr, "E", LEXTYPE_EPSILON, LEXATTR_DEFAULT);
+                    else {
+                        lbuf[0] = buf[i];
+                        lbuf[1] = '\0';
+                        addtok (&curr, lbuf, LEXTYPE_TERM, LEXATTR_DEFAULT);
+                    }
+                }
                 break;
             case '*':
                 addtok (&curr, "*", LEXTYPE_KLEENE, LEXATTR_DEFAULT);
@@ -74,39 +103,37 @@ token_s *buildlex (const char *file)
                     addtok (&curr, "=", LEXTYPE_PRODSYM, LEXATTR_DEFAULT);
                 break;
             case '<':
-                j = i;
                 lbuf[0] = '<';
-                for (bpos = 1, i++; ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')
-                                || (buf[i] >= '0' && buf[i] <= '9')); bpos++, i++)
+                for (bpos = 1, i++, j = i; ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')
+                                || (buf[i] >= '0' && buf[i] <= '9') || buf[i] == '_'); bpos++, i++)
                 {
                     if (bpos == MAX_LEXLEN) {
-                        lbuf[bpos] = '\0';
                         addtok (&curr, lbuf, LEXTYPE_ERROR, LEXATTR_ERRTOOLONG);
-                        break;
+                        goto doublebreak_;
                     }
                     lbuf[bpos] = buf[i];
                 }
-                if (i == j)
-                    addtok (&curr, "<", LEXTYPE_NONTERM, LEXATTR_DEFAULT);
+                if (i == j) {
+                    i--;
+                    goto fallthrough_;
+                }
                 else if (buf[i] == '>' && bpos != MAX_LEXLEN) {
                     lbuf[bpos] = '>';
                     lbuf[bpos + 1] = '\0';
                     addtok (&curr, lbuf, LEXTYPE_NONTERM, LEXATTR_DEFAULT);
                 }
                 else {
-                    addtok (&curr, "<", LEXTYPE_TERM, LEXATTR_DEFAULT);
-                    addtok (&curr, &lbuf[1], LEXTYPE_TERM, LEXATTR_DEFAULT);
+                    lbuf[bpos] = '\0';
+                    addtok (&curr, &lbuf[0], LEXTYPE_TERM, LEXATTR_DEFAULT);
                     i--;
                 }
+doublebreak_:
                 break;
-            case EPSILON:
-                addtok (&curr, "\219", LEXTYPE_EPSILON, LEXATTR_DEFAULT);
-                break;
+fallthrough_:
             default:
                 if (buf[i] <= ' ')
-                    continue;
-                for (bpos = 0; ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')
-                    || (buf[i] >= '0' && buf[i] <= '9')); bpos++, i++)
+                    break;
+                for (bpos = 0, j = LEXATTR_CHARDIG; buf[i] > ' ' && buf[i] != UEOF; bpos++, i++)
                 {
                     if (bpos == MAX_LEXLEN) {
                         lbuf[bpos] = '\0';
@@ -114,24 +141,25 @@ token_s *buildlex (const char *file)
                         break;
                     }
                     lbuf[bpos] = buf[i];
+                    if (!((buf[i] >= 'A' && buf[i] <= 'Z') || (buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= '0' && buf[i] <= '9')))
+                        j = LEXATTR_NCHARDIG;
                 }
                 if (!bpos) {
                     lbuf[0] = buf[i];
                     lbuf[1] = '\0';
-                    addtok (&curr, lbuf, LEXTYPE_TERM, LEXATTR_DEFAULT);
+                    addtok (&curr, lbuf, LEXTYPE_TERM, j);
                 }
                 else {
                     lbuf[bpos] = '\0';
                     if (buf[0] >= '0' && buf[0] <= '9')
-                        addtok (&curr, lbuf, LEXTYPE_NID, LEXATTR_DEFAULT);
-                    else
-                        addtok (&curr, lbuf, LEXTYPE_TERM, LEXATTR_DEFAULT);
+                        addtok (&curr, lbuf, LEXTYPE_TERM, j);
+                    else 
+                        addtok (&curr, lbuf, LEXTYPE_TERM, LEXATTR_BEGINDIG);
                     i--;
                 }
                 break;
         }
     }
-    printlist (head);
 }
 
 int addtok (token_s **tlist, u_char *lexeme, uint16_t type, uint16_t attribute)
@@ -183,9 +211,9 @@ static u_char *readfile (const char *file)
         return NULL;
     }
     for (nbytes = 0; (buf[nbytes] = fgetc(f)) != UEOF; nbytes++) {
-        if (nbytes == bsize) {
-            nbytes *= 2;
-            buf = realloc(buf, nbytes);
+        if (nbytes+1 == bsize) {
+            bsize *= 2;
+            buf = realloc(buf, bsize);
             if (!buf) {
                 perror("Heap Allocation Error");
                 fclose(f);
@@ -195,6 +223,56 @@ static u_char *readfile (const char *file)
     }
     fclose(f);
     if (nbytes < bsize)
-        buf = realloc(buf, nbytes);
+        buf = realloc(buf, nbytes+1);
     return buf;
+}
+
+void parseregex (token_s *list)
+{
+    prx_keywords(list);
+    prx_tokens(list);
+}
+
+void prx_keywords (token_s *curr)
+{
+    
+}
+
+void prx_tokens (token_s *curr)
+{
+    
+}
+
+void prx_tokens_ (token_s *curr)
+{
+    
+}
+
+void prx_texp (token_s *curr)
+{
+    
+}
+
+void prx_expression (token_s *curr)
+{
+    
+}
+
+void prx_expression_ (token_s *curr)
+{
+    
+}
+
+void prx_term (token_s *curr)
+{
+    
+}
+
+void prx_term_ (token_s *curr)
+{
+    
+}
+
+void prx_closure (token_s *curr)
+{
 }

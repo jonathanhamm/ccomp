@@ -32,8 +32,7 @@ tokens:
     <term> <closure> <expression'>
 <expression'>=>
     <term> <closure> <expression'>
-    |
-    \| <term>
+    | <term>
     |
     €
 
