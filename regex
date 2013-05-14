@@ -1,20 +1,9 @@
-tokens: 
-    leter: a...zA...Z
-    digit: 0...9
-    nonwhitespacechar: self-explanatory
-    \|
-    \€
-    *
-    +
-    ?
-    EOL (attribute for whitespace)
-
 <start>=>
     <keywords>
     <tokens>
 
 <keywords>=>
-    id <keywords>
+    terminal <keywords>
     |
     €
 
@@ -26,29 +15,27 @@ tokens:
     €
 
 <texp>=>
-    <tid> prodsym <expression>
-
+    nonterm prodsym <expression>
 <expression>=>
     <term> <closure> <expression'>
 <expression'>=>
-    <term> <closure> <expression'>
-    | <term>
+    <union> <expression>
     |
     €
 
 <term>=>
     ( <expression> )
     |
-    \€
+    terminal <union> <expression'>
     |
-    id <term'>
-    |
-    \ id <term'>
-<term'>=>
-    <expression>
+    nonterm <union> <expression'>
+
+<union>=>
+    union
     |
     €
 
+
 <closure>=>
-    * | + | ? | €
+    * | + | ? | | <closure> | €
     

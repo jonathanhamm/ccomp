@@ -37,10 +37,10 @@ numlreal
     <digit> <digit> *
 
 <optional_fraction>=>
-    . <digits> | \E
+    . <digits> | €
     
 <optional_exponent>=>
-    ( E ( + | - | \E ) <digits> ) | \E | <ffff
+    ( E ( \+ | - | € ) <digits> ) | € 
 
 <num>=>
     <digits> <optional_fraction> <optional_exponent>
@@ -49,10 +49,10 @@ numlreal
     = | <> | < | <= | >= | >
     
 <addop>=>
-    + | - | or
+    \+ | - | or
 
 <mulop>=>
-    * | / | div | mod | and
+    \* | / | div | mod | and
 
 <assignop>=>
     :=
