@@ -37,17 +37,20 @@
 
 static void printlist (token_s *list);
 static u_char *readfile (const char *file);
+static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
+static int bsearch_r (idtnode_s *tnode, u_char key);
+static int trie_insert (idtnode_s *trie, u_char *str);
 
-static void parseregex (token_s **curr);
-static void prx_keywords (token_s **curr);
-static void prx_tokens (token_s **curr);
-static void prx_tokens_ (token_s **curr);
-static void prx_texp (token_s **curr);
-static void prx_expression (token_s **curr);
-static void prx_expression_ (token_s **curr);
-static void prx_term (token_s **curr);
-static void prx_union (token_s **curr);
-static void prx_closure (token_s **curr);
+static void parseregex (lex_s *lex, token_s **curr);
+static void prx_keywords (lex_s *lex, token_s **curr);
+static void prx_tokens (lex_s *lex, token_s **curr);
+static void prx_tokens_ (lex_s *lex, token_s **curr);
+static void prx_texp (lex_s *lex, token_s **curr);
+static void prx_expression (lex_s *lex, token_s **curr);
+static void prx_expression_ (lex_s *lex, token_s **curr);
+static void prx_term (lex_s *lex, token_s **curr);
+static void prx_union (lex_s *lex, token_s **curr);
+static void prx_closure (lex_s *lex, token_s **curr);
 
 token_s *buildlex (const char *file)
 {
@@ -56,6 +59,7 @@ token_s *buildlex (const char *file)
     uint8_t bpos;
     u_char lbuf[2*MAX_LEXLEN + 1];
     token_s *list, *backup;
+    lex_s *lex;
     
     list = NULL;
     buf = readfile(file);
@@ -204,8 +208,8 @@ doublebreak_:
             list->prev = NULL;
         free(backup);
     }
-    printlist(list);
-    parseregex(&list);
+    lex = lex_s_();
+    parseregex(lex, &list);
 }
 
 int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute)
@@ -274,48 +278,48 @@ static u_char *readfile (const char *file)
     return buf;
 }
 
-void parseregex (token_s **list)
+void parseregex (lex_s *lex, token_s **list)
 {
-    prx_keywords(list);
+    prx_keywords(lex, list);
     if ((*list)->type.val != LEXTYPE_EOL)
         printf("Syntax Error at line %u: Expected EOL but got %s\n", (*list)->lineno, (*list)->lexeme);
     *list = (*list)->next;
-    prx_tokens(list);
+    prx_tokens(lex, list);
     if ((*list)->type.val != LEXTYPE_EOF)
         printf("Syntax Error at line %u: Expected $ but got %s\n", (*list)->lineno, (*list)->lexeme);
         
 }
 
-void prx_keywords (token_s **curr)
+void prx_keywords (lex_s *lex, token_s **curr)
 {
     while ((*curr)->type.val == LEXTYPE_TERM) {
-        
+        idtable_insert (lex->kwtable, (*curr)->lexeme);
         *curr = (*curr)->next;
     }
 }
 
-void prx_tokens (token_s **curr)
+void prx_tokens (lex_s *lex, token_s **curr)
 {
-    prx_texp (curr);
-    prx_tokens_(curr);
+    prx_texp (lex, curr);
+    prx_tokens_(lex, curr);
 }
 
-void prx_tokens_ (token_s **curr)
+void prx_tokens_ (lex_s *lex, token_s **curr)
 {
     if ((*curr)->type.val == LEXTYPE_EOL) {
         *curr = (*curr)->next;
-        prx_texp (curr);
-        prx_tokens_ (curr);
+        prx_texp (lex, curr);
+        prx_tokens_ (lex, curr);
     }
 }
 
-void prx_texp (token_s **curr)
+void prx_texp (lex_s *lex, token_s **curr)
 {
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         *curr = (*curr)->next;
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
-            prx_expression(curr);
+            prx_expression(lex, curr);
         }
         else
             printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -324,33 +328,48 @@ void prx_texp (token_s **curr)
         printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
 }
 
-void prx_expression (token_s **curr)
+void prx_expression (lex_s *lex, token_s **curr)
 {
-    prx_term(curr);
-    prx_closure(curr);
-    prx_expression_(curr);
+    prx_term(lex, curr);
+    prx_closure(lex, curr);
+    prx_expression_(lex, curr);
 }
 
-void prx_expression_ (token_s **curr)
+void prx_expression_ (lex_s *lex, token_s **curr)
 {
-    prx_union(curr);
-    switch ((*curr)->type.val) {
-        case LEXTYPE_OPENPAREN:
-        case LEXTYPE_TERM:
-        case LEXTYPE_NONTERM:
-            prx_expression(curr);
-            break;
-        default:
-            break;
+    if ((*curr)->type.val == LEXTYPE_UNION) {
+        *curr = (*curr)->next;
+        switch ((*curr)->type.val) {
+            case LEXTYPE_OPENPAREN:
+            case LEXTYPE_TERM:
+            case LEXTYPE_NONTERM:
+                prx_expression(lex, curr);
+                break;
+            default:
+                *curr = (*curr)->next;
+                printf("Syntax Error line %u: Expected '(' , terminal, or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                break;
+        }
+    }
+    else {
+        switch ((*curr)->type.val) {
+            case LEXTYPE_OPENPAREN:
+            case LEXTYPE_TERM:
+            case LEXTYPE_NONTERM:
+                prx_expression(lex, curr);
+                break;
+            default:
+                break;
+        }
     }
 }
 
-void prx_term (token_s **curr)
+void prx_term (lex_s *lex, token_s **curr)
 {
     switch((*curr)->type.val) {
         case LEXTYPE_OPENPAREN:
             *curr = (*curr)->next;
-            prx_expression(curr);
+            prx_expression(lex, curr);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             *curr = (*curr)->next;
@@ -358,8 +377,7 @@ void prx_term (token_s **curr)
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
             *curr = (*curr)->next;
-            prx_union(curr);
-            prx_expression_(curr);
+            prx_expression_(lex, curr);
             break;
         default:
             printf("Syntax Error at line %u: Expected '(' , terminal , or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -368,7 +386,7 @@ void prx_term (token_s **curr)
     
 }
 
-void prx_union (token_s **curr)
+void prx_union (lex_s *lex, token_s **curr)
 {
     if ((*curr)->type.val == LEXTYPE_UNION) {
         *curr = (*curr)->next;
@@ -376,16 +394,123 @@ void prx_union (token_s **curr)
     }
 }
 
-void prx_closure (token_s **curr)
+void prx_closure (lex_s *lex, token_s **curr)
 {
     switch((*curr)->type.val) {
         case LEXTYPE_KLEENE:
         case LEXTYPE_POSITIVE:
         case LEXTYPE_ORNULL:
             *curr = (*curr)->next;
-            prx_closure (curr);
+            prx_closure (lex, curr);
             break;
         default:
             break;
     }
+}
+
+lex_s *lex_s_ (void)
+{
+    lex_s *lex;
+    
+    lex = calloc(1,sizeof(*lex));
+    if (!lex) {
+        perror("Heap Allocation Error");
+        return NULL;
+    }
+    lex->kwtable = idtable_s_();
+    return lex;
+}
+
+idtable_s *idtable_s_ (void)
+{
+    idtable_s *table;
+    
+    table = calloc(1, sizeof(*table));
+    if (!table) {
+        perror("Heap Allocation Error");
+        return NULL;
+    }
+    table->root = calloc(1, sizeof(*table->root));
+    if (!table->root) {
+        perror("Heap Allocation Error");
+        return NULL;
+    }
+    return table;
+}
+
+void idtable_insert (idtable_s *table, u_char *str)
+{
+    table->typecount++;
+    trie_insert(table->root, str);
+}
+
+void printarray (idtnode_s *tnode)
+{
+    uint8_t i;
+    
+    for (i = 0; i < tnode->nchildren; i++)
+        printf("%c,", tnode->children[i]->c);
+    printf("\n");
+}
+
+int trie_insert (idtnode_s *trie, u_char *str)
+{
+    int search, alloc;
+    idtnode_s *nnode;
+    
+    if (*str == '\0')
+        return 1;
+    alloc = 0;
+    nnode = NULL;
+    if (!trie->children) {
+        trie->children = malloc(sizeof(*trie->children));
+        alloc = 1;
+    }
+    else {
+        search = bsearch_r (trie, *str);
+        if (search < 0) {
+            trie->children = realloc(trie->children, trie->nchildren+1);
+            alloc = 1;
+        }
+    }
+    if (alloc) {
+        if (!trie->children || !nnode) {
+            perror("Heap Allocation Error");
+            return -1;
+        }
+        parray_insert (trie, search, nnode);
+    }
+    trie_insert (trie, str+1);
+}
+
+void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child)
+{
+    uint8_t i, j, n;
+    idtnode_s **children;
+    
+    children = tnode->children;
+    n = tnode->nchildren - index;
+    for (i = 0, j = tnode->nchildren; i < n; i++, j--)
+        children[j] = children[j-1];
+    children[j] = child;
+}
+
+
+int bsearch_r (idtnode_s *tnode, u_char key)
+{
+	int mid, low, high;
+    
+    low = 0;
+    high = tnode->nchildren-1;
+    for (mid = low+(high-low)/2; high >= low; mid = low+(high-low)/2) {
+        if (key < tnode->children[mid]->c)
+            high = mid - 1;
+        else if (key > tnode->children[mid]->c)
+            low = mid + 1;
+        else
+            return mid;
+    }
+    if (mid == tnode->nchildren)
+        mid--;
+    return mid;
 }

@@ -19,21 +19,18 @@
 <expression>=>
     <term> <closure> <expression'>
 <expression'>=>
-    <union> <expression>
+    union <expression>
+    |
+    <expression>
     |
     €
 
 <term>=>
     ( <expression> )
     |
-    terminal <union> <expression'>
+    terminal <expression'>
     |
-    nonterm <union> <expression'>
-
-<union>=>
-    union
-    |
-    €
+    nonterm <expression'>
 
 
 <closure>=>
