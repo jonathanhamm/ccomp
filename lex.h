@@ -60,6 +60,7 @@ extern lex_s *lex_s_ (void);
 extern token_s *buildlex (const char *file);
 extern idtable_s *idtable_s_ (void);
 extern void idtable_insert (idtable_s *table, u_char *str);
+extern int idtable_lookup (idtable_s *table, u_char *str);
 extern int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute);
 
 #endif

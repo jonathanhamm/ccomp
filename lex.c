@@ -38,8 +38,9 @@
 static void printlist (token_s *list);
 static u_char *readfile (const char *file);
 static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
-static int bsearch_r (idtnode_s *tnode, u_char key);
-static int trie_insert (idtnode_s *trie, u_char *str);
+static uint16_t bsearch_tr (idtnode_s *tnode, u_char key);
+static int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str);
+static int trie_lookup (idtnode_s *trie, u_char *str);
 
 static void parseregex (lex_s *lex, token_s **curr);
 static void prx_keywords (lex_s *lex, token_s **curr);
@@ -293,7 +294,8 @@ void parseregex (lex_s *lex, token_s **list)
 void prx_keywords (lex_s *lex, token_s **curr)
 {
     while ((*curr)->type.val == LEXTYPE_TERM) {
-        idtable_insert (lex->kwtable, (*curr)->lexeme);
+        idtable_insert(lex->kwtable, (*curr)->lexeme);
+        printf("returned value: %d\n", idtable_lookup(lex->kwtable, (*curr)->lexeme));
         *curr = (*curr)->next;
     }
 }
@@ -441,46 +443,43 @@ idtable_s *idtable_s_ (void)
 void idtable_insert (idtable_s *table, u_char *str)
 {
     table->typecount++;
-    trie_insert(table->root, str);
+    trie_insert(table, table->root, str);
 }
 
-void printarray (idtnode_s *tnode)
+int idtable_lookup (idtable_s *table, u_char *str)
 {
-    uint8_t i;
-    
-    for (i = 0; i < tnode->nchildren; i++)
-        printf("%c,", tnode->children[i]->c);
-    printf("\n");
+    return trie_lookup(table->root, str);
 }
 
-int trie_insert (idtnode_s *trie, u_char *str)
+int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str)
 {
-    int search, alloc;
+    int search;
     idtnode_s *nnode;
-    
-    if (*str == '\0')
-        return 1;
-    alloc = 0;
-    nnode = NULL;
-    if (!trie->children) {
+        
+    if (!trie->nchildren) {
+        search = 0; 
         trie->children = malloc(sizeof(*trie->children));
-        alloc = 1;
     }
     else {
-        search = bsearch_r (trie, *str);
-        if (search < 0) {
-            trie->children = realloc(trie->children, trie->nchildren+1);
-            alloc = 1;
-        }
+        search = bsearch_tr(trie, *str);
+        if (search & 0x8000)
+            search &= ~0x8000;
+        else
+            return trie_insert(table, trie->children[search], str+1);
     }
-    if (alloc) {
-        if (!trie->children || !nnode) {
-            perror("Heap Allocation Error");
-            return -1;
-        }
+    nnode = calloc (1, sizeof(*nnode));
+    if (!nnode || !trie->children) {
+        perror("Heap Allocation Error");
+        return -1;
+    }
+    nnode->c = *str;
+    if (!*str) {
+        nnode->type = table->typecount;
         parray_insert (trie, search, nnode);
+        return 1;
     }
-    trie_insert (trie, str+1);
+    parray_insert (trie, search, nnode);
+    return trie_insert(table, trie->children[search], str+1);
 }
 
 void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child)
@@ -493,12 +492,24 @@ void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child)
     for (i = 0, j = tnode->nchildren; i < n; i++, j--)
         children[j] = children[j-1];
     children[j] = child;
+    tnode->nchildren++;
 }
 
-
-int bsearch_r (idtnode_s *tnode, u_char key)
+int trie_lookup (idtnode_s *trie, u_char *str)
 {
-	int mid, low, high;
+    uint16_t search;
+    
+    search = bsearch_tr(trie, *str);
+    if (search & 0x8000)
+        return -(search & ~0x8000);
+    if (!*str)
+        return trie->children[search]->type;
+    return trie_lookup(trie->children[search], str+1);
+}
+
+uint16_t bsearch_tr (idtnode_s *tnode, u_char key)
+{
+	int16_t mid, low, high;
     
     low = 0;
     high = tnode->nchildren-1;
@@ -512,5 +523,7 @@ int bsearch_r (idtnode_s *tnode, u_char key)
     }
     if (mid == tnode->nchildren)
         mid--;
+    if (high < low)
+        return mid | 0x8000;
     return mid;
 }
