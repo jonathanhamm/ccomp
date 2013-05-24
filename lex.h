@@ -25,6 +25,7 @@ typedef struct idtable_s idtable_s;
 typedef struct idtnode_s idtnode_s;
 typedef struct token_s token_s;
 typedef struct machnode_s machnode_s;
+
 typedef struct mach_s mach_s;
 
 struct token_s
@@ -53,13 +54,17 @@ struct idtable_s
     idtnode_s *root;
 };
 
+#define NTYPE_LIST 0
+#define NTYPE_TREE 1
 struct machnode_s
 {
-    uint16_t index;
-    uint16_t jump;
+    uint8_t type;
     uint16_t nbranches;
     token_s *token;
-    machnode_s **branches;
+    union {
+        machnode_s **branches;
+        machnode_s *next;
+    };
 };
 
 struct mach_s
