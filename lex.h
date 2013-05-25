@@ -9,7 +9,7 @@
 
 #define MAX_LEXLEN 31
 #define UEOF (u_char)EOF
-#define EPSILON 219
+#define EPSILON 130
 #define EPSILONSTR_(epsilon) #epsilon
 #define EPSILONSTR EPSILONSTR_(EPSILON)
 #define NULLSET 232
@@ -54,17 +54,11 @@ struct idtable_s
     idtnode_s *root;
 };
 
-#define NTYPE_LIST 0
-#define NTYPE_TREE 1
 struct machnode_s
 {
-    uint8_t type;
     uint16_t nbranches;
     token_s *token;
-    union {
-        machnode_s **branches;
-        machnode_s *next;
-    };
+    machnode_s **branches;
 };
 
 struct mach_s

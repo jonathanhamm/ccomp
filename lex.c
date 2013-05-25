@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #define LEXTYPE_ERROR       0
 #define LEXTYPE_TERM        1
@@ -33,10 +34,29 @@
 #define LEXATTR_NCHARDIG    1
 #define LEXATTR_BEGINDIG    2
 
+#define CLOSTYPE_NONE       0
+#define CLOSTYPE_KLEENE     1
+#define CLOSTYPE_POS        2
+#define CLOSTYPE_ORNULL     3
+
 #define INITFBUF_SIZE 128
 
+typedef struct exp__s exp__s;
+typedef struct nodelist_s nodelist_s;
+
+struct exp__s
+{
+    int8_t op;
+    machnode_s *node;
+};
+
+struct nodelist_s
+{
+    machnode_s *node;
+    nodelist_s *next;
+};
+
 static void printlist (token_s *list);
-static u_char *readfile (const char *file);
 static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
 static uint16_t bsearch_tr (idtnode_s *tnode, u_char key);
 static int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str);
@@ -47,11 +67,20 @@ static void prx_keywords (lex_s *lex, token_s **curr);
 static void prx_tokens (lex_s *lex, token_s **curr);
 static void prx_tokens_ (lex_s *lex, token_s **curr);
 static void prx_texp (lex_s *lex, token_s **curr);
-static void prx_expression (lex_s *lex, token_s **curr);
-static void prx_expression_ (lex_s *lex, token_s **curr);
-static void prx_term (lex_s *lex, token_s **curr);
-static void prx_union (lex_s *lex, token_s **curr);
-static void prx_closure (lex_s *lex, token_s **curr);
+static machnode_s *prx_expression (lex_s *lex, token_s **curr);
+static exp__s prx_expression_ (lex_s *lex, token_s **curr);
+static machnode_s *prx_term (lex_s *lex, token_s **curr);
+static int prx_closure (lex_s *lex, token_s **curr);
+
+static inline machnode_s *makenode(token_s *token);
+static inline void state_union(machnode_s *left, machnode_s *right);
+static void state_concat(machnode_s *left, machnode_s *right);
+static void addchild (machnode_s *parent, machnode_s *child);
+static nodelist_s *getleaves (machnode_s *start);
+static void addnode(nodelist_s **list, machnode_s *node);
+static int lookupnode (nodelist_s **list, machnode_s *node);
+static void traverse (machnode_s *parent, nodelist_s **list, nodelist_s **dcycle);
+static void freenodelist(nodelist_s *list);
 
 token_s *buildlex (const char *file)
 {
@@ -211,6 +240,18 @@ doublebreak_:
     }
     lex = lex_s_();
     parseregex(lex, &list);
+    mach_s *curr = lex->machs;
+    machnode_s *mcurr;
+    for (; curr; curr = curr->next) {
+        printf("%s\n", curr->nterm->lexeme);
+        for (mcurr = curr->start; mcurr; ) {
+            printf("%s\n", mcurr->token->lexeme);
+            if (mcurr->branches)
+                mcurr = mcurr->branches[0];
+            else
+                break;
+        }
+    }
 }
 
 int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute)
@@ -232,6 +273,7 @@ int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uin
         (*tlist)->next = ntok;
         ntok->prev = *tlist;
         *tlist = ntok;
+        
     }
     return 0;
 }
@@ -244,7 +286,7 @@ void printlist (token_s *list)
     }
 }
 
-static u_char *readfile (const char *file)
+u_char *readfile (const char *file)
 {
     FILE *f;
     size_t bsize, nbytes;
@@ -295,7 +337,6 @@ void prx_keywords (lex_s *lex, token_s **curr)
 {
     while ((*curr)->type.val == LEXTYPE_TERM) {
         idtable_insert(lex->kwtable, (*curr)->lexeme);
-        printf("returned value: %d\n", idtable_lookup(lex->kwtable, (*curr)->lexeme));
         *curr = (*curr)->next;
     }
 }
@@ -317,11 +358,19 @@ void prx_tokens_ (lex_s *lex, token_s **curr)
 
 void prx_texp (lex_s *lex, token_s **curr)
 {
+    machnode_s *node;
+    
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
+        addmachine (lex, *curr);
         *curr = (*curr)->next;
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
-            prx_expression(lex, curr);
+            node = calloc(1, sizeof(*node));
+            if (!node) {
+                perror("Heap Allocation Error");
+                return;
+            }
+            prx_expression(lex , curr);
         }
         else
             printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -330,83 +379,127 @@ void prx_texp (lex_s *lex, token_s **curr)
         printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
 }
 
-void prx_expression (lex_s *lex, token_s **curr)
+machnode_s *prx_expression (lex_s *lex, token_s **curr)
 {
-    prx_term(lex, curr);
-    prx_closure(lex, curr);
-    prx_expression_(lex, curr);
+    exp__s exp_;
+    machnode_s *term;
+    
+    term = prx_term(lex, curr);
+    switch (prx_closure(lex, curr)) {
+        case CLOSTYPE_KLEENE:
+            break;
+        case CLOSTYPE_POS:
+            break;
+        case CLOSTYPE_ORNULL:
+            break;
+        case CLOSTYPE_NONE:
+            break;
+        default:
+            break;
+    }
+    exp_ = prx_expression_(lex, curr);
+    if (exp_.op)
+        state_concat (term, exp_.node);
+    else
+        state_union(term, exp_.node);
+    return term;
 }
 
-void prx_expression_ (lex_s *lex, token_s **curr)
-{
+exp__s prx_expression_ (lex_s *lex, token_s **curr)
+{    
     if ((*curr)->type.val == LEXTYPE_UNION) {
         *curr = (*curr)->next;
         switch ((*curr)->type.val) {
             case LEXTYPE_OPENPAREN:
             case LEXTYPE_TERM:
             case LEXTYPE_NONTERM:
-                prx_expression(lex, curr);
-                break;
+            case LEXTYPE_EPSILON:   
+                return (exp__s){0, prx_expression(lex, curr)};
             default:
                 *curr = (*curr)->next;
                 printf("Syntax Error line %u: Expected '(' , terminal, or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-                break;
+                return (exp__s){-1, NULL};
         }
     }
-    else {
-        switch ((*curr)->type.val) {
-            case LEXTYPE_OPENPAREN:
-            case LEXTYPE_TERM:
-            case LEXTYPE_NONTERM:
-                prx_expression(lex, curr);
-                break;
-            default:
-                break;
-        }
+    switch ((*curr)->type.val) {
+        case LEXTYPE_OPENPAREN:
+        case LEXTYPE_TERM:
+        case LEXTYPE_NONTERM:
+        case LEXTYPE_EPSILON:
+            return (exp__s){1, prx_expression(lex, curr)};
+            break;
+        default:
+            return (exp__s){1, NULL};
     }
 }
 
-void prx_term (lex_s *lex, token_s **curr)
+machnode_s *prx_term (lex_s *lex, token_s **curr)
 {
+    exp__s exp_;
+    machnode_s *head;
+    
     switch((*curr)->type.val) {
         case LEXTYPE_OPENPAREN:
             *curr = (*curr)->next;
-            prx_expression(lex, curr);
+            //tstack_push
+            head = prx_expression(lex, curr);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             *curr = (*curr)->next;
             break;
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
+        case LEXTYPE_EPSILON:
+           // tstack_push
+         //   appendstate (*base, *curr);
+            //<term>.branches[curr].append(terminal);
+            //bind branches
+            head = makenode(*curr);
+            head->token = *curr;
             *curr = (*curr)->next;
-            prx_expression_(lex, curr);
+            exp_ = prx_expression_(lex, curr);
+            if (exp_.op)
+                state_concat (head, exp_.node);
+            else
+                state_union (head, exp_.node);
+            //<term>.appendbranches(<term>.branches[curr], <expression'>.branches);
             break;
         default:
             printf("Syntax Error at line %u: Expected '(' , terminal , or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-            break;
+            return NULL;
     }
+    return head;
+} 
+
+int prx_closure (lex_s *lex, token_s **curr)
+{
+    int type;
     
-}
-
-void prx_union (lex_s *lex, token_s **curr)
-{
-    if ((*curr)->type.val == LEXTYPE_UNION) {
-        *curr = (*curr)->next;
-        
-    }
-}
-
-void prx_closure (lex_s *lex, token_s **curr)
-{
     switch((*curr)->type.val) {
         case LEXTYPE_KLEENE:
+            *curr = (*curr)->next;
+            type = CLOSTYPE_KLEENE;
+            break;
         case LEXTYPE_POSITIVE:
+            *curr = (*curr)->next;
+            type = CLOSTYPE_POS;
+            break;
         case LEXTYPE_ORNULL:
             *curr = (*curr)->next;
-            prx_closure (lex, curr);
+            type = CLOSTYPE_ORNULL;
+            *curr = (*curr)->next;
             break;
         default:
-            break;
+            return CLOSTYPE_NONE;
+    }
+    switch (prx_closure (lex, curr)) {
+        case CLOSTYPE_NONE:
+            return type;
+        case CLOSTYPE_KLEENE:
+        case CLOSTYPE_POS:
+        case CLOSTYPE_ORNULL:
+        default:
+            return type;
     }
 }
 
@@ -468,7 +561,7 @@ int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str)
             return trie_insert(table, trie->children[search], str+1);
     }
     nnode = calloc (1, sizeof(*nnode));
-    if (!nnode || !trie->children) {
+    if (!(nnode && trie->children)) {
         perror("Heap Allocation Error");
         return -1;
     }
@@ -526,4 +619,130 @@ uint16_t bsearch_tr (idtnode_s *tnode, u_char key)
     if (high < low)
         return mid | 0x8000;
     return mid;
+}
+
+
+void addmachine (lex_s *lex, token_s *tok)
+{
+    mach_s *nm;
+    
+    nm = calloc(1, sizeof(*nm));
+    if (!nm) {
+        perror("Heap Allocation Error");
+        return; 
+    }
+    nm->nterm = tok;
+    if (lex->machs)
+        nm->next = lex->machs;
+    lex->machs = nm;
+    lex->curr = nm;
+}
+
+inline machnode_s *makenode(token_s *token)
+{
+    machnode_s *nnode;
+    
+    nnode = calloc(1, sizeof(*nnode));
+    if (!nnode) {
+        perror("Heap Allocation Error");
+        return NULL;
+    }
+    nnode->token = token;
+    return nnode;
+}
+
+inline void state_union(machnode_s *left, machnode_s *right)
+{
+    addchild(left, right);
+}
+
+void state_concat(machnode_s *left, machnode_s *right)
+{
+    nodelist_s *llist, *curr;
+    
+    llist = getleaves(left);
+    for (curr = llist; curr; curr = curr->next)
+        addchild (curr->node, right);
+    freenodelist(llist);
+}
+
+void addchild (machnode_s *parent, machnode_s *child)
+{
+    if (!parent->nbranches)
+        parent->branches = malloc(sizeof(*parent->branches));
+    else
+        parent->branches = realloc(parent->branches, (parent->nbranches+1) * sizeof(*parent->branches));
+    if (!parent->branches) {
+        perror("Heap Allocation Error");
+        return;
+    }
+    parent->branches[parent->nbranches] = child;
+}
+
+
+nodelist_s *getleaves (machnode_s *start)
+{
+    nodelist_s *list, *dcycle;
+    
+    list = NULL;
+    dcycle =NULL;
+    traverse (start, &list, &dcycle);
+    freenodelist(dcycle);
+    return list;
+}
+
+void addnode(nodelist_s **list, machnode_s *node)
+{
+    nodelist_s *n;
+    
+    n = malloc(sizeof(*n));
+    if (!n) {
+        perror("Heap Allocation Error");
+        return;
+    }
+    n->node = node;
+    n->next = *list;
+    *list = n;
+}
+
+static int lookupnode (nodelist_s **list, machnode_s *node)
+{
+    nodelist_s *curr;
+    
+    for (curr = *list; curr; curr = curr->next) {
+        if (curr->node == node)
+            return 1;
+    }
+    return 0;
+}
+
+void traverse (machnode_s *parent, nodelist_s **list, nodelist_s **dcycle)
+{
+    uint16_t i;
+    
+    addnode(dcycle, parent);
+    if (!parent->nbranches)
+        addnode(list, parent);
+    for (i = 0; i < parent->nbranches; i++) {
+        if (!lookupnode(dcycle, parent->branches[i]))
+            traverse(parent->branches[i], list, dcycle);
+    }
+} 
+
+void freenodelist(nodelist_s *list)
+{
+    nodelist_s *backup;
+    
+    while (list) {
+        backup = list;
+        list = list->next;
+        free(backup);
+    }
+}
+
+token_s *lex (lex_s *lex, u_char *buf)
+{
+    uint32_t i;
+    
+
 }
