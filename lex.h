@@ -80,8 +80,7 @@ struct lex_s
 
 extern u_char *readfile (const char *file);
 extern token_s *lex (lex_s *lex, u_char *buf);
-extern lex_s *lex_s_ (void);
-extern token_s *buildlex (const char *file);
+extern lex_s *buildlex (const char *file);
 extern idtable_s *idtable_s_ (void);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
