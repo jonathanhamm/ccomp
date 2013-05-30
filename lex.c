@@ -41,8 +41,12 @@
 
 #define INITFBUF_SIZE 128
 
+typedef enum bool {false = 0, true = 1} bool;
+
 typedef struct exp__s exp__s;
 typedef struct nodelist_s nodelist_s;
+typedef struct lexargs_s lexargs_s;
+typedef struct pnonterm_s pnonterm_s;
 
 struct exp__s
 {
@@ -56,20 +60,36 @@ struct nodelist_s
     nodelist_s *next;
 };
 
+struct lexargs_s
+{
+    lex_s *lex;
+    mach_s *machine;
+    u_char *buf;
+    uint16_t bread;
+    bool accepted;
+};
+
+struct pnonterm_s
+{
+    bool success;
+    uint32_t offset;
+};
+
 static void printlist (token_s *list);
 static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
 static uint16_t bsearch_tr (idtnode_s *tnode, u_char key);
 static int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str);
 static int trie_lookup (idtnode_s *trie, u_char *str);
 
+static lex_s *lex_s_ (void);
 static void parseregex (lex_s *lex, token_s **curr);
 static void prx_keywords (lex_s *lex, token_s **curr);
 static void prx_tokens (lex_s *lex, token_s **curr);
 static void prx_tokens_ (lex_s *lex, token_s **curr);
 static void prx_texp (lex_s *lex, token_s **curr);
-static machnode_s *prx_expression (lex_s *lex, token_s **curr);
-static exp__s prx_expression_ (lex_s *lex, token_s **curr);
-static machnode_s *prx_term (lex_s *lex, token_s **curr);
+static machnode_s *prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, bool uparent_update);
+static exp__s prx_expression_ (lex_s *lex, token_s **curr, machnode_s **uparent, bool uparent_update);
+static machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, bool uparent_update);
 static int prx_closure (lex_s *lex, token_s **curr);
 
 static inline machnode_s *makenode(token_s *token);
@@ -82,7 +102,12 @@ static int lookupnode (nodelist_s **list, machnode_s *node);
 static void traverse (machnode_s *parent, nodelist_s **list, nodelist_s **dcycle);
 static void freenodelist(nodelist_s *list);
 
-token_s *buildlex (const char *file)
+static void mscan (lexargs_s *args);
+static pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine);
+static int lmatch (u_char *lexeme, u_char *buf);
+static int rlmatch (lex_s *lex, mach_s *mach, machnode_s *machnode, u_char *buf);
+
+lex_s *buildlex (const char *file)
 {
     uint32_t i, j, lineno;
     u_char *buf;
@@ -244,14 +269,15 @@ doublebreak_:
     machnode_s *mcurr;
     for (; curr; curr = curr->next) {
         printf("%s\n", curr->nterm->lexeme);
-        for (mcurr = curr->start; mcurr; ) {
+       /* for (mcurr = curr->start; mcurr; ) {
             printf("%s\n", mcurr->token->lexeme);
             if (mcurr->branches)
                 mcurr = mcurr->branches[0];
             else
                 break;
-        }
+        }*/
     }
+    return lex;
 }
 
 int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute)
@@ -286,12 +312,17 @@ void printlist (token_s *list)
     }
 }
 
+#define SEEK
+#undef SEEK
+
 u_char *readfile (const char *file)
 {
     FILE *f;
     size_t bsize, nbytes;
     u_char *buf;
     
+    clock_t t = clock();
+#ifndef SEEK
     bsize = INITFBUF_SIZE;
     f = fopen (file, "r");
     if (!f) {
@@ -315,9 +346,33 @@ u_char *readfile (const char *file)
             }
         }
     }
+#else
+    f = fopen(file, "r");
+    if (!f) {
+        perror("File IO Error");
+        return NULL;
+    }
+    fseek(f, 0L, SEEK_END);
+    nbytes = bsize = ftell(f);
+    buf = malloc(bsize);
+    if (!buf) {
+        perror("Heap Allocation Error");
+        fclose(f);
+        return NULL;
+    }
+    fread(buf, 1, bsize, f);
+    int x;
+    for (x = 0; x < bsize; x++)
+        printf("%c", buf[x]);
+#endif
     fclose(f);
+#ifndef SEEK
     if (nbytes < bsize)
         buf = realloc(buf, nbytes+1);
+#endif
+    printf("time: %u\n", (unsigned int)(clock() - t));
+
+    printf("%lu\n", nbytes);
     return buf;
 }
 
@@ -358,7 +413,7 @@ void prx_tokens_ (lex_s *lex, token_s **curr)
 
 void prx_texp (lex_s *lex, token_s **curr)
 {
-    machnode_s *node;
+    machnode_s *node, *uparent;
     
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
@@ -370,7 +425,8 @@ void prx_texp (lex_s *lex, token_s **curr)
                 perror("Heap Allocation Error");
                 return;
             }
-            prx_expression(lex , curr);
+            uparent = NULL;
+            lex->machs->start = prx_expression(lex , curr, &uparent, true);
         }
         else
             printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -379,14 +435,15 @@ void prx_texp (lex_s *lex, token_s **curr)
         printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
 }
 
-machnode_s *prx_expression (lex_s *lex, token_s **curr)
+machnode_s *prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, bool uparent_update)
 {
     exp__s exp_;
     machnode_s *term;
     
-    term = prx_term(lex, curr);
+    term = prx_term(lex, curr, uparent, uparent_update);
     switch (prx_closure(lex, curr)) {
         case CLOSTYPE_KLEENE:
+            state_concat (term, term);
             break;
         case CLOSTYPE_POS:
             break;
@@ -397,15 +454,17 @@ machnode_s *prx_expression (lex_s *lex, token_s **curr)
         default:
             break;
     }
-    exp_ = prx_expression_(lex, curr);
-    if (exp_.op)
-        state_concat (term, exp_.node);
-    else
-        state_union(term, exp_.node);
+    exp_ = prx_expression_(lex, curr, uparent, uparent_update);
+    if (exp_.node) {
+        if (exp_.op)
+            state_concat (term, exp_.node);
+        else
+            state_union(*uparent, exp_.node);
+    }
     return term;
 }
 
-exp__s prx_expression_ (lex_s *lex, token_s **curr)
+exp__s prx_expression_ (lex_s *lex, token_s **curr, machnode_s **uparent, bool uparent_update)
 {    
     if ((*curr)->type.val == LEXTYPE_UNION) {
         *curr = (*curr)->next;
@@ -414,7 +473,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr)
             case LEXTYPE_TERM:
             case LEXTYPE_NONTERM:
             case LEXTYPE_EPSILON:   
-                return (exp__s){0, prx_expression(lex, curr)};
+                return (exp__s){0, prx_expression(lex, curr, uparent, uparent_update)};
             default:
                 *curr = (*curr)->next;
                 printf("Syntax Error line %u: Expected '(' , terminal, or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -426,43 +485,51 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr)
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
-            return (exp__s){1, prx_expression(lex, curr)};
+            return (exp__s){1, prx_expression(lex, curr, uparent, uparent_update)};
             break;
         default:
             return (exp__s){1, NULL};
     }
 }
 
-machnode_s *prx_term (lex_s *lex, token_s **curr)
+machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, bool uparent_update)
 {
     exp__s exp_;
-    machnode_s *head;
+    machnode_s *head, *uparentbackup;
     
     switch((*curr)->type.val) {
         case LEXTYPE_OPENPAREN:
             *curr = (*curr)->next;
-            //tstack_push
-            head = prx_expression(lex, curr);
+            uparentbackup = *uparent;
+            head = prx_expression(lex, curr, uparent, 1);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             *curr = (*curr)->next;
+            if (uparentbackup)
+                *uparent = uparentbackup;
             break;
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
-           // tstack_push
-         //   appendstate (*base, *curr);
-            //<term>.branches[curr].append(terminal);
-            //bind branches
-            head = makenode(*curr);
-            head->token = *curr;
+            if (*uparent)
+                head = makenode(*curr);
+            if (uparent_update) {
+                if (!*uparent) {
+                    head = makenode(NULL);
+                    *uparent = head;
+                    state_union (*uparent, makenode(*curr));
+                }
+                uparent_update = false;
+                *uparent = head;
+            }
             *curr = (*curr)->next;
-            exp_ = prx_expression_(lex, curr);
-            if (exp_.op)
-                state_concat (head, exp_.node);
-            else
-                state_union (head, exp_.node);
-            //<term>.appendbranches(<term>.branches[curr], <expression'>.branches);
+            exp_ = prx_expression_(lex, curr, uparent, uparent_update);
+            if (exp_.node) {
+                if (exp_.op)
+                    state_concat (head, exp_.node);
+                else
+                    state_union (*uparent, exp_.node);
+            }
             break;
         default:
             printf("Syntax Error at line %u: Expected '(' , terminal , or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -636,6 +703,7 @@ void addmachine (lex_s *lex, token_s *tok)
         nm->next = lex->machs;
     lex->machs = nm;
     lex->curr = nm;
+    lex->nmachs++;
 }
 
 inline machnode_s *makenode(token_s *token)
@@ -676,7 +744,10 @@ void addchild (machnode_s *parent, machnode_s *child)
         perror("Heap Allocation Error");
         return;
     }
+    if(child == NULL)
+        asm("hlt");
     parent->branches[parent->nbranches] = child;
+    parent->nbranches++;
 }
 
 
@@ -742,7 +813,126 @@ void freenodelist(nodelist_s *list)
 
 token_s *lex (lex_s *lex, u_char *buf)
 {
-    uint32_t i;
+    int32_t tmp;
+    uint16_t i, j, threadsmade;
+    lexargs_s *largs;
+    pthread_t *threads;
+    mach_s *machine;
     
+    largs = malloc(lex->nmachs * sizeof(*largs));
+    threads = malloc(lex->nmachs * sizeof(*threads));
+    if (!(largs && threads)) {
+        perror("Heap Allocation Error");
+        return NULL;
+    }
+    while (*buf != UEOF) {
+        while (*buf <= ' ')
+            buf++;
+        for (i = 0, threadsmade = 0, machine = lex->machs; machine; i++, machine = machine->next) {
+            printf("at machine: %s\n", machine->nterm->lexeme);
+            for (j = 0, tmp = 0; j < machine->start->nbranches; j++) {
+                tmp = rlmatch (lex, machine, machine->start->branches[j], buf);
+                if (tmp) {
+                    largs[threadsmade].accepted = 0;
+                    largs[threadsmade].bread = 0;
+                    largs[threadsmade].buf = buf;
+                    largs[threadsmade].lex = lex;
+                    largs[threadsmade].machine = machine;
+                    pthread_create(&threads[threadsmade], NULL, (void *(*)(void *))mscan, &largs[threadsmade]);
+                    threadsmade++;
+                    break;
+                }
+            }
+        }
+        for (i = 0; i < threadsmade; i++)
+            pthread_join(threads[i], NULL);
+        tmp = -1;
+        for (i = 0; i < threadsmade; i++) {
+            if (largs[i].accepted && largs[i].bread > tmp)
+                tmp = largs[i].bread;
+        }
+        if (tmp < 0)
+            printf("lexical error %s\n", buf);
+        else {
+            char c = *(buf + tmp);
+            *(buf + tmp) = '\0';
+            printf("successfully parsed %s\n", buf);
+            *(buf + tmp) = c;
+        }
+        if (tmp > 0)
+            buf += tmp;
+    }
+    free(largs);
+    free(threads);
+}
 
+pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
+{
+    int32_t tmp;
+    uint32_t i, j;
+    mach_s *iter;
+    machnode_s *curr;
+    pnonterm_s result;
+    bool success;
+    
+    i = 0;
+    success = true;
+    curr = machine->start;
+    while (curr->nbranches) {
+        if (curr->token)
+        if (curr->token->type.val == LEXTYPE_NONTERM) {
+            for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->token->lexeme); iter = iter->next);
+            result = callnonterm (lex, &buf[i], iter);
+            i += result.offset;
+            success = result.success;
+        }
+        for (j = 0; j < curr->nbranches; j++) {
+            tmp = lmatch(curr->branches[j]->token->lexeme, &buf[i]);
+            if (tmp > 0) {
+                i += tmp;
+                break;
+            }
+        }
+        if (j < curr->nbranches)
+            curr = curr->branches[j];
+        else
+            return (pnonterm_s) {false, i};
+    }
+    return (pnonterm_s) {success, i};
+}
+
+void mscan (lexargs_s *args)
+{
+    pnonterm_s result;
+    
+    result = callnonterm (args->lex, args->buf, args->machine);
+    args->bread = result.offset;
+    args->accepted = result.success;
+}
+
+int lmatch (u_char *lexeme, u_char *buf)
+{
+    uint16_t i;
+    
+    for (i = 0; lexeme[i] && lexeme[i] == buf[i]; i++);
+    if (lexeme[i])
+        return 0;
+    return i;
+}
+
+int rlmatch (lex_s *lex, mach_s *mach, machnode_s *machnode, u_char *buf)
+{
+    int tmp;
+    uint16_t i;
+    mach_s *iter;
+    
+    if (machnode->token->type.val == LEXTYPE_NONTERM) {
+        for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, machnode->token->lexeme); iter = iter->next);
+        for (i = 0; i < iter->start->nbranches; i++) {
+            tmp = rlmatch(lex, iter, iter->start->branches[i], buf);
+            if (tmp > 0)
+                return tmp;
+        }
+    }
+    return lmatch (machnode->token->lexeme, buf);
 }
