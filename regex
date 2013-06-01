@@ -4,6 +4,9 @@
 
 <keywords>=>
     terminal <keywords>
+    {
+        addkeyword(terminal);
+    }
     |
     €
 
@@ -16,23 +19,70 @@
 
 <texp>=>
     nonterm prodsym <expression>
+    {
+        addgraph(nonterm);
+    }
 <expression>=>
     <term> <closure> <expression'>
+    {
+        makenode(<term>, tree);
+        makenode(<expression, tree);
+        addclosure(<term>, <closure>.curr);
+        if <expression'>.op = union then 
+            <term>.appendbranches(<expression'>.branches);
+            <expression>.branches := <term>.branches;
+        else
+            <term>.bindbranches(<expression'>.branches);
+            <expression>.branches := <term>.branches;
+        endif
+    }
 <expression'>=>
     union <expression>
+    {
+        makenode(<expression>);
+        <expression'>.op := union;
+        <expression'>.branches := <expression>.branches;
+    }
     |
     <expression>
+    {
+        makenode(<expression>);
+        <expression'>.op := concat;
+        <expression'>.branches := <expression>.branches;
+    }
     |
     €
 
 <term>=>
     ( <expression> )
+    {
+        makenode(<expression>);
+        <term>.branches := <expression>.branches;
+    }
     |
     terminal <expression'>
+    {
+        makenode(<expression'>);
+        <term>.branches[curr].append(terminal);
+        <term>.appendbranches(<term>.branches[curr], <expression'>.branches);
+    }
     |
     nonterm <expression'>
+    {
+        makenode(<expression'>);
+        <term>.branches[curr].append(nonterm);
+        <term>.appendbranches(<term>.branches[curr], <expression'>.branches);
+    }
 
 
 <closure>=>
-    * | + | ? | | <closure> | €
+    * { <closure>.curr := kleenestar; }
+    | 
+    + { <closure>.curr := pos; } 
+    | 
+    ? { <closure>.curr := ornull; }
+    | 
+    <closure> { <closure1>.curr := <closure2>.curr; }
+    | 
+    €
     

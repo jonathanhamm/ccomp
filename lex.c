@@ -829,10 +829,11 @@ token_s *lex (lex_s *lex, u_char *buf)
         while (*buf <= ' ')
             buf++;
         for (i = 0, threadsmade = 0, machine = lex->machs; machine; i++, machine = machine->next) {
-            printf("at machine: %s\n", machine->nterm->lexeme);
             for (j = 0, tmp = 0; j < machine->start->nbranches; j++) {
                 tmp = rlmatch (lex, machine, machine->start->branches[j], buf);
                 if (tmp) {
+                    printf("at machine: %s\n", machine->nterm->lexeme);
+
                     largs[threadsmade].accepted = 0;
                     largs[threadsmade].bread = 0;
                     largs[threadsmade].buf = buf;
@@ -855,7 +856,7 @@ token_s *lex (lex_s *lex, u_char *buf)
             printf("lexical error %s\n", buf);
         else {
             char c = *(buf + tmp);
-            *(buf + tmp) = '\0';
+           // *(buf + tmp) = '\0';
             printf("successfully parsed %s\n", buf);
             *(buf + tmp) = c;
         }
@@ -879,19 +880,22 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
     success = true;
     curr = machine->start;
     while (curr->nbranches) {
-        if (curr->token)
-        if (curr->token->type.val == LEXTYPE_NONTERM) {
-            for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->token->lexeme); iter = iter->next);
-            result = callnonterm (lex, &buf[i], iter);
-            i += result.offset;
-            success = result.success;
-        }
         for (j = 0; j < curr->nbranches; j++) {
-            tmp = lmatch(curr->branches[j]->token->lexeme, &buf[i]);
-            if (tmp > 0) {
-                i += tmp;
+            tmp = rlmatch(lex, machine, curr->branches[j], &buf[i]);
+            if (tmp) {
+                if (curr->branches[j]->token->type.val == LEXTYPE_NONTERM) {
+                    for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->branches[j]->token->lexeme); iter = iter->next);
+                    result = callnonterm (lex, &buf[i], iter);
+                    i += result.offset;
+                    success = result.success;
+                }
+                else
+                    i += tmp;
+                printf("i %d\n", i);
                 break;
             }
+            else
+                return (pnonterm_s) {false, i};
         }
         if (j < curr->nbranches)
             curr = curr->branches[j];
