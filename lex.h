@@ -9,9 +9,6 @@
 
 #define MAX_LEXLEN 31
 #define UEOF (u_char)EOF
-#define EPSILON 130
-#define EPSILONSTR_(epsilon) #epsilon
-#define EPSILONSTR EPSILONSTR_(EPSILON)
 #define NULLSET 232
 #define NULLSETSTR_(null) #null
 #define NULLSETSTR  NULLSETSTR_(NULLSET)
@@ -25,8 +22,9 @@ typedef struct idtable_s idtable_s;
 typedef struct idtnode_s idtnode_s;
 typedef struct token_s token_s;
 typedef struct machnode_s machnode_s;
-
 typedef struct mach_s mach_s;
+
+typedef enum bool {false = 0, true = 1} bool;
 
 struct token_s
 {
@@ -56,9 +54,12 @@ struct idtable_s
 
 struct machnode_s
 {
+    bool isfinal;
     uint16_t nbranches;
+    uint16_t ncyles;
     token_s *token;
     machnode_s **branches;
+    machnode_s **loopback;
 };
 
 struct mach_s
