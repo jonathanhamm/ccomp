@@ -398,7 +398,7 @@ void prx_tokens_ (lex_s *lex, token_s **curr)
 
 void prx_texp (lex_s *lex, token_s **curr)
 {
-    machnode_s *node;
+    machnode_s *node, *expression;
     
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
@@ -418,7 +418,9 @@ void prx_texp (lex_s *lex, token_s **curr)
             node->token->type.val = LEXTYPE_START;
             node->token->type.attribute = LEXATTR_DEFAULT;
             snprintf(node->token->lexeme, MAX_LEXLEN, "START STATE %s", (*curr)->prev->prev->lexeme);
-            state_union(node, prx_expression(lex , curr, &node, NULL, false));
+            expression = prx_expression(lex , curr, &node, NULL, false);
+            if (expression != node)
+                state_union(node, expression);
             printf("\n\nFinal union\n\n");
             lex->machs->start = node;
         }
@@ -433,6 +435,7 @@ machnode_s *prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, ma
 {
     exp__s exp_;
     machnode_s *locterm, *uparentbackup;
+    
     
     locterm = prx_term(lex, curr, uparent, term, uparent_update);
     switch (prx_closure(lex, curr)) {
@@ -882,14 +885,14 @@ int addcycle (machnode_s *node, machnode_s *cycle)
 
 int addclosure (machnode_s *term, int type)
 {
-    nodelist_s *leaves, *iter;
+    nodelist_s *leaves, *iter;    
     
     printf("Getting leaves for %s, nchildren: %d\n", term->token->lexeme, term->nbranches);
     leaves = getleaves (term);
     for (iter = leaves; iter; iter = iter->next) {
         switch (type) {
             case CLOSTYPE_KLEENE:
-                printf("Adding Kleen left associative to: %s\n", term->token->lexeme);
+                printf("Adding Kleen left associative to: %s from %s\n", term->token->lexeme, iter->node->token->lexeme);
                 addcycle(iter->node, term);
                 break;
             case CLOSTYPE_POS:
