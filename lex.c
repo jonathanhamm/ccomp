@@ -434,28 +434,22 @@ machnode_s *prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, ma
     exp__s exp_;
     machnode_s *locterm, *uparentbackup;
     
-    if ((*curr)->type.val == LEXTYPE_OPENPAREN)
-        uparentbackup = *uparent;
-    else
-        uparentbackup = NULL;
     locterm = prx_term(lex, curr, uparent, term, uparent_update);
     switch (prx_closure(lex, curr)) {
         case CLOSTYPE_KLEENE:
-            addclosure (term, CLOSTYPE_KLEENE);
+            addclosure (locterm, CLOSTYPE_KLEENE);
             break;
         case CLOSTYPE_POS:
-            addclosure (term, CLOSTYPE_POS);
+            addclosure (locterm, CLOSTYPE_POS);
             break;
         case CLOSTYPE_ORNULL:
-            addclosure (term, CLOSTYPE_ORNULL);
+            addclosure (locterm, CLOSTYPE_ORNULL);
             break;
         case CLOSTYPE_NONE:
             break;
         default:
             break;
     }
-    if (uparentbackup)
-        *uparent = uparentbackup;
     exp_ = prx_expression_(lex, curr, uparent, term, uparent_update);
     if (exp_.node) {
         if (exp_.op)
@@ -503,20 +497,19 @@ machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode
         case LEXTYPE_OPENPAREN:
             *curr = (*curr)->next;
             uparentbackup = *uparent;
+            if (term)
+                *uparent = term;
+            printf("old parent: %s , new parent %s\n", uparentbackup->token->lexeme, term->token->lexeme);
             head = prx_expression(lex, curr, uparent, term, true);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             *curr = (*curr)->next;
             *uparent = uparentbackup;
-            return uparentbackup;
+            return term;
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
             head = makenode(*curr);
-            if (uparent_update) {
-                uparent_update = false;
-                *uparent = head;
-            }
             switch ((*curr)->type.val) {
                 case LEXTYPE_TERM:
                     *curr = (*curr)->next;
