@@ -417,7 +417,7 @@ void prx_texp (lex_s *lex, token_s **curr)
             }
             node->token->type.val = LEXTYPE_START;
             node->token->type.attribute = LEXATTR_DEFAULT;
-            strcpy (node->token->lexeme, "START STATE");
+            snprintf(node->token->lexeme, MAX_LEXLEN, "START STATE %s", (*curr)->prev->prev->lexeme);
             state_union(node, prx_expression(lex , curr, &node, NULL, false));
             printf("\n\nFinal union\n\n");
             lex->machs->start = node;
@@ -451,17 +451,22 @@ machnode_s *prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, ma
             break;
     }
     exp_ = prx_expression_(lex, curr, uparent, term, uparent_update);
-    if (exp_.node) {
-        if (exp_.op)
-            state_concat (term, exp_.node);
-        else
-            state_union(*uparent, exp_.node);
+    if (term != exp_.node) {
+        if (exp_.node) {
+            if (exp_.op)
+                state_concat (term, exp_.node);
+            else
+                state_union (*uparent, exp_.node);
+        }
+    }
+    else if (term) {
+        printf("EXCEPTIONAL: %s\n", term->token->lexeme);
     }
     return locterm;
 }
 
 exp__s prx_expression_ (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update)
-{    
+{
     if ((*curr)->type.val == LEXTYPE_UNION) {
         *curr = (*curr)->next;
         switch ((*curr)->type.val) {
@@ -499,46 +504,69 @@ machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode
             uparentbackup = *uparent;
             if (term)
                 *uparent = term;
-            printf("old parent: %s , new parent %s\n", uparentbackup->token->lexeme, term->token->lexeme);
             head = prx_expression(lex, curr, uparent, term, true);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             *curr = (*curr)->next;
             *uparent = uparentbackup;
+            if (!term) {
+                printf("Special: %s\n", head->token->lexeme);
+                return uparentbackup;
+            }
             return term;
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
             head = makenode(*curr);
+            if (uparent_update) {
+                if (term)
+                    state_concat(term, head);
+                uparent_update = false;
+            }
             switch ((*curr)->type.val) {
                 case LEXTYPE_TERM:
                     *curr = (*curr)->next;
                     exp_ = prx_expression_(lex, curr, uparent, head, uparent_update);
-                    if (exp_.node) {
-                        if (exp_.op)
-                            state_concat (head, exp_.node);
-                        else
-                            state_union (*uparent, exp_.node);
+                    if (head != exp_.node) {
+                        if (exp_.node) {
+                            if (exp_.op)
+                                state_concat (head, exp_.node);
+                            else
+                                state_union (*uparent, exp_.node);
+                        }
+                    }
+                    else {
+                        printf("EXCEPTIONAL: %s\n", head->token->lexeme);
                     }
                     break;
                 case LEXTYPE_NONTERM:
                     *curr = (*curr)->next;
                     exp_ = prx_expression_(lex, curr, uparent, head, uparent_update);
-                    if (exp_.node) {
-                        if (exp_.op)
-                            state_concat (head, exp_.node);
-                        else
-                            state_union (*uparent, exp_.node);
+                    if (head != exp_.node) {
+                        if (exp_.node) {
+                            if (exp_.op)
+                                state_concat (head, exp_.node);
+                            else
+                                state_union (*uparent, exp_.node);
+                        }
+                    }
+                    else {
+                        printf("EXCEPTIONAL: %s\n", head->token->lexeme);
                     }
                     break;
                 case LEXTYPE_EPSILON:
                     *curr = (*curr)->next;
                     exp_ = prx_expression_(lex, curr, uparent, head, uparent_update);
-                    if (exp_.node) {
-                        if (exp_.op)
-                            state_concat (head, exp_.node);
-                        else
-                            state_union (*uparent, exp_.node);
+                    if (head != exp_.node) {
+                        if (exp_.node) {
+                            if (exp_.op)
+                                state_concat (head, exp_.node);
+                            else
+                                state_union (*uparent, exp_.node);
+                        }
+                    }
+                    else {
+                        printf("EXCEPTIONAL: %s\n", head->token->lexeme);
                     }
                     break;
             }
