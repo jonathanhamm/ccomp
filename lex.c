@@ -539,7 +539,8 @@ machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode
                         }
                     }
                     else {
-                        printf("EXCEPTIONAL: %s\n", head->token->lexeme);
+                        if (!term)
+                            state_concat(*uparent, head);
                     }
                     break;
                 case LEXTYPE_NONTERM:
@@ -554,7 +555,8 @@ machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode
                         }
                     }
                     else {
-                        printf("EXCEPTIONAL: %s\n", head->token->lexeme);
+                        if (!term)
+                            state_concat(*uparent, head);
                     }
                     break;
                 case LEXTYPE_EPSILON:
@@ -569,7 +571,8 @@ machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode
                         }
                     }
                     else {
-                        printf("EXCEPTIONAL: %s\n", head->token->lexeme);
+                        if (!term)
+                            state_concat(*uparent, head);
                     }
                     break;
             }
@@ -972,30 +975,27 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
     i = 0;
     success = true;
     curr = machine->start;
-    while (curr->nbranches) {
-        for (j = 0; j < curr->nbranches; j++) {
-            tmp = rlmatch(lex, machine, curr->branches[j], &buf[i]);
-            if (tmp) {
-                if (curr->branches[j]->token->type.val == LEXTYPE_NONTERM) {
-                    for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->branches[j]->token->lexeme); iter = iter->next);
-                    printf("calling on: %s\n", iter->nterm->lexeme);
-                    result = callnonterm (lex, &buf[i], iter);
-                    i += result.offset;
-                    success = result.success;
-                }
-                else
-                    i += tmp;
-                printf("tmp: %d\n", tmp);
-                break;
+    for (j = 0; j < curr->nbranches; j++) {
+        tmp = rlmatch(lex, machine, curr->branches[j], &buf[i]);
+        if (tmp) {
+            if (curr->branches[j]->token->type.val == LEXTYPE_NONTERM) {
+                for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->branches[j]->token->lexeme); iter = iter->next);
+                printf("calling on: %s\n", iter->nterm->lexeme);
+                result = callnonterm (lex, &buf[i], iter);
+                i += result.offset;
+                success = result.success;
             }
             else
-                return (pnonterm_s) {false, i};
+                i += tmp;
+            break;
         }
-        if (j < curr->nbranches)
-            curr = curr->branches[j];
         else
             return (pnonterm_s) {false, i};
     }
+    if (j < curr->nbranches)
+        curr = curr->branches[j];
+    else
+        return (pnonterm_s) {false, i};
     return (pnonterm_s) {success, i};
 }
 
