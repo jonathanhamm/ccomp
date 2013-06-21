@@ -42,15 +42,23 @@
 
 #define INITFBUF_SIZE 128
 
+typedef struct term_s term_s;
 typedef struct exp__s exp__s;
 typedef struct nodelist_s nodelist_s;
 typedef struct lexargs_s lexargs_s;
 typedef struct pnonterm_s pnonterm_s;
 
+struct term_s
+{
+    machnode_s *head;
+    machnode_s *term;
+};
+
 struct exp__s
 {
     int8_t op;
-    machnode_s *node;
+    bool node;
+    term_s term;
 };
 
 struct nodelist_s
@@ -86,9 +94,9 @@ static void prx_keywords (lex_s *lex, token_s **curr);
 static void prx_tokens (lex_s *lex, token_s **curr);
 static void prx_tokens_ (lex_s *lex, token_s **curr);
 static void prx_texp (lex_s *lex, token_s **curr);
-static machnode_s *prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update);
+static term_s prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update);
 static exp__s prx_expression_ (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update);
-static machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update);
+static term_s prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update);
 static int prx_closure (lex_s *lex, token_s **curr);
 
 static inline machnode_s *makenode(token_s *token);
@@ -398,7 +406,8 @@ void prx_tokens_ (lex_s *lex, token_s **curr)
 
 void prx_texp (lex_s *lex, token_s **curr)
 {
-    machnode_s *node;
+    term_s term;
+    machnode_s *node, *expression;
     
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
@@ -406,7 +415,7 @@ void prx_texp (lex_s *lex, token_s **curr)
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
             node = calloc(1, sizeof(*node));
-            if (!node) {
+            if (!node) {    
                 perror("Heap Allocation Error");
                 return;
             }
@@ -417,8 +426,9 @@ void prx_texp (lex_s *lex, token_s **curr)
             }
             node->token->type.val = LEXTYPE_START;
             node->token->type.attribute = LEXATTR_DEFAULT;
-            strcpy (node->token->lexeme, "START STATE");
-            state_union(node, prx_expression(lex , curr, &node, NULL, false));
+            snprintf(node->token->lexeme, MAX_LEXLEN, "START STATE %s", (*curr)->prev->prev->lexeme);
+            term = prx_expression(lex , curr, &node, NULL, false);
+            state_union(node, term.head);
             printf("\n\nFinal union\n\n");
             lex->machs->start = node;
         }
@@ -429,21 +439,22 @@ void prx_texp (lex_s *lex, token_s **curr)
         printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
 }
 
-machnode_s *prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update)
+term_s prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update)
 {
     exp__s exp_;
-    machnode_s *locterm, *uparentbackup;
+    term_s locterm;
+    machnode_s *uparentbackup;
     
     locterm = prx_term(lex, curr, uparent, term, uparent_update);
     switch (prx_closure(lex, curr)) {
         case CLOSTYPE_KLEENE:
-            addclosure (locterm, CLOSTYPE_KLEENE);
+            addclosure (locterm.head, CLOSTYPE_KLEENE);
             break;
         case CLOSTYPE_POS:
-            addclosure (locterm, CLOSTYPE_POS);
+            addclosure (locterm.head, CLOSTYPE_POS);
             break;
         case CLOSTYPE_ORNULL:
-            addclosure (locterm, CLOSTYPE_ORNULL);
+            addclosure (locterm.head, CLOSTYPE_ORNULL);
             break;
         case CLOSTYPE_NONE:
             break;
@@ -452,16 +463,21 @@ machnode_s *prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, ma
     }
     exp_ = prx_expression_(lex, curr, uparent, term, uparent_update);
     if (exp_.node) {
-        if (exp_.op)
-            state_concat (term, exp_.node);
-        else
-            state_union(*uparent, exp_.node);
+        if (term != exp_.term.head) {
+            if (exp_.op)
+                state_concat (term, exp_.term.head);
+            else
+                state_union (*uparent, exp_.term.head);
+        }
+        else {
+            printf("EXCEPTIONAL: %s\n", exp_.term.head->token->lexeme);
+        }
     }
     return locterm;
 }
 
 exp__s prx_expression_ (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update)
-{    
+{
     if ((*curr)->type.val == LEXTYPE_UNION) {
         *curr = (*curr)->next;
         switch ((*curr)->type.val) {
@@ -469,11 +485,11 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, machnode_s **uparent, machno
             case LEXTYPE_TERM:
             case LEXTYPE_NONTERM:
             case LEXTYPE_EPSILON:   
-                return (exp__s){0, prx_expression(lex, curr, uparent, term, uparent_update)};
+                return (exp__s){0, true, prx_expression(lex, curr, uparent, term, uparent_update)};
             default:
                 *curr = (*curr)->next;
                 printf("Syntax Error line %u: Expected '(' , terminal, or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-                return (exp__s){-1, NULL};
+                return (exp__s){-1, false, {NULL, NULL}};
         }
     }
     switch ((*curr)->type.val) {
@@ -481,16 +497,17 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, machnode_s **uparent, machno
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
-            return (exp__s){1, prx_expression(lex, curr, uparent, term, uparent_update)};
+            return (exp__s){1, true, prx_expression(lex, curr, uparent, term, uparent_update)};
             break;
         default:
-            return (exp__s){1, NULL};
+            return (exp__s){1, false, {NULL, NULL}};
     }
 }
 
-machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update)
+term_s prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update)
 {
     exp__s exp_;
+    term_s term_;
     machnode_s *head, *uparentbackup;
     
     switch((*curr)->type.val) {
@@ -499,13 +516,12 @@ machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode
             uparentbackup = *uparent;
             if (term)
                 *uparent = term;
-            printf("old parent: %s , new parent %s\n", uparentbackup->token->lexeme, term->token->lexeme);
-            head = prx_expression(lex, curr, uparent, term, true);
+            term_ = prx_expression(lex, curr, uparent, term, true);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             *curr = (*curr)->next;
             *uparent = uparentbackup;
-            return term;
+            return (term_s){term_.head, term};
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
@@ -515,39 +531,54 @@ machnode_s *prx_term (lex_s *lex, token_s **curr, machnode_s **uparent, machnode
                     *curr = (*curr)->next;
                     exp_ = prx_expression_(lex, curr, uparent, head, uparent_update);
                     if (exp_.node) {
-                        if (exp_.op)
-                            state_concat (head, exp_.node);
-                        else
-                            state_union (*uparent, exp_.node);
+                        if (head != exp_.term.head) {
+                            if (exp_.op)
+                                state_concat (head, exp_.term.head);
+                            else
+                                state_union (*uparent, exp_.term.head);
+                        }
+                        else {
+                            printf("EXCEPTIONAL: %s\n", exp_.term.head->token->lexeme);
+                        }
                     }
                     break;
                 case LEXTYPE_NONTERM:
                     *curr = (*curr)->next;
                     exp_ = prx_expression_(lex, curr, uparent, head, uparent_update);
                     if (exp_.node) {
-                        if (exp_.op)
-                            state_concat (head, exp_.node);
-                        else
-                            state_union (*uparent, exp_.node);
+                        if (head != exp_.term.head) {
+                            if (exp_.op)
+                                state_concat (head, exp_.term.head);
+                            else
+                                state_union (*uparent, exp_.term.head);
+                        }
+                        else {
+                            printf("EXCEPTIONAL: %s\n", exp_.term.head->token->lexeme);
+                        }
                     }
                     break;
                 case LEXTYPE_EPSILON:
                     *curr = (*curr)->next;
                     exp_ = prx_expression_(lex, curr, uparent, head, uparent_update);
                     if (exp_.node) {
-                        if (exp_.op)
-                            state_concat (head, exp_.node);
-                        else
-                            state_union (*uparent, exp_.node);
+                        if (head != exp_.term.head) {
+                            if (exp_.op)
+                                state_concat (head, exp_.term.head);
+                            else
+                                state_union (*uparent, exp_.term.head);
+                        }
+                        else {
+                            printf("EXCEPTIONAL: %s\n", exp_.term.head->token->lexeme);
+                        }
                     }
                     break;
             }
             break;
         default:
             printf("Syntax Error at line %u: Expected '(' , terminal , or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-            return NULL;
+            return (term_s){NULL, NULL};
     }
-    return head;
+    return (term_s){head, term};
 } 
 
 int prx_closure (lex_s *lex, token_s **curr)

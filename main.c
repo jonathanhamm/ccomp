@@ -11,7 +11,6 @@
 
 int main(int argc, const char * argv[])
 {
-    
     lex (buildlex ("regex_pascal"), readfile ("samples/lex_sample1"));
     return 0;
 }
