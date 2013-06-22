@@ -434,8 +434,7 @@ void prx_texp (lex_s *lex, token_s **curr)
 machnode_s *prx_expression (lex_s *lex, token_s **curr, machnode_s **uparent, machnode_s *term, bool uparent_update)
 {
     exp__s exp_;
-    machnode_s *locterm, *uparentbackup;
-    
+    machnode_s *locterm;
     
     locterm = prx_term(lex, curr, uparent, term, uparent_update);
     switch (prx_closure(lex, curr)) {
@@ -989,17 +988,14 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
                 i += tmp;
             break;
         }
-        else
-            return (pnonterm_s) {false, i};
     }
     if (j < curr->nbranches)
         curr = curr->branches[j];
     else
         return (pnonterm_s) {false, i};
+    printf("success\n");
     return (pnonterm_s) {success, i};
 }
-
-
 
 bool transparent (machnode_s *node)
 {
@@ -1021,8 +1017,6 @@ void mscan (lexargs_s *args)
     pnonterm_s result;
     
     result = callnonterm (args->lex, args->buf, args->machine);
-    if(result.offset)
-        for(;;);
     args->bread = result.offset;
     args->accepted = result.success;
 }
@@ -1031,9 +1025,11 @@ int lmatch (u_char *lexeme, u_char *buf)
 {
     uint16_t i;
     
+    printf("matching: token %s with input %s\n", lexeme, buf);
     for (i = 0; lexeme[i] && lexeme[i] == buf[i]; i++);
     if (lexeme[i])
         return 0;
+    printf("matched!\n");
     return i;
 }
 
