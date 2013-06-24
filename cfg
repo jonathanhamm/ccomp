@@ -1,0 +1,29 @@
+<start>=>
+	<nonterminal>
+	<nonterminals>
+
+<nonterminals>=>
+	<nonterminal>
+	|
+	Û
+
+<nonterminal>=>
+	nonterm prodsym <production> <productions> <decoration>
+
+<productions>=>
+	UNION <production>
+	|
+	Û
+
+<production>=>
+	token <tokens>
+
+<tokens>=>
+	token <token>
+	|
+	Û
+
+<decoration>=>
+	[ * ]
+	|
+	Û
