@@ -1027,9 +1027,6 @@ doublebreak:
             }
         }
         else {
-            if (j == curr->ncyles)
-                return (pnonterm_s) {.success = gotfinal, .offset = lastfinal};
-
             if (curr->isfinal) {
                 gotfinal = true;
                 lastfinal = i;
