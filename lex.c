@@ -415,6 +415,7 @@ void prx_texp (lex_s *lex, token_s **curr)
                 perror("Heap Allocation Error");
                 return;
             }
+            node->isfinal = false;
             node->token->type.val = LEXTYPE_START;
             node->token->type.attribute = LEXATTR_DEFAULT;
             snprintf(node->token->lexeme, MAX_LEXLEN, "START STATE %s", (*curr)->prev->prev->lexeme);
@@ -910,7 +911,7 @@ token_s *lex (lex_s *lex, u_char *buf)
 {
     int32_t tmp;
     uint16_t i, j, threadsmade;
-    lexargs_s *largs;
+    lexargs_s *largs, *chosen;
     pthread_t *threads;
     mach_s *machine;
     
@@ -928,8 +929,7 @@ token_s *lex (lex_s *lex, u_char *buf)
                 tmp = rlmatch (lex, machine, machine->start->branches[j], buf);
                 if (tmp) {
                     printf("at machine: %s\n", machine->nterm->lexeme);
-
-                    largs[threadsmade].accepted = 0;
+                    largs[threadsmade].accepted = false;
                     largs[threadsmade].bread = 0;
                     largs[threadsmade].buf = buf;
                     largs[threadsmade].lex = lex;
@@ -942,21 +942,22 @@ token_s *lex (lex_s *lex, u_char *buf)
         }
         for (i = 0; i < threadsmade; i++)
             pthread_join(threads[i], NULL);
-        tmp = -1;
+        chosen = NULL;
         for (i = 0; i < threadsmade; i++) {
-            if (largs[i].accepted && largs[i].bread > tmp)
+            if (largs[i].accepted && (!chosen || largs[i].bread > chosen->bread)) {
                 tmp = largs[i].bread;
+                chosen = &largs[i];
+            }
         }
-        if (tmp < 0)
+        if (chosen) {
+            char c = *(buf + chosen->bread);
+            *(buf + tmp) = '\0';
+            printf("successfully parsed %s, %d\n", buf, chosen->bread);
+            *(buf + chosen->bread) = c;
+            buf += chosen->bread;
+        }
+        else
             printf("lexical error %s\n", buf);
-        else {
-            char c = *(buf + tmp);
-           // *(buf + tmp) = '\0';
-            printf("successfully parsed %s\n", buf);
-            *(buf + tmp) = c;
-        }
-        if (tmp > 0)
-            buf += tmp;
     }
     free(largs);
     free(threads);
@@ -965,36 +966,62 @@ token_s *lex (lex_s *lex, u_char *buf)
 pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
 {
     int32_t tmp;
-    uint32_t i, j;
+    uint32_t i, j, k, lastfinal;
     mach_s *iter;
     machnode_s *curr;
     pnonterm_s result;
-    bool success;
+    bool gotfinal;
     
     i = 0;
-    success = true;
+    gotfinal = false;
     curr = machine->start;
-    for (j = 0; j < curr->nbranches; j++) {
-        tmp = rlmatch(lex, machine, curr->branches[j], &buf[i]);
-        if (tmp) {
-            if (curr->branches[j]->token->type.val == LEXTYPE_NONTERM) {
-                for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->branches[j]->token->lexeme); iter = iter->next);
-                printf("calling on: %s\n", iter->nterm->lexeme);
-                result = callnonterm (lex, &buf[i], iter);
-                i += result.offset;
-                success = result.success;
+    while (1) {
+        for (j = 0; j < curr->nbranches; j++) {
+            tmp = rlmatch(lex, machine, curr->branches[j], &buf[i]);
+            if (tmp) {
+                if (curr->branches[j]->token->type.val == LEXTYPE_NONTERM) {
+                    for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->branches[j]->token->lexeme); iter = iter->next);
+                    printf("calling on: %s\n", iter->nterm->lexeme);
+                    result = callnonterm (lex, &buf[i], iter);
+                    i += result.offset;
+                    if (!result.success)
+                        continue;
+                }
+                else
+                    i += tmp;
+                curr = curr->branches[j];
+                break;
             }
-            else
-                i += tmp;
-            break;
         }
+        if (j == curr->nbranches) {
+            for (j = 0; j < curr->ncyles; j++) {
+                for (k = 0; k < curr->loopback[j]->nbranches; k++){
+                    tmp = rlmatch(lex, machine, curr->loopback[j]->branches[k], &buf[i]);
+                    if (tmp) {
+                        if (curr->loopback[j]->branches[k]->token->type.val == LEXTYPE_NONTERM) {
+                            for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->loopback[j]->branches[k]->token->lexeme); iter = iter->next);
+                            printf("calling on: %s\n", iter->nterm->lexeme);
+                            result = callnonterm (lex, &buf[i], iter);
+                            i += result.offset;
+                            if (!result.success)
+                                continue;
+                        }
+                        else
+                            i += tmp;
+                        curr = curr->loopback[j]->branches[k];
+                        goto doublebreak;
+                    }
+                }
+            }
+        }
+doublebreak:
+        if (curr->isfinal) {
+            gotfinal = true;
+            lastfinal = i;
+        }
+        if (j == curr->ncyles)
+            return (pnonterm_s) {.success = gotfinal, .offset = lastfinal};
     }
-    if (j < curr->nbranches)
-        curr = curr->branches[j];
-    else
-        return (pnonterm_s) {false, i};
-    printf("success\n");
-    return (pnonterm_s) {success, i};
 }
 
 bool transparent (machnode_s *node)
@@ -1025,11 +1052,13 @@ int lmatch (u_char *lexeme, u_char *buf)
 {
     uint16_t i;
     
-    printf("matching: token %s with input %s\n", lexeme, buf);
-    for (i = 0; lexeme[i] && lexeme[i] == buf[i]; i++);
+    for (i = 0; lexeme[i]; i++) {
+        if (lexeme[i] != buf[i])
+            return 0;
+    }
     if (lexeme[i])
         return 0;
-    printf("matched!\n");
+    printf("matched: %s , %s\n", lexeme, buf);
     return i;
 }
 
