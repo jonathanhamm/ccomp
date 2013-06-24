@@ -974,6 +974,7 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
     
     i = 0;
     gotfinal = false;
+    lastfinal = 0;
     curr = machine->start;
     while (1) {
         for (j = 0; j < curr->nbranches; j++) {
@@ -984,7 +985,9 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
                     printf("calling on: %s\n", iter->nterm->lexeme);
                     result = callnonterm (lex, &buf[i], iter);
                     i += result.offset;
-                    if (!result.success)
+                    if (result.success)
+                        lastfinal += result.offset;
+                    else
                         continue;
                 }
                 else
@@ -1003,7 +1006,9 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
                             printf("calling on: %s\n", iter->nterm->lexeme);
                             result = callnonterm (lex, &buf[i], iter);
                             i += result.offset;
-                            if (!result.success)
+                            if (result.success)
+                                lastfinal += result.offset;
+                            else
                                 continue;
                         }
                         else
@@ -1013,14 +1018,23 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
                     }
                 }
             }
-        }
 doublebreak:
-        if (curr->isfinal) {
-            gotfinal = true;
-            lastfinal = i;
+            if (j == curr->ncyles)
+                return (pnonterm_s) {.success = gotfinal, .offset = lastfinal};
+            if (curr->isfinal) {
+                gotfinal = true;
+                lastfinal = i;
+            }
         }
-        if (j == curr->ncyles)
-            return (pnonterm_s) {.success = gotfinal, .offset = lastfinal};
+        else {
+            if (j == curr->ncyles)
+                return (pnonterm_s) {.success = gotfinal, .offset = lastfinal};
+
+            if (curr->isfinal) {
+                gotfinal = true;
+                lastfinal = i;
+            }
+        }
     }
 }
 
