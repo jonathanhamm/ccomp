@@ -5,7 +5,7 @@
 <nonterminals>=>
 	<nonterminal>
 	|
-	Û
+	\E
 
 <nonterminal>=>
 	nonterm prodsym <production> <productions> <decoration>
@@ -13,7 +13,7 @@
 <productions>=>
 	UNION <production>
 	|
-	Û
+	\E
 
 <production>=>
 	token <tokens>
@@ -21,9 +21,9 @@
 <tokens>=>
 	token <token>
 	|
-	Û
+	\E
 
 <decoration>=>
 	[ * ]
 	|
-	Û
+	\E
