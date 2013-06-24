@@ -40,8 +40,6 @@
 #define CLOSTYPE_POS        2
 #define CLOSTYPE_ORNULL     3
 
-#define INITFBUF_SIZE 128
-
 typedef struct exp__s exp__s;
 typedef struct nodelist_s nodelist_s;
 typedef struct lexargs_s lexargs_s;
@@ -325,41 +323,6 @@ void printlist (token_s *list)
         printf("%s\n", list->lexeme);
         list = list->next;
     }
-}
-
-u_char *readfile (const char *file)
-{
-    FILE *f;
-    size_t bsize, nbytes;
-    u_char *buf;
-    
-    bsize = INITFBUF_SIZE;
-    f = fopen (file, "r");
-    if (!f) {
-        perror("File IO Error");
-        return NULL;
-    }
-    buf = malloc(INITFBUF_SIZE);
-    if (!buf) {
-        perror("Heap Allocation Error");
-        fclose(f);
-        return NULL;
-    }
-    for (nbytes = 0; (buf[nbytes] = fgetc(f)) != UEOF; nbytes++) {
-        if (nbytes+1 == bsize) {
-            bsize *= 2;
-            buf = realloc(buf, bsize);
-            if (!buf) {
-                perror("Heap Allocation Error");
-                fclose(f);
-                return NULL;
-            }
-        }
-    }
-    fclose(f);
-    if (nbytes < bsize)
-        buf = realloc(buf, nbytes+1);
-    return buf;
 }
 
 void parseregex (lex_s *lex, token_s **list)

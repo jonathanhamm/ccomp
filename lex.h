@@ -5,17 +5,12 @@
 #ifndef LEX_H_
 #define LEX_H_
 
-#include <stdint.h>
+#include "general.h"
 
 #define MAX_LEXLEN 31
-#define UEOF (u_char)EOF
 #define NULLSET 232
 #define NULLSETSTR_(null) #null
 #define NULLSETSTR  NULLSETSTR_(NULLSET)
-
-#ifndef u_char
-typedef unsigned char u_char;
-#endif
 
 typedef struct lex_s lex_s;
 typedef struct idtable_s idtable_s;
@@ -23,8 +18,6 @@ typedef struct idtnode_s idtnode_s;
 typedef struct token_s token_s;
 typedef struct machnode_s machnode_s;
 typedef struct mach_s mach_s;
-
-typedef enum bool {false = 0, true = 1} bool;
 
 struct token_s
 {
@@ -79,7 +72,6 @@ struct lex_s
     idtable_s *kwtable;
 };
 
-extern u_char *readfile (const char *file);
 extern token_s *lex (lex_s *lex, u_char *buf);
 extern lex_s *buildlex (const char *file);
 extern idtable_s *idtable_s_ (void);
