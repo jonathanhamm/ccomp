@@ -1,0 +1,199 @@
+<program>=>
+	program id ( <identifier_list> ) ;
+	<program'>
+	<compound_statement>
+	.
+	{
+		<program>.type := derp;
+		<program>.code := "derr derrr derr derr derr";
+	}
+<program'>=>
+	<declarations> <dec>
+	{}
+	|
+	<subprogram_declarations>
+	{}
+	|
+	\E
+	
+<dec>=>
+	<subprogram_declarations>
+	{}
+	|
+	\E
+
+<identifier_list>=>
+	id <identifier_list'>
+	{
+		<identifier_list>.type := file;
+		<id>.bob := if a < b then
+						blah
+					else
+						if a+b <> 324.12 then
+							derp (he.qr, <derp>.y)
+						else
+							printf(derp)
+					;
+		addtype (id.entry, <identifier_list>.type);
+		<id>.grr := ---598234;
+	}
+<identifier_list'>=>
+	, id <identifier_list'>
+	{
+		<identifier_list'>.type := file;
+		addtype (id.entry, <identifier_list>.type);
+	}
+	|
+	\E
+
+<declarations>=>
+	var id : <type> ; <declarations'>
+<declarations'>=>
+	var id : <type> ; <declarations'>
+	|
+	\E
+
+<type>=>
+	<standard_type>
+	|
+	array[numint..numint] of <standard_type>
+
+<standard_type>=>
+	integer
+	|
+	real
+	
+<subprogram_declarations>=>
+	<subprogram_declaration> ; <subprogram_declarations'>
+<subprogram_declarations'>=>
+	<subprogram_declaration> ; <subprogram_declarations'>
+	|
+	\E
+
+<subprogram_declaration>=>
+	<subprogram_head>
+	<subprogram_declaration'>
+	<compound_statement>
+<subprogram_declaration'>=>
+	<declarations> <dec>
+	|
+	<subprogram_declarations>
+	|
+	\E
+
+<subprogram_head>=>
+	procedure id <subprogram_head'>;
+<subprogram_head'>=>
+	<arguments>
+	|
+	\E
+
+<arguments>=>
+	( <parameter_list> )
+<parameter_list>=>
+	id : <type> <parameter_list'>
+<parameter_list'>=>
+	; id : <type> <parameter_list'>
+	|
+	\E
+	
+<compound_statement>=>
+	begin
+	<compound_statement'>
+	end
+<compound_statement'>=>
+	<optional_statements>
+	|
+	\E
+	
+<optional_statements>=>
+	<statement_list>
+
+<statement_list>=>
+	<statement> <statement_list'>
+<statement_list'>=>
+	; <statement> <statement_list'>
+	|
+	\E
+
+<statement>=>
+	<variable> assignop <expression>
+	|
+	<procedure_statement>
+	|
+	<compound_statement>
+	|
+	while <expression> do <statement>
+	|
+	if <expression> then <statement> <statement'>
+<statement'>=>
+	else <statement>
+	|
+	\E
+	
+<variable>=>
+	id <variable'>
+<variable'>=>
+	[ <expression> ]
+	|
+	\E
+
+<procedure_statement>=>
+	call id <procedure_statement'>
+<procedure_statement'>=>
+	( <expression_list> )
+	|
+	\E
+	
+<expression_list>=>
+	<expression> <expression_list'>
+<expression_list'>=>
+	, <expression> <expression_list'>
+	|
+	\E
+	
+<expression>=>
+	<simple_expression> <expression'>
+<expression'>=>
+	relop <simple_expression>
+	|
+	\E
+	
+<simple_expression>=>
+	<sign> <term> <simple_expression'>
+	|
+	<term> <simple_expression'>
+<simple_expression'>=>
+	addop <term> <simple_expression'>
+	|
+	\E
+
+<term>=>
+	<factor> <term'>
+	{
+		<term>.val := <term>[1].val * <term'>.val;
+		
+	}
+<term'>=>
+	mulop <factor> <term'>
+	|
+	\E
+
+<factor>=>
+	id <factor'>
+	|
+	<num>
+	|
+	( <expression> )
+	|
+	not <factor>
+<factor'>=>
+	[ <expression> ]
+	|
+	\E
+
+<sign>=>
+	+ | -
+
+<num>=>
+	numint | numreal | numlreal
