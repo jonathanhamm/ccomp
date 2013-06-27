@@ -1,0 +1,38 @@
+5/11/13
+    Began writing revision of lexical analyzer. The new design will parse a regular expression expressed in the form the textbook
+    gives, and construct an NFA using a pointer-based graph. Began work on the lexical analyzer for the regex. 
+    
+5/12/13
+    Finished the basic lexical analyzer for the regex. 
+
+5/13/13 
+    Began work on creating a grammar that describes the regular expression defined in the book. 
+
+5/16/13
+    The grammar revealed several flaws in my lexcial analyzer. Characters like angle brackets, and '|' are integral to the 
+    regular expression's description, but might also be part of the pattern the language must recognize. To fix this, I added 
+    an escape sequence '\' for these characters. Tokens are separated by whitespace or "key characters", while consecutive
+    characters are generally interpreted as one token. 
+    
+5/17/13
+    I think I have the lexical analyzer for the regular expression complete. I've done more work on building the regular
+    expression's syntax analyzer, and its grammar need significant work. I automatically computed its first and follow sets 
+    using work on my previous compiler project attempt, and constructed the parser from there.
+
+5/20/13
+    The syntax analyzer appears to be working correctly after various tests. I've begun making some semantic decorations for 
+    the syntax directed definition phase. The goal of this phase is to follow the parsing routines and build an NFA. Additionally, 
+    the keywords are stored in a trie. Keywords are listed before the language's regular expression. 
+    
+5/25/13
+    Made additional revisions to the semantic decorations. It should be noted that parsing expressions requires inherited
+    attributes for features like Kleene closure. Because the parser is recursive descent, functions further down the call 
+    stack need access to the first characer (or node) that denotes the beginng of a term. This allows for the addition of 
+    cycles in the graph when Kleen closure is encountered, since an edge pointing "back" is need to express Kleene start. 
+
+5/30/13
+    Implementing union and concatenation is challenging since it must take into consideration union. For example, an expression 
+    such as "(ab | cd) x" must append 'x' as an edge to both 'ab' and 'cd'. 
+
+6/3/13
+    

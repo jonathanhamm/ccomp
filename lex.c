@@ -1,5 +1,5 @@
 /*
- Author: h31nr1ch h1mml3r ,,|,,
+ Author: Jonathan Hamm
  
  lex.c
  */
@@ -103,7 +103,7 @@ static int addclosure (machnode_s *term, int type);
 
 static bool transparent (machnode_s *node);
 static void mscan (lexargs_s *args);
-static pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine);
+static pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *start);
 static int lmatch (u_char *lexeme, u_char *buf);
 static int rlmatch (lex_s *lex, mach_s *mach, machnode_s *machnode, u_char *buf);
 
@@ -926,19 +926,22 @@ token_s *lex (lex_s *lex, u_char *buf)
     free(threads);
 }
 
-pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
+pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *start)
 {
     int32_t tmp;
     uint32_t i, j, k, lastfinal;
     mach_s *iter;
     machnode_s *curr;
     pnonterm_s result;
-    bool gotfinal;
+    bool gotfinal, gotepsilon;
+    lexargs_s *largs, *chosen;
+    pthread_t *threads;
     
     i = 0;
     gotfinal = false;
+    gotepsilon = false;
     lastfinal = 0;
-    curr = machine->start;
+    curr = start;
     while (1) {
         for (j = 0; j < curr->nbranches; j++) {
             tmp = rlmatch(lex, machine, curr->branches[j], &buf[i]);
@@ -946,7 +949,7 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
                 if (curr->branches[j]->token->type.val == LEXTYPE_NONTERM) {
                     for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->branches[j]->token->lexeme); iter = iter->next);
                     printf("calling on: %s\n", iter->nterm->lexeme);
-                    result = callnonterm (lex, &buf[i], iter);
+                    result = callnonterm (lex, &buf[i], iter, iter->start);
                     i += result.offset;
                     if (result.success)
                         lastfinal += result.offset;
@@ -958,6 +961,8 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
                 curr = curr->branches[j];
                 break;
             }
+            else if (curr->branches[j]->token->type.val == LEXTYPE_EPSILON)
+                gotepsilon = true;
         }
         if (j == curr->nbranches) {
             for (j = 0; j < curr->ncyles; j++) {
@@ -967,7 +972,7 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
                         if (curr->loopback[j]->branches[k]->token->type.val == LEXTYPE_NONTERM) {
                             for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, curr->loopback[j]->branches[k]->token->lexeme); iter = iter->next);
                             printf("calling on: %s\n", iter->nterm->lexeme);
-                            result = callnonterm (lex, &buf[i], iter);
+                            result = callnonterm (lex, &buf[i], iter, iter->start);
                             i += result.offset;
                             if (result.success)
                                 lastfinal += result.offset;
@@ -982,8 +987,26 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine)
                 }
             }
 doublebreak:
-            if (j == curr->ncyles)
-                return (pnonterm_s) {.success = gotfinal, .offset = lastfinal};
+            if (j == curr->ncyles) {
+                if (gotepsilon) {
+                    largs = malloc (curr->nbranches * sizeof(*largs));
+                    threads = malloc (curr->nbranches * sizeof(*threads));
+                    for (j = 0; j < curr->nbranches; j++) {
+                        result = callnonterm (lex, &buf[i], machine, curr->branches[j]);
+                        i += result.offset;
+                        if (result.success)
+                            lastfinal += result.offset;
+                        else
+                            continue;
+                    }
+                    free(largs);
+                    free(threads);
+                    if (j == curr->nbranches)
+                        return (pnonterm_s) {.success = gotfinal, .offset = lastfinal};
+                }
+                else
+                    return (pnonterm_s) {.success = gotfinal, .offset = lastfinal};
+            }
             if (curr->isfinal) {
                 gotfinal = true;
                 lastfinal = i;
@@ -1017,7 +1040,7 @@ void mscan (lexargs_s *args)
 {
     pnonterm_s result;
     
-    result = callnonterm (args->lex, args->buf, args->machine);
+    result = callnonterm (args->lex, args->buf, args->machine, args->machine->start);
     args->bread = result.offset;
     args->accepted = result.success;
 }

@@ -30,7 +30,8 @@ parse_s *build_parse (const char *file)
 
 void pp_start (token_s **curr)
 {
-    
+    pp_nonterminal (curr);
+    pp_nonterminals (curr);
 }
 
 void pp_nonterminal (token_s **curr)
