@@ -35,4 +35,6 @@
     such as "(ab | cd) x" must append 'x' as an edge to both 'ab' and 'cd'. 
 
 6/3/13
+    I decided my solution for handling unions is to have the character immediately left of the parenthesis containing the union to 
+    act as a parent node. Each set comprising the union operations will be 
     
