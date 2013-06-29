@@ -50,8 +50,7 @@ numlreal
     
 <addop>=>
     \+ | - | or
-
-<mulop>=>
+	<mulop>=>
     \* | / | div | mod | and
 
 <assignop>=>

@@ -107,7 +107,7 @@ static mach_s *getmach(lex_s *lex, u_char *id);
 static pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *start);
 static int lmatch (u_char *lexeme, u_char *buf);
 static int rlmatch (lex_s *lex, mach_s *mach, machnode_s *machnode, u_char *buf);
-static bool resolve_finalstates(machnode_s *start);
+static bool resolve_finalstates(lex_s *lex, machnode_s *start);
 
 lex_s *buildlex (const char *file)
 {
@@ -384,11 +384,11 @@ void prx_texp (lex_s *lex, token_s **curr)
             node->isfinal = false;
             node->token->type.val = LEXTYPE_START;
             node->token->type.attribute = LEXATTR_DEFAULT;
-            snprintf(node->token->lexeme, MAX_LEXLEN, "START STATE %s", (*curr)->prev->prev->lexeme);
+            snprintf(node->token->lexeme, MAX_LEXLEN, "%s", (*curr)->prev->prev->lexeme);
             expression = prx_expression(lex , curr, &node, NULL, false);
             if (expression != node)
                 state_union(node, expression);
-            if (resolve_finalstates(node))
+            if (resolve_finalstates(lex, node))
                 node->isfinal = true;
             lex->machs->start = node;
             printf("\n\n%s   %d\n\n\n", node->token->lexeme, node->isfinal);
@@ -568,7 +568,6 @@ int prx_closure (lex_s *lex, token_s **curr)
         case LEXTYPE_ORNULL:
             *curr = (*curr)->next;
             type = CLOSTYPE_ORNULL;
-            *curr = (*curr)->next;
             break;
         default:
             return CLOSTYPE_NONE;
@@ -852,8 +851,23 @@ int addcycle (machnode_s *node, machnode_s *cycle)
 
 int addclosure (machnode_s *term, int type)
 {
-    nodelist_s *leaves, *iter;    
+    token_s *epsilon_token;
+    machnode_s *epsilon_node;
+    nodelist_s *leaves, *iter;
     
+    epsilon_token = malloc(sizeof(*epsilon_token));
+    if (!epsilon_token) {
+        perror("Heap Allocation Error");
+        return -1;
+    }
+    strcpy(epsilon_token->lexeme, "EPSILON");
+    epsilon_token->lineno = 0;
+    epsilon_token->next = NULL;
+    epsilon_token->prev = NULL;
+    epsilon_token->type.val = LEXTYPE_EPSILON;
+    epsilon_token->type.attribute = LEXATTR_DEFAULT;
+    epsilon_node = makenode(epsilon_token);
+    addchild(term, epsilon_node);
     printf("Getting leaves for %s, nchildren: %d\n", term->token->lexeme, term->nbranches);
     leaves = getleaves (term);
     for (iter = leaves; iter; iter = iter->next) {
@@ -871,22 +885,26 @@ int addclosure (machnode_s *term, int type)
     freenodelist(leaves);
 }
 
-bool resolve_finalstates(machnode_s *start)
+bool resolve_finalstates(lex_s *lex, machnode_s *start)
 {
-    uint16_t i, j;
+    uint16_t i;
+    bool nterm;
     
+    nterm = false;
     if (!start->nbranches) {
         start->isfinal = true;
-        printf("is final: %s\n", start->token->lexeme);
-        if (start->token->type.val == LEXTYPE_EPSILON)
+        if (start->token->type.val == LEXTYPE_NONTERM)
+            nterm = resolve_finalstates(lex, getmach(lex, start->token->lexeme)->start);
+        if (start->token->type.val == LEXTYPE_EPSILON || nterm)
             return true;
         return false;
     }
     for (i = 0; i < start->nbranches; i++) {
-        if (resolve_finalstates(start->branches[i])) {
+        if (resolve_finalstates(lex, start->branches[i])) {
             start->isfinal = true;
-            printf("is final: %s\n", start->token->lexeme);
-            if (start->token->type.val == LEXTYPE_EPSILON)
+            if (start->token->type.val == LEXTYPE_NONTERM)
+                nterm = resolve_finalstates(lex, getmach(lex, start->token->lexeme)->start);
+            if (start->token->type.val == LEXTYPE_EPSILON || nterm)
                 return true;
         }
     }
@@ -953,7 +971,7 @@ token_s *lex (lex_s *lex, u_char *buf)
 mach_s *getmach(lex_s *lex, u_char *id)
 {
     mach_s *iter;
-    
+
     for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, id); iter = iter->next);
     return iter;
 }
@@ -980,12 +998,12 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *st
                     mach = getmach(lex, curr->branches[j]->token->lexeme);
                     printf("calling on: %s from %s\n", mach->nterm->lexeme, curr->token->lexeme);
                     result = callnonterm (lex, &buf[i], mach, mach->start);
-                    i += result.offset;
                     char backup = buf[i];
                     buf[i] = '\0';
                     printf("Returned to %s with: %s %d\n", curr->token->lexeme, buf, result.success);
                     buf[i] = backup;
                     if (result.success) {
+                        i += result.offset;
                         lastfinal += result.offset;
                         gotfinal = true;
                     }
@@ -1009,8 +1027,8 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *st
                             mach = getmach(lex, curr->loopback[j]->branches[k]->token->lexeme);
                             printf("calling on: %s\n", mach->nterm->lexeme);
                             result = callnonterm (lex, &buf[i], mach, mach->start);
-                            i += result.offset;
                             if (result.success) {
+                                i += result.offset;
                                 lastfinal += result.offset;
                                 gotfinal = true;
                             }
