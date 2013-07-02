@@ -13,4 +13,5 @@ typedef enum bool {false = 0, true = 1} bool;
 
 extern u_char *readfile (const char *file);
 
+
 #endif

@@ -983,15 +983,123 @@ mach_s *getmach(lex_s *lex, u_char *id)
     return iter;
 }
 
+typedef struct threadlist_s threadlist_s;
+
+struct threadlist_s
+{
+    pthread_t thread;
+    lex_s *lex;
+    u_char *buf;
+    mach_s *machine;
+    machnode_s *start;
+    pnonterm_s result;
+    threadlist_s *next;
+};
+
+static void nonterm_wrapper (threadlist_s *node)
+{
+    node->result = callnonterm (node->lex, node->buf, node->machine, node->start);
+}
+
+static threadlist_s *addthread (threadlist_s **list, lex_s *lex, u_char *buf, mach_s *machine, machnode_s *start)
+{
+    threadlist_s *nthread;
+    
+    nthread = malloc(sizeof(*nthread));
+    if (!nthread) {
+        perror("Heap Allocation Error\n");
+        return NULL;
+    }
+    nthread->lex = lex;
+    nthread->buf = buf;
+    nthread->machine = machine;
+    nthread->start = start;
+    if (!*list) {
+        *list = nthread;
+        nthread->next = NULL;
+    }
+    else {
+        nthread->next = *list;
+        *list = (*list)->next;
+        *list = nthread;
+    }
+}
+
+static void free_threadlist (threadlist_s *list)
+{
+    threadlist_s *backup;
+    
+    while (list) {
+        backup = list;
+        list = list->next;
+        free(backup);
+    }
+}
+
 pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *start)
 {
-    uint16_t i, j, tmp, max;
-    machnode_s *curr;
+    uint16_t i, tmp,
+            max, imax,
+            localoffset;
+    mach_s *mach;
+    machnode_s *curr, *gotepsilon;
+    pnonterm_s result;
+    bool gotfinal;
+    threadlist_s *tlist;
     
+    tlist = NULL;
+    localoffset = 0;
     curr = machine->start;
+    gotfinal = false;
     while (true) {
+        max = 0;
+        gotepsilon = NULL;
         for (i = 0; i < curr->nbranches; i++) {
-            tmp = rlmatch (lex, machine, curr->branches[i], buf);
+            tmp = rlmatch (lex, machine, curr->branches[i], &buf[localoffset]);
+            if (tmp) {
+                if (curr->branches[i]->token->type.val == LEXTYPE_NONTERM) {
+                    mach = getmach(lex, curr->branches[i]->token->lexeme);
+                    result = callnonterm (lex, &buf[localoffset], mach, mach->start);
+                    if (result.success && result.offset > max) {
+                        max = result.offset;
+                        imax = i;
+                    }
+                }
+                else {
+                    if (tmp > max) {
+                        max = tmp;
+                        imax = i;
+                    }
+                }
+            }
+            else if (curr->branches[i]->token->type.val == LEXTYPE_EPSILON) {
+                gotepsilon = curr->branches[i];
+                if (gotepsilon->isfinal)
+                    for(;;)printf("derp");
+            }
+        }
+        if (max)
+            localoffset += max;
+        else {
+            for (i = 0; i < curr->ncyles; i++) {
+                tmp = rlmatch (lex, machine, curr->loopback[i], &buf[localoffset]);
+                if (tmp) {
+                    if (curr->loopback[i]->token->type.val == LEXTYPE_NONTERM) {
+                        mach = getmach(lex, curr->branches[i]->token->lexeme);
+                        result = callnonterm (lex, &buf[localoffset], mach, mach->start);
+                        if (result.success && result.offset > max) {
+                            max = result.offset;
+                            imax = i;
+                        }
+                    }
+                    else {
+                        if (tmp > max) {
+                            max = tmp;
+                            imax = i;
+                        }
+                    }
+                }
+            }
         }
     }
     
