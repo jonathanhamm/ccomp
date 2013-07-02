@@ -985,101 +985,16 @@ mach_s *getmach(lex_s *lex, u_char *id)
 
 pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *start)
 {
-    int32_t tmp;
-    uint32_t i, j, k, max, mj, lastfinal;
-    mach_s *mach;
-    machnode_s *curr, *gotepsilon;
-    pnonterm_s result;
-    bool gotfinal;
+    uint16_t i, j, tmp, max;
+    machnode_s *curr;
     
-    i = 0;
-    gotfinal = false;
-    lastfinal = 0;
-    curr = start;
-    while (1) {
-        gotepsilon = NULL;
-        max = 0;
-        mj = 0;
-        for (j = 0; j < curr->nbranches; j++) {
-            tmp = rlmatch(lex, machine, curr->branches[j], &buf[i]);
-            if (tmp) {
-                if (curr->branches[j]->token->type.val == LEXTYPE_NONTERM) {
-                    mach = getmach(lex, curr->branches[j]->token->lexeme);
-                    printf("calling on: %s from %s\n", mach->nterm->lexeme, curr->token->lexeme);
-                    result = callnonterm (lex, &buf[i], mach, mach->start);
-                    char backup = buf[i];
-                    buf[i] = '\0';
-                    printf("Returned to %s with: %s %d\n", curr->token->lexeme, buf, result.success);
-                    buf[i] = backup;
-                    if (result.success) {
-                        if (max < result.offset) 
-                            max = result.offset;
-                        gotfinal = true;
-                    }
-                    else
-                        continue;
-                }
-                else {
-                    if (max < tmp) {
-                        max = tmp;
-                        mj = j;
-                    }
-                }
-                curr = curr->branches[j];
-                break;
-            }
-            else if (curr->branches[j]->token->type.val == LEXTYPE_EPSILON)
-                gotepsilon = curr->branches[j];
-        }
-        if (gotfinal) {
-            lastfinal += max;
-            i += max;
-            curr= curr->branches[j];
-        }
-        if (j == curr->nbranches) {
-            for (j = 0; j < curr->ncyles; j++) {
-                for (k = 0; k < curr->loopback[j]->nbranches; k++){
-                    tmp = rlmatch(lex, machine, curr->loopback[j]->branches[k], &buf[i]);
-                    if (tmp) {
-                        if (curr->loopback[j]->branches[k]->token->type.val == LEXTYPE_NONTERM) {
-                            mach = getmach(lex, curr->loopback[j]->branches[k]->token->lexeme);
-                            printf("calling on: %s\n", mach->nterm->lexeme);
-                            result = callnonterm (lex, &buf[i], mach, mach->start);
-                            if (result.success) {
-                                i += result.offset;
-                                lastfinal += result.offset;
-                                gotfinal = true;
-                                break;
-                            }
-                            else
-                                continue;
-                        }
-                        else
-                            i += tmp;
-                        curr = curr->loopback[j]->branches[k];
-                        goto doublebreak;
-                    }
-                }
-            }
-doublebreak:
-            if (j == curr->ncyles) {
-                if (gotepsilon)
-                    curr = gotepsilon;
-                else
-                    return (pnonterm_s) {.success = gotfinal, .offset = lastfinal};
-            }
-            if (curr->isfinal) {
-                gotfinal = true;
-                lastfinal = i;
-            }
-        }
-        else {
-            if (curr->isfinal) {
-                gotfinal = true;
-                lastfinal = i;
-            }
+    curr = machine->start;
+    while (true) {
+        for (i = 0; i < curr->nbranches; i++) {
+            tmp = rlmatch (lex, machine, curr->branches[i], buf);
         }
     }
+    
 }
 
 bool transparent (machnode_s *node)
