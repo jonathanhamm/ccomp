@@ -1039,7 +1039,7 @@ static void free_threadlist (threadlist_s *list)
 pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *start)
 {
     uint16_t i, tmp,
-            max, imax,
+            max, imax, ep,
             localoffset, lastfinal;
     mach_s *mach;
     machnode_s *curr, *gotepsilon;
@@ -1141,16 +1141,55 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *st
                     return (pnonterm_s) {.success = gotfinal, .offset = localoffset};
             }
             else {
-                localoffset += max;
-                curr = curr->loopback[imax];
+                if (gotepsilon) {
+                    ep = 0;
+                    for (tmpnode = tlist; tmpnode; tmpnode = tmpnode->next)
+                        pthread_join(tmpnode->thread, NULL);
+                    for (tmpnode = tlist; tmpnode; tmpnode = tmpnode->next) {
+                        if (tmpnode->result.success && tmpnode->result.offset > ep) {
+                            gotfinal = true;
+                            ep = tmpnode->result.offset;
+                            gotepsilon = tmpnode->start;
+                        }
+                    }
+                    free_llist((void *)tlist);
+                    tlist = NULL;
+                }
+                if (ep > max) {
+                    localoffset += ep;
+                    curr = gotepsilon;
+                }
+                else {
+                    localoffset += max;
+                    curr = curr->loopback[imax];
+                }
             }
         }
         else {
-            localoffset += max;
-            curr = curr->branches[imax];
+            if (gotepsilon) {
+                ep = 0;
+                for (tmpnode = tlist; tmpnode; tmpnode = tmpnode->next)
+                    pthread_join(tmpnode->thread, NULL);
+                for (tmpnode = tlist; tmpnode; tmpnode = tmpnode->next) {
+                    if (tmpnode->result.success && tmpnode->result.offset > ep) {
+                        gotfinal = true;
+                        ep = tmpnode->result.offset;
+                        gotepsilon = tmpnode->start;
+                    }
+                }
+                free_llist((void *)tlist);
+                tlist = NULL;
+            }
+            if (ep > max) {
+                localoffset += ep;
+                curr = gotepsilon;
+            }
+            else {
+                localoffset += max;
+                curr = curr->branches[imax];
+            }
         }
     }
-    
 }
 
 bool transparent (machnode_s *node)
