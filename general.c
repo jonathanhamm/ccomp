@@ -38,3 +38,14 @@ u_char *readfile (const char *file)
         buf = realloc(buf, nbytes+1);
     return buf;
 }
+
+void free_llist (void *list)
+{
+    void *backup;
+    
+    while (list) {
+        backup = list;
+        list = *(void **)list;
+        free(backup);
+    }
+}

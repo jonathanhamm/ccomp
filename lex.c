@@ -964,7 +964,7 @@ token_s *lex (lex_s *lex, u_char *buf)
         if (chosen) {
             char c = *(buf + chosen->bread);
             *(buf + tmp) = '\0';
-            printf("successfully parsed %s, %d from %s\n", buf, chosen->bread, chosen->machine->nterm->lexeme);
+            printf("\n\nsuccessfully parsed %s, %d from %s\n\n", buf, chosen->bread, chosen->machine->nterm->lexeme);
             *(buf + chosen->bread) = c;
             buf += chosen->bread;
         }
@@ -987,18 +987,19 @@ typedef struct threadlist_s threadlist_s;
 
 struct threadlist_s
 {
+    threadlist_s *next;
     pthread_t thread;
     lex_s *lex;
     u_char *buf;
     mach_s *machine;
     machnode_s *start;
     pnonterm_s result;
-    threadlist_s *next;
 };
 
-static void nonterm_wrapper (threadlist_s *node)
+static void *callnonterm_wrapper (threadlist_s *node)
 {
     node->result = callnonterm (node->lex, node->buf, node->machine, node->start);
+    return NULL;
 }
 
 static threadlist_s *addthread (threadlist_s **list, lex_s *lex, u_char *buf, mach_s *machine, machnode_s *start)
@@ -1014,15 +1015,14 @@ static threadlist_s *addthread (threadlist_s **list, lex_s *lex, u_char *buf, ma
     nthread->buf = buf;
     nthread->machine = machine;
     nthread->start = start;
-    if (!*list) {
-        *list = nthread;
+    if (!*list)
         nthread->next = NULL;
-    }
     else {
         nthread->next = *list;
         *list = (*list)->next;
-        *list = nthread;
     }
+    *list = nthread;
+    return nthread;
 }
 
 static void free_threadlist (threadlist_s *list)
@@ -1040,16 +1040,17 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *st
 {
     uint16_t i, tmp,
             max, imax,
-            localoffset;
+            localoffset, lastfinal;
     mach_s *mach;
     machnode_s *curr, *gotepsilon;
     pnonterm_s result;
     bool gotfinal;
-    threadlist_s *tlist;
+    threadlist_s *tlist, *tmpnode;
     
     tlist = NULL;
     localoffset = 0;
-    curr = machine->start;
+    lastfinal = 0;
+    curr = start;
     gotfinal = false;
     while (true) {
         max = 0;
@@ -1061,45 +1062,92 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *st
                     mach = getmach(lex, curr->branches[i]->token->lexeme);
                     result = callnonterm (lex, &buf[localoffset], mach, mach->start);
                     if (result.success && result.offset > max) {
-                        max = result.offset;
                         imax = i;
+                        max = result.offset;
+                        if (curr->branches[i]->isfinal) {
+                            gotfinal = true;
+                            lastfinal = result.offset;
+                        }
                     }
                 }
                 else {
                     if (tmp > max) {
-                        max = tmp;
+                        char backup = buf[tmp];
+                        buf[tmp] = '\0';
+                        printf("tmp: %d\n", tmp);
+                        printf("parsed: %s\n", buf);
+                        buf[tmp] = backup;
                         imax = i;
+                        max = tmp;
+                        if (curr->branches[i]->isfinal) {
+                            gotfinal = true;
+                            lastfinal = localoffset;
+                        }
                     }
                 }
             }
             else if (curr->branches[i]->token->type.val == LEXTYPE_EPSILON) {
                 gotepsilon = curr->branches[i];
-                if (gotepsilon->isfinal)
-                    for(;;)printf("derp");
+                tmpnode = addthread (&tlist, lex, &buf[localoffset], machine, curr->branches[i]);
+                pthread_create(&tmpnode->thread, NULL, (void *(*)(void *))callnonterm_wrapper, (void *)tmpnode);
             }
         }
-        if (max)
-            localoffset += max;
-        else {
+        if (!max) {
             for (i = 0; i < curr->ncyles; i++) {
                 tmp = rlmatch (lex, machine, curr->loopback[i], &buf[localoffset]);
                 if (tmp) {
                     if (curr->loopback[i]->token->type.val == LEXTYPE_NONTERM) {
-                        mach = getmach(lex, curr->branches[i]->token->lexeme);
+                        mach = getmach(lex, curr->loopback[i]->token->lexeme);
                         result = callnonterm (lex, &buf[localoffset], mach, mach->start);
                         if (result.success && result.offset > max) {
-                            max = result.offset;
                             imax = i;
+                            max = result.offset;
+                            if (curr->loopback[i]->isfinal) {
+                                gotfinal = true;
+                                lastfinal = localoffset;
+                            }
                         }
                     }
-                    else {
-                        if (tmp > max) {
-                            max = tmp;
-                            imax = i;
+                    else if (tmp > max) {
+                        max = tmp;
+                        imax = i;
+                        if (curr->loopback[i]->isfinal) {
+                            gotfinal = true;
+                            lastfinal = localoffset;
                         }
                     }
                 }
             }
+            if (!max) {
+                if (gotepsilon) {
+                    for (tmpnode = tlist; tmpnode; tmpnode = tmpnode->next)
+                        pthread_join(tmpnode->thread, NULL);
+                    for (tmpnode = tlist; tmpnode; tmpnode = tmpnode->next) {
+                        if (tmpnode->result.success && tmpnode->result.offset > max) {
+                            gotfinal = true;
+                            max = tmpnode->result.offset;
+                            gotepsilon = tmpnode->start;
+                        }
+                    }
+                    free_llist((void *)tlist);
+                    tlist = NULL;
+                    if (gotfinal)
+                        localoffset += max;
+                    else
+                        return (pnonterm_s) {.success = gotfinal, .offset = localoffset};
+                    curr = gotepsilon;
+                }
+                else
+                    return (pnonterm_s) {.success = gotfinal, .offset = localoffset};
+            }
+            else {
+                localoffset += max;
+                curr = curr->loopback[imax];
+            }
+        }
+        else {
+            localoffset += max;
+            curr = curr->branches[imax];
         }
     }
     
@@ -1131,6 +1179,8 @@ int lmatch (u_char *lexeme, u_char *buf)
 {
     uint16_t i;
     
+    
+    printf("trying to match at lexeme: %s against %s\n", lexeme, buf);
     for (i = 0; lexeme[i]; i++) {
         if (lexeme[i] != buf[i])
             return 0;
