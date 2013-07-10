@@ -925,7 +925,7 @@ token_s *lex (lex_s *lex, u_char *buf)
     lexargs_s *largs, *chosen;
     pthread_t *threads;
     mach_s *machine;
-    
+        
     largs = malloc(lex->nmachs * sizeof(*largs));
     threads = malloc(lex->nmachs * sizeof(*threads));
     if (!(largs && threads)) {
@@ -1177,6 +1177,7 @@ pnonterm_s callnonterm (lex_s *lex, u_char *buf, mach_s *machine, machnode_s *st
                         gotepsilon = tmpnode->start;
                     }
                 }
+                for(;;)printf("%d %d\n", ep, max);
                 free_llist((void *)tlist);
                 tlist = NULL;
             }
