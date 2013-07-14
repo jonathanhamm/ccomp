@@ -20,58 +20,121 @@
 <texp>=>
     nonterm prodsym <expression>
     {
-        addgraph(nonterm);
+        regex := addregex(nonterm)
+        regex.nfa := <expression>
     }
 <expression>=>
     <term> <closure> <expression'>
     {
-        makenode(<term>, tree);
-        makenode(<expression, tree);
-        addclosure(<term>, <closure>.curr);
-        if <expression'>.op = union then 
-            <term>.appendbranches(<expression'>.branches);
-            <expression>.branches := <term>.branches;
-        else
-            <term>.bindbranches(<expression'>.branches);
-            <expression>.branches := <term>.branches;
-        endif
+        <term>:
+            start := <term>.start
+            final := <term>.final
+        <closure>:
+            if  <closure>.val = kleenestar then
+                start := makenode()
+                final := makenode()
+                start.addedge(edge(EPSILON), <term>.start)
+                <term>.final.addedge(edge(EPSILON), final)
+                <term>.final.addcycle(edge(EPSILON), final)
+            elif <closure>.val = pos then
+            
+            elif <closure>.val = ornull then
+            
+            elif <closure>.val = null then
+            
+            else
+                throw syntax error
+            fi
+        <expression'>:
+            if <expression'>.op = UNION then
+                start := makenode()
+                final := makenode()
+                start.addedge(edge(EPSILON), <term>.start)
+                start.addedge(edge(EPSILON), <expression'>.start)
+                <term>.final.addedge(edge(EPSILON), final)
+                <expression'>.final.addedge(edge(EPSILON), final)
+            else if <expression'>.op = CONCATENATION then
+                final := <expression'>.final
+                <term>.final := <expression'>.start
+            fi
+            <expression>.start := start
+            <expression>.final := final
+        return: {<expression>}
+        
     }
 <expression'>=>
     union <expression>
     {
-        makenode(<expression>);
-        <expression'>.op := union;
-        <expression'>.branches := <expression>.branches;
+        return { .op := UNION, .expression := <expression> }
     }
     |
     <expression>
     {
-        makenode(<expression>);
-        <expression'>.op := concat;
-        <expression'>.branches := <expression>.branches;
+        return { .op := CONCATENATION, .expression := <expression> }
     }
     |
     €
+    {
+        return { .op := NOP, .expression := NULL }
+    }
 
 <term>=>
     ( <expression> )
     {
-        makenode(<expression>);
-        <term>.branches := <expression>.branches;
+        ( <expression> ):
+            <term>.start := <expression>.start
+            <term>.fianl := <expression>.final
+        return { <term> }
     }
     |
     terminal <expression'>
     {
-        makenode(<expression'>);
-        <term>.branches[curr].append(terminal);
-        <term>.appendbranches(<term>.branches[curr], <expression'>.branches);
+        terminal:
+            start := makenode()
+            final := makenode()
+            start.addedge(edge(terminal), final)
+        <expression'>:
+            if <expression'>.op = UNION then
+                start_ := makenode()
+                final_ := makenode()
+                start_.addedge(edge(EPSILON), start)
+                start_.addedge(edge(EPSILON), <expression'>.start)
+                final.addedge(edge(EPSILON), final_)
+                <expression'>.final.addedge(edge(EPSILON), final_)
+                start := start_
+                final := final_
+            elif <expression'>.op = CONCATENATION then
+                <expression'>.start := final 
+                final := <expression'>.final
+            fi
+            <term>.start := start
+            <term>.final := final
+        return { <term> }
     }
     |
     nonterm <expression'>
     {
-        makenode(<expression'>);
-        <term>.branches[curr].append(nonterm);
-        <term>.appendbranches(<term>.branches[curr], <expression'>.branches);
+        nonterm:
+            start := makenode()
+            final := makenode()
+            start.addedge(edge(nonterm), final)
+        <expression'>:
+            if <expression'>.op = UNION then
+                start_ := makenode()
+                final_ := makenode()
+                start_.addedge(edge(EPSILON), start)
+                start_.addedge(edge(EPSILON), <expression'>.start)
+                final.addedge(edge(EPSILON), final_)
+                <expression'>.final.addedge(edge(EPSILON), final_)
+                start := start_
+                final := final_
+            elif <expression'>.op = CONCATENATION then
+                <expression'>.start := final 
+                final := <expression'>.final
+            fi
+            <term>.start := start
+            <term>.final := final
+        return { <term> }
     }
 
 
