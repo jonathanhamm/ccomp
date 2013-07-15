@@ -8,14 +8,14 @@
         addkeyword(terminal);
     }
     |
-    €
+    ε
 
 <tokens>=>
     <texp> <tokens'>
 <tokens'>=>
     EOL <texp> <tokens'>
     |
-    €
+    ε
 
 <texp>=>
     nonterm prodsym <expression>
@@ -25,16 +25,46 @@
 <expression>=>
     <term> <closure> <expression'>
     {
-        makenode(<term>, tree);
-        makenode(<expression, tree);
-        addclosure(<term>, <closure>.curr);
-        if <expression'>.op = union then 
-            <term>.appendbranches(<expression'>.branches);
-            <expression>.branches := <term>.branches;
-        else
-            <term>.bindbranches(<expression'>.branches);
-            <expression>.branches := <term>.branches;
-        endif
+        <term>:
+            start := <term>.start
+            final := <term>.final
+        <closure>:
+            if  <closure>.val = kleenestar then
+                start := makenode()
+                final := makenode()
+                start.addedge(edge(ε), <term>.start)
+                <term>.final.addedge(edge(ε), final)
+                <term>.final.addcycle(edge(ε), final)
+            elif <closure>.val = pos then
+            
+            elif <closure>.val = ornull then
+            
+            elif <closure>.val = null then
+            
+            else
+                throw syntax error
+            fi
+        <expression'>:
+            if <expression'>.op = UNION then
+                if inherited = null then
+                    start := makenode()
+                    final := makenode()
+                    start.addedge(edge(ε), <term>.start)
+                    start.addedge(edge(ε), <expression'>.start)
+                    <term>.final.addedge(edge(ε), final)
+                    <expression'>.final.addedge(edge(ε), final)
+                else
+                    inherited.start.addedge(edge(ε), <expression'>.start)
+                    <expression'>.final.addedge(edge(ε), inherited.final)
+                fi
+            else if <expression'>.op = CONCATENATION then
+                final := <expression'>.final
+                <term>.final := <expression'>.start
+            fi
+            <expression>.start := start
+            <expression>.final := final
+        return: {<expression>}
+        
     }
 <expression'>=>
     union <expression>
@@ -51,7 +81,10 @@
         <expression'>.branches := <expression>.branches;
     }
     |
-    €
+    ε
+    {
+        return { .op := NOP, .expression := NULL }
+    }
 
 <term>=>
     ( <expression> )
@@ -62,16 +95,64 @@
     |
     terminal <expression'>
     {
-        makenode(<expression'>);
-        <term>.branches[curr].append(terminal);
-        <term>.appendbranches(<term>.branches[curr], <expression'>.branches);
+        terminal:
+            start := makenode()
+            final := makenode()
+            start.addedge(edge(terminal), final)
+        <expression'>:
+            if <expression'>.op = UNION then
+                if inherited.start = NULL then
+                    start_ := makenode()
+                    final_ := makenode()
+                else
+                    start_ := inherited.start
+                    final_ := inherited.final
+                fi
+                start_.addedge(edge(ε), start)
+                start_.addedge(edge(ε), <expression'>.start)
+                final.addedge(edge(ε), final_)
+                <expression'>.final.addedge(edge(ε), final_)
+                start := start_
+                final := final_
+            elif <expression'>.op = CONCATENATION then
+                <expression'>.start := final 
+                final := <expression'>.final
+            fi
+            <term>.start := start
+            <term>.final := final
+        return { <term> }
     }
     |
     nonterm <expression'>
     {
-        makenode(<expression'>);
-        <term>.branches[curr].append(nonterm);
-        <term>.appendbranches(<term>.branches[curr], <expression'>.branches);
+        nonterm:
+            start := makenode()
+            final := makenode()
+            start.addedge(edge(nonterm), final)
+        <expression'>:
+            if <expression'>.op = UNION then
+                if inherited.start = NULL then
+                    start_ := makenode()
+                    final_ := makenode()
+                else
+                    start_ := inherited.start
+                    final_ := inherited.final
+                fi
+                start_ := makenode()
+                final_ := makenode()
+                start_.addedge(edge(ε), start)
+                start_.addedge(edge(ε), <expression'>.start)
+                final.addedge(edge(ε), final_)
+                <expression'>.final.addedge(edge(ε), final_)
+                start := start_
+                final := final_
+            elif <expression'>.op = CONCATENATION then
+                <expression'>.start := final 
+                final := <expression'>.final
+            fi
+            <term>.start := start
+            <term>.final := final
+        return { <term> }
     }
 
 
@@ -83,6 +164,6 @@
     ? { <closure>.curr := ornull; }
     | 
     <closure> { <closure1>.curr := <closure2>.curr; }
-    | 
-    €
+    |
+    ε
     

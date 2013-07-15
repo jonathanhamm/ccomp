@@ -16,7 +16,8 @@ typedef struct lex_s lex_s;
 typedef struct idtable_s idtable_s;
 typedef struct idtnode_s idtnode_s;
 typedef struct token_s token_s;
-typedef struct machnode_s machnode_s;
+typedef struct nfa_s nfa_s;
+typedef struct nfa_node_s nfa_node_s;
 typedef struct mach_s mach_s;
 
 struct token_s
@@ -45,22 +46,16 @@ struct idtable_s
     idtnode_s *root;
 };
 
-struct machnode_s
+struct nfa_s
 {
-    bool isfinal;
-    uint16_t nbranches;
-    uint16_t ncyles;
-    token_s *token;
-    machnode_s **branches;
-    machnode_s **loopback;
+    nfa_node_s *start;
+    nfa_node_s *final;
 };
 
 struct mach_s
 {
     token_s *nterm;
-    uint16_t nstates;
-    machnode_s *curr;
-    machnode_s *start;
+    nfa_s  *nfa;
     mach_s *next;
 };
 
