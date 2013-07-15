@@ -97,9 +97,9 @@ static void prx_keywords (lex_s *lex, token_s **curr);
 static void prx_tokens (lex_s *lex, token_s **curr);
 static void prx_tokens_ (lex_s *lex, token_s **curr);
 static void prx_texp (lex_s *lex, token_s **curr);
-static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s *unfa);
-static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s *unfa);
-static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s *unfa);
+static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa);
+static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa);
+static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa);
 static int prx_closure (lex_s *lex, token_s **curr);
 
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
@@ -440,6 +440,7 @@ void reparent (nfa_node_s *parent, nfa_node_s *oldparent)
 
 void prx_texp (lex_s *lex, token_s **curr)
 {
+    nfa_s *NULL_ = NULL;
     token_s *nterm;
     
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
@@ -458,7 +459,8 @@ void prx_texp (lex_s *lex, token_s **curr)
             nterm->next = NULL;
             nterm->prev = NULL;
             snprintf(nterm->lexeme, MAX_LEXLEN, "Start: %s", (*curr)->prev->prev->lexeme);
-            lex->machs->nfa = prx_expression(lex , curr, NULL);
+            lex->machs->nfa = prx_expression(lex , curr, &NULL_);
+            printf("%s: %d\n", nterm->lexeme, lex->machs->nfa->start->nedges);
         }
         else
             printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -467,18 +469,16 @@ void prx_texp (lex_s *lex, token_s **curr)
         printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
 }
 
-nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s *unfa)
+nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa)
 {
     exp__s exp_;
     nfa_s *nfa, *term;
     
-    
-    nfa = nfa_();
     term = prx_term(lex, curr, unfa);
-    nfa->start = term->start;
-    nfa->final = term->final;
+    nfa = term;
     switch (prx_closure(lex, curr)) {
         case CLOSTYPE_KLEENE:
+            nfa = nfa_();
             nfa->start = nfa_node_s_();
             nfa->final = nfa_node_s_();
             addedge(nfa->start, nfa_edge_s_(make_epsilon(), term->start));
@@ -496,13 +496,14 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s *unfa)
     }
     exp_ = prx_expression_(lex, curr, unfa);
     if (exp_.op == OP_UNION) {
-        if (unfa) {
-            addedge(unfa->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
-            addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), (unfa)->final));
-            nfa->start = (unfa)->start;
-            nfa->final = (unfa)->final;
+        if (*unfa) {
+            addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
+            addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
+            nfa->start = (*unfa)->start;
+            nfa->final = (*unfa)->final;
         }
         else {
+            *unfa = nfa;
             nfa->start = nfa_node_s_();
             nfa->final = nfa_node_s_();
             addedge(nfa->start, nfa_edge_s_(make_epsilon(), term->start));
@@ -510,18 +511,16 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s *unfa)
             addedge(term->final, nfa_edge_s_(make_epsilon(), nfa->final));
             addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), nfa->final));
         }
-        free(exp_.nfa);
+        nfa = *unfa;
     }
     else if (exp_.op == OP_CONCAT) {
         reparent(term->final, exp_.nfa->start);
         term->final = exp_.nfa->final;
-        free(exp_.nfa->start);
-        free(exp_.nfa);
     }
     return nfa;
 }
 
-exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s *unfa)
+exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa)
 {
     if ((*curr)->type.val == LEXTYPE_UNION) {
         *curr = (*curr)->next;
@@ -549,16 +548,16 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s *unfa)
     }
 }
 
-nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s *unfa)
+nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa)
 {
     exp__s exp_;
-    nfa_s *nfa, *backup;
+    nfa_s *nfa, *NULL_ = NULL;
     nfa_node_s *start, *final;
     
     switch((*curr)->type.val) {
         case LEXTYPE_OPENPAREN:
             *curr = (*curr)->next;
-            nfa = prx_expression(lex, curr, NULL);
+            nfa = prx_expression(lex, curr, &NULL_);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             *curr = (*curr)->next;
@@ -573,11 +572,11 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s *unfa)
             *curr = (*curr)->next;
             exp_ = prx_expression_(lex, curr, unfa);
             if (exp_.op == OP_UNION) {
-                if (unfa) {
-                    addedge(unfa->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
-                    addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), unfa->final));
-                    nfa->start = unfa->start;
-                    nfa->final = unfa->final;
+                if (*unfa) {
+                    addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), nfa->start));
+                    addedge(nfa->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
+                    nfa->start = (*unfa)->start;
+                    nfa->final = (*unfa)->final;
                 }
                 else {
                     start = nfa_node_s_();
@@ -586,16 +585,16 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s *unfa)
                     addedge(start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
                     addedge(nfa->final, nfa_edge_s_(make_epsilon(), final));
                     addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), final));
+                    *unfa = nfa;
                     nfa->start = start;
                     nfa->final = final;
                 }
-                free(exp_.nfa);
             }
             else if (exp_.op == OP_CONCAT) {
                 reparent (nfa->final, exp_.nfa->start);
+                if (nfa == exp_.nfa)
+                    asm("hlt");
                 nfa->final = exp_.nfa->final;
-                free(exp_.nfa->start);
-                free(exp_.nfa);
             }
             break;
         default:

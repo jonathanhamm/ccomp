@@ -28,7 +28,7 @@
     Made additional revisions to the semantic decorations. It should be noted that parsing expressions requires inherited
     attributes for features like Kleene closure. Because the parser is recursive descent, functions further down the call 
     stack need access to the first characer (or node) that denotes the beginng of a term. This allows for the addition of 
-    cycles in the graph when Kleen closure is encountered, since an edge pointing "back" is need to express Kleene start. 
+    cycles in the graph when Kleen closure is encountered, since an edge pointing "back" is need to express Kleene star. 
 
 5/30/13
     Implementing union and concatenation is challenging since it must take into consideration union. For example, an expression 
@@ -38,3 +38,6 @@
     I decided my solution for handling unions is to have the character immediately left of the parenthesis containing the union to 
     act as a parent node. Each set comprising the union operations will be 
     
+7/13/13
+    I made a major revision to the construction of the regex NFA. It now uses a much strictor adherence to Thompson's construction 
+    algorithm, which has produced much more elegant code. 
