@@ -48,8 +48,6 @@ typedef struct exp__s exp__s;
 typedef struct nodelist_s nodelist_s;
 typedef struct lexargs_s lexargs_s;
 typedef struct pnonterm_s pnonterm_s;
-
-typedef struct nfa_node_s nfa_node_s;
 typedef struct nfa_edge_s nfa_edge_s;
 
 struct nfa_node_s
@@ -99,9 +97,9 @@ static void prx_keywords (lex_s *lex, token_s **curr);
 static void prx_tokens (lex_s *lex, token_s **curr);
 static void prx_tokens_ (lex_s *lex, token_s **curr);
 static void prx_texp (lex_s *lex, token_s **curr);
-static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa);
-static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa);
-static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa);
+static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s *unfa);
+static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s *unfa);
+static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s *unfa);
 static int prx_closure (lex_s *lex, token_s **curr);
 
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
@@ -442,34 +440,25 @@ void reparent (nfa_node_s *parent, nfa_node_s *oldparent)
 
 void prx_texp (lex_s *lex, token_s **curr)
 {
-    uint16_t i;
+    token_s *nterm;
     
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
         *curr = (*curr)->next;
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
-            node = calloc(1, sizeof(*node));
-            if (!node) {
+            nterm = malloc(sizeof(*nterm));
+            if (!nterm) {
                 perror("Heap Allocation Error");
                 return;
             }
-            node->token = calloc (1, sizeof(*node->token));
-            if (!node->token) {
-                perror("Heap Allocation Error");
-                return;
-            }
-            node->isfinal = false;
-            node->token->type.val = LEXTYPE_START;
-            node->token->type.attribute = LEXATTR_DEFAULT;
-            snprintf(node->token->lexeme, MAX_LEXLEN, "%s", (*curr)->prev->prev->lexeme);
-            expression = prx_expression(lex , curr, &node, NULL, false);
-            if (expression != node)
-                state_union(node, expression);
-            if (resolve_finalstates(lex, node))
-                node->isfinal = true;
-            lex->machs->start = node;
-            printf("\n\n%s   %d\n\n\n", node->token->lexeme, node->isfinal);
+            nterm->lineno = 0;
+            nterm->type.val = LEXTYPE_START;
+            nterm->type.attribute = LEXATTR_DEFAULT;
+            nterm->next = NULL;
+            nterm->prev = NULL;
+            snprintf(nterm->lexeme, MAX_LEXLEN, "Start: %s", (*curr)->prev->prev->lexeme);
+            lex->machs->nfa = prx_expression(lex , curr, NULL);
         }
         else
             printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -478,7 +467,7 @@ void prx_texp (lex_s *lex, token_s **curr)
         printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
 }
 
-nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa)
+nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s *unfa)
 {
     exp__s exp_;
     nfa_s *nfa, *term;
@@ -507,11 +496,11 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa)
     }
     exp_ = prx_expression_(lex, curr, unfa);
     if (exp_.op == OP_UNION) {
-        if (*unfa) {
-            addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
-            addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
-            nfa->start = (*unfa)->start;
-            nfa->final = (*unfa)->final;
+        if (unfa) {
+            addedge(unfa->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
+            addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), (unfa)->final));
+            nfa->start = (unfa)->start;
+            nfa->final = (unfa)->final;
         }
         else {
             nfa->start = nfa_node_s_();
@@ -532,7 +521,7 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa)
     return nfa;
 }
 
-exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa)
+exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s *unfa)
 {
     if ((*curr)->type.val == LEXTYPE_UNION) {
         *curr = (*curr)->next;
@@ -560,7 +549,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa)
     }
 }
 
-nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa)
+nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s *unfa)
 {
     exp__s exp_;
     nfa_s *nfa, *backup;
@@ -572,11 +561,11 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa)
             nfa = prx_expression(lex, curr, NULL);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+            *curr = (*curr)->next;
             return nfa;
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
-            exp_ = prx_expression_(lex, curr, unfa);
             nfa = nfa_();
             nfa->start = nfa_node_s_();
             nfa->final = nfa_node_s_();
@@ -584,11 +573,11 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa)
             *curr = (*curr)->next;
             exp_ = prx_expression_(lex, curr, unfa);
             if (exp_.op == OP_UNION) {
-                if (*unfa) {
-                    addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
-                    addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
-                    nfa->start = (*unfa)->start;
-                    nfa->final = (*unfa)->final;
+                if (unfa) {
+                    addedge(unfa->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
+                    addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), unfa->final));
+                    nfa->start = unfa->start;
+                    nfa->final = unfa->final;
                 }
                 else {
                     start = nfa_node_s_();
@@ -790,7 +779,7 @@ token_s *lex (lex_s *lex, u_char *buf)
     lexargs_s *largs, *chosen;
     pthread_t *threads;
     mach_s *machine;
-        
+    /*
     largs = malloc(lex->nmachs * sizeof(*largs));
     threads = malloc(lex->nmachs * sizeof(*threads));
     if (!(largs && threads)) {
@@ -837,7 +826,7 @@ token_s *lex (lex_s *lex, u_char *buf)
             printf("lexical error %s\n", buf);
     }
     free(largs);
-    free(threads);
+    free(threads);*/
 }
 
 mach_s *getmach(lex_s *lex, u_char *id)
@@ -853,7 +842,7 @@ void mscan (lexargs_s *args)
 {
     pnonterm_s result;
     
-    result = callnonterm (args->lex, args->buf, args->machine, args->machine->start);
+    //result = callnonterm (args->lex, args->buf, args->machine, args->machine->start);
     args->bread = result.offset;
     args->accepted = result.success;
 }
