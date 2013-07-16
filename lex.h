@@ -18,6 +18,7 @@ typedef struct idtnode_s idtnode_s;
 typedef struct token_s token_s;
 typedef struct nfa_s nfa_s;
 typedef struct nfa_node_s nfa_node_s;
+typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
 
 struct token_s
@@ -51,6 +52,21 @@ struct nfa_s
     nfa_node_s *start;
     nfa_node_s *final;
 };
+
+struct nfa_node_s
+{
+    uint16_t nedges;
+    uint16_t ncycles;
+    nfa_edge_s **edges;
+    nfa_edge_s **cycles;
+};
+
+struct nfa_edge_s
+{
+    token_s *token;
+    nfa_node_s *state;
+};
+
 
 struct mach_s
 {

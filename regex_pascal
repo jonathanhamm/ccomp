@@ -38,7 +38,7 @@ numlreal
 
 <optional_fraction>=>
     . <digits> | \E
-    
+        
 <optional_exponent>=>
     ( E ( \+ | - | \E ) <digits> ) | \E 
 
