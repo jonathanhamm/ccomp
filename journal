@@ -39,5 +39,16 @@
     act as a parent node. Each set comprising the union operations will be 
     
 7/13/13
-    I made a major revision to the construction of the regex NFA. It now uses a much strictor adherence to Thompson's construction 
+    I made a major revision to the construction of the regex NFA. It now uses a much stricter adherence to Thompson's construction 
     algorithm, which has produced much more elegant code. 
+
+7/14/13
+    Worked more on the NFA construction. The NFA is being constructed recursively in a post-order fashion. So far this is causing major
+    complications for unions, since Thompson's algorithm requires these to be surrounded by two states with epsilon transitions for each
+    union term. The parser must be able to add branches inside an NFA "union switch" in post order. 
+
+7/15/13
+    The parsing appears to work, but there is still a major issue with unions outside of parenthesis that involve concatenations. 
+    
+7/16/13
+    Might have fixed the problem with unions and concatenations in parsing. 

@@ -437,6 +437,22 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
 
 /******************************************************************************************************/
 
+void print_nfa(nfa_node_s *start, nfa_node_s *final)
+{
+    uint16_t i;
+ 
+    if (start == final)
+        return;
+    printf("start->nedges: %d\n", start->nedges);
+    for (i = 0; i < start->nedges; i++) {
+        printf("edge: %s\n", start->edges[i]->token->lexeme);
+        if (start != start->edges[i]->state)
+           print_nfa(start->edges[i]->state, final);
+        else
+            printf("aaaaaaa\n");
+    }
+}
+
 void prx_texp (lex_s *lex, token_s **curr)
 {
     nfa_s *NULL_1 = NULL, *NULL_2 = NULL;
@@ -459,7 +475,13 @@ void prx_texp (lex_s *lex, token_s **curr)
             nterm->prev = NULL;
             snprintf(nterm->lexeme, MAX_LEXLEN, "Start: %s", (*curr)->prev->prev->lexeme);
             lex->machs->nfa = prx_expression(lex , curr, &NULL_1, &NULL_2);
-            printf("%s: %d %s\n\n", nterm->lexeme, lex->machs->nfa->start->nedges, lex->machs->nfa->start->edges[0]->token->lexeme);
+            if (NULL_1) {
+                insert_at_branch (NULL_1, NULL_2, lex->machs->nfa);
+                lex->machs->nfa = NULL_1;
+            }
+            printf("%s: %d %s\n", nterm->lexeme, lex->machs->nfa->start->nedges, lex->machs->nfa->start->edges[0]->token->lexeme);
+            print_nfa(lex->machs->nfa->start, lex->machs->nfa->final);
+            printf("\n\n");
         }
         else
             printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -496,10 +518,8 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
     exp_ = prx_expression_(lex, curr, unfa, concat);
     if (exp_.op == OP_UNION) {
         if (*unfa) {
-            addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
-            addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
-            nfa->start = (*unfa)->start;
-            nfa->final = (*unfa)->final;
+            addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), nfa->start));
+            addedge(nfa->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
         }
         else {
             *unfa = nfa;
@@ -511,17 +531,15 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), nfa->final));
         }
         *concat = term;
-        nfa = *unfa;
     }
     else if (exp_.op == OP_CONCAT) {
         if (*unfa) {
-            insert_at_branch (*unfa, *concat, exp_.nfa);
-            *concat = exp_.nfa;
-            //reparent(term->final, exp_.nfa->start);
+            insert_at_branch (*unfa, *concat, nfa);
+            *concat = term;
         }
         else {
-            reparent(term->final, exp_.nfa->start);
-            term->final = exp_.nfa->final;
+            reparent(term->final, nfa->start);
+            term->final = nfa->final;
         }
     }
     return nfa;
@@ -586,8 +604,8 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
                 if (*unfa) {
                     addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
                     addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
-                    nfa->start = (*unfa)->start;
-                    nfa->final = (*unfa)->final;
+                   // nfa->start = (*unfa)->start;
+                  //  nfa->final = (*unfa)->final;
                 }
                 else {
                     start = nfa_node_s_();
@@ -606,7 +624,6 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
                 if (*unfa) {
                     insert_at_branch (*unfa, *concat, exp_.nfa);
                     *concat = exp_.nfa;
-                    return *unfa;
                 }
                 else {
                     reparent (nfa->final, exp_.nfa->start);
