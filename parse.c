@@ -21,7 +21,7 @@ parse_s *build_parse (const char *file)
     buf = readfile(file);
     parse = calloc(1, sizeof(*parse));
     if (!parse) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         return NULL;
     }
     

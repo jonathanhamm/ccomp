@@ -282,7 +282,7 @@ int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uin
     
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         return -1;
     }
     ntok->type.val = type;
@@ -359,7 +359,7 @@ token_s *make_epsilon (void)
     
     new = calloc(1, sizeof(*new));
     if (!new) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
     strcpy(new->lexeme, "EPSILON");
@@ -374,7 +374,7 @@ nfa_edge_s *nfa_edge_s_(token_s *token, nfa_node_s *state)
     
     edge = calloc(1, sizeof(*edge));
     if (!edge) {
-        perror("Heap Allocation error");
+        perror("Memory Allocation error");
         exit(EXIT_FAILURE);
     }
     edge->token = token;
@@ -389,7 +389,7 @@ void addedge (nfa_node_s *start, nfa_edge_s *edge)
     else
         start->edges = malloc(sizeof(*start->edges));
     if (!start->edges) {
-        perror("Heap Allocation error");
+        perror("Memory Allocation error");
         exit(EXIT_FAILURE);
     }
     start->edges[start->nedges] = edge;
@@ -405,7 +405,7 @@ void addcycle (nfa_node_s *start, nfa_node_s *dest)
     else
         start->cycles = malloc(sizeof(*start->cycles));
     if (!start->cycles) {
-        perror("Heap Allocation error");
+        perror("Memory Allocation error");
         exit(EXIT_FAILURE);
     }
     edge = nfa_edge_s_(make_epsilon(), dest);
@@ -430,8 +430,8 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
             reparent (insert->final, concat->start);
             insert->final = concat->final;
             unfa->start->edges[i]->state = insert->start;
-            free(insert);
-            free(concat);
+            //free(insert);
+            //free(concat);
             break;
         }
     }
@@ -472,7 +472,7 @@ void prx_texp (lex_s *lex, token_s **curr)
             *curr = (*curr)->next;
             nterm = malloc(sizeof(*nterm));
             if (!nterm) {
-                perror("Heap Allocation Error");
+                perror("Memory Allocation Error");
                 return;
             }
             nterm->lineno = 0;
@@ -627,6 +627,7 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             }
             else if (exp_.op == OP_CONCAT) {
                 if (*unfa) {
+                    printf("odd call\n");
                     insert_at_branch (*unfa, *concat, exp_.nfa);
                     *concat = exp_.nfa;
                 }
@@ -680,7 +681,7 @@ lex_s *lex_s_ (void)
     
     lex = calloc(1,sizeof(*lex));
     if (!lex) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         return NULL;
     }
     lex->kwtable = idtable_s_();
@@ -693,12 +694,12 @@ idtable_s *idtable_s_ (void)
     
     table = calloc(1, sizeof(*table));
     if (!table) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         return NULL;
     }
     table->root = calloc(1, sizeof(*table->root));
     if (!table->root) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         return NULL;
     }
     return table;
@@ -733,7 +734,7 @@ int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str)
     }
     nnode = calloc (1, sizeof(*nnode));
     if (!(nnode && trie->children)) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         return -1;
     }
     nnode->c = *str;
@@ -799,7 +800,7 @@ void addmachine (lex_s *lex, token_s *tok)
     
     nm = calloc(1, sizeof(*nm));
     if (!nm) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         return; 
     }
     nm->nterm = tok;
@@ -821,7 +822,7 @@ token_s *lex (lex_s *lex, u_char *buf)
     largs = malloc(lex->nmachs * sizeof(*largs));
     threads = malloc(lex->nmachs * sizeof(*threads));
     if (!(largs && threads)) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         return NULL;
     }
     while (*buf != UEOF) {
