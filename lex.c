@@ -1,5 +1,5 @@
 /*
- Author: Jonathan Hamm
+ Author: Rasputin
  
  lex.c
  */
@@ -343,12 +343,12 @@ void prx_tokens_ (lex_s *lex, token_s **curr)
     }
 }
 /*********************************** EXPIRIMENTAL NEW ROUTINES *************************************/
-inline nfa_s *nfa_ (void)
+static inline nfa_s *nfa_ (void)
 {
     return calloc(1, sizeof(nfa_s));
 }
 
-inline nfa_node_s *nfa_node_s_ (void)
+static inline nfa_node_s *nfa_node_s_ (void)
 {
     return calloc(1, sizeof(nfa_node_s));
 }
@@ -430,6 +430,8 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
             reparent (insert->final, concat->start);
             insert->final = concat->final;
             unfa->start->edges[i]->state = insert->start;
+            free(insert);
+            free(concat);
             break;
         }
     }
