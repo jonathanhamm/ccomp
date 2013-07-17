@@ -441,16 +441,21 @@ void print_nfa(nfa_node_s *start, nfa_node_s *final)
 {
     uint16_t i;
  
-    if (start == final)
+    if (start == final) {
+        printf("breakout\n");
         return;
+    }
     printf("start->nedges: %d\n", start->nedges);
     for (i = 0; i < start->nedges; i++) {
-        printf("edge: %s\n", start->edges[i]->token->lexeme);
+        printf("edge: %s to %p\n", start->edges[i]->token->lexeme, start->edges[i]->state);
         if (start != start->edges[i]->state)
            print_nfa(start->edges[i]->state, final);
         else
             printf("aaaaaaa\n");
     }
+    for (i = 0; i < start->ncycles; i++)
+        printf("cycle: %s to %p\n", start->cycles[i]->token->lexeme, start->cycles[i]->state);
+    printf("end loop\n");
 }
 
 void prx_texp (lex_s *lex, token_s **curr)
@@ -604,8 +609,6 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
                 if (*unfa) {
                     addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
                     addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
-                   // nfa->start = (*unfa)->start;
-                  //  nfa->final = (*unfa)->final;
                 }
                 else {
                     start = nfa_node_s_();
