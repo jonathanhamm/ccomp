@@ -426,6 +426,7 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
     int i;
     
     for (i = unfa->start->nedges-1; i >= 0; i--) {
+        printf("comparing: %p %p\n", unfa->start->edges[i]->state, concat->start);
         if (unfa->start->edges[i]->state == concat->start) {
             reparent (insert->final, concat->start);
             insert->final = concat->final;
@@ -436,9 +437,10 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
             printf("------------------------------------ insert performed ------------------------------------\n");
             //free(insert);
             //free(concat);
-            return;
+            break;
         }
     }
+    printf("\n");
 }
 
 /******************************************************************************************************/
@@ -588,7 +590,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
 nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
     exp__s exp_;
-    nfa_s *nfa, *NULL_1 = NULL, *NULL_2 = NULL, *backup1;
+    nfa_s *nfa, *NULL_1 = NULL, *NULL_2 = NULL, *backup1, *u_nfa;
     nfa_node_s *start, *final;
     
     switch((*curr)->type.val) {
@@ -617,15 +619,14 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
                     addedge(nfa->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
                 }
                 else {
-                    start = nfa_node_s_();
-                    final = nfa_node_s_();
-                    addedge(start, nfa_edge_s_(make_epsilon(), nfa->start));
-                    addedge(start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
-                    addedge(nfa->final, nfa_edge_s_(make_epsilon(), final));
-                    addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), final));
-                    *unfa = nfa;
-                    nfa->start = start;
-                    nfa->final = final;
+                    u_nfa = nfa_();
+                    u_nfa->start = nfa_node_s_();
+                    u_nfa->final = nfa_node_s_();
+                    addedge(u_nfa->start, nfa_edge_s_(make_epsilon(), nfa->start));
+                    addedge(u_nfa->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
+                    addedge(nfa->final, nfa_edge_s_(make_epsilon(), u_nfa->final));
+                    addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), u_nfa->final));
+                    *unfa = u_nfa;
                 }
                 *concat = nfa;
             }
