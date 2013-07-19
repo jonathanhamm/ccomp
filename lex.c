@@ -26,6 +26,7 @@
 #define LEXTYPE_EOF         16
 #define LEXTYPE_NULLSET     17
 #define LEXTYPE_START       18
+#define LEXTYPE_ANNOTATE    19
 
 #define LEXATTR_DEFAULT     0
 #define LEXATTR_WSPACEEOL   1
@@ -86,6 +87,7 @@ static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **
 static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static int prx_closure (lex_s *lex, token_s **curr);
+static void prx_annotation (nfa_edge_s *edge, token_s **curr);
 
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
 
@@ -128,6 +130,30 @@ lex_s *buildlex (const char *file)
             case '\n':
                 lineno++;
                 addtok (&list, "EOL", lineno, LEXTYPE_EOL, LEXATTR_DEFAULT);
+                break;
+            case '{':
+                i++;
+                while (buf[i] <= ' ')
+                    i++;
+                if (buf[i] >= '0' && buf[i] <= '9') {
+                    for (bpos = 0; buf[i] >= '0' && buf[i] <= '9'; i++, bpos++) {
+                        if (bpos == MAX_LEXLEN) {
+                            perror("Lexical Error: Too Long Annotation ID");
+                            exit(EXIT_FAILURE);
+                        }
+                        lbuf[bpos] = buf[i];
+                    }
+                }
+                while (buf[i] <= ' ')
+                    i++;
+                if (buf[i] == '}') {
+                    lbuf[bpos] = '\0';
+                    addtok (&list, lbuf, lineno, LEXTYPE_ANNOTATE, LEXATTR_DEFAULT);
+                }
+                else {
+                    perror("Lexical Error: Too Long Annotation ID");
+                    exit(EXIT_FAILURE);
+                }
                 break;
             case '=':
                 if (buf[i+1] == '>') {
@@ -190,6 +216,7 @@ fallthrough_:
                         case '+':
                         case '?':
                         case '|':
+                        case '{':
                             if (bpos > 0) {
                                 lbuf[bpos] = '\0';
                                 addtok (&list, lbuf, lineno, LEXTYPE_TERM, j);
@@ -501,8 +528,6 @@ void prx_texp (lex_s *lex, token_s **curr)
         printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
 }
 
-int bob = 0;
-
 nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
     exp__s exp_;
@@ -590,8 +615,8 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
 nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
     exp__s exp_;
+    nfa_edge_s *edge;
     nfa_s *nfa, *NULL_1 = NULL, *NULL_2 = NULL, *backup1, *u_nfa;
-    nfa_node_s *start, *final;
     
     switch((*curr)->type.val) {
         case LEXTYPE_OPENPAREN:
@@ -616,8 +641,10 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             nfa = nfa_();
             nfa->start = nfa_node_s_();
             nfa->final = nfa_node_s_();
-            addedge(nfa->start, nfa_edge_s_(*curr, nfa->final));
+            edge = nfa_edge_s_(*curr, nfa->final);
+            addedge(nfa->start, edge);
             *curr = (*curr)->next;
+            prx_annotation (edge, curr);
             exp_ = prx_expression_(lex, curr, unfa, concat);
             if (exp_.op == OP_UNION) {
                 if (*unfa) {
@@ -682,6 +709,14 @@ int prx_closure (lex_s *lex, token_s **curr)
         case CLOSTYPE_ORNULL:
         default:
             return type;
+    }
+}
+
+void prx_annotation (nfa_edge_s *edge, token_s **curr)
+{
+    if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
+        edge->annotation = atoi((*curr)->lexeme);
+        *curr = (*curr)->next;
     }
 }
 

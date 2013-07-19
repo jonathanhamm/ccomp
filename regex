@@ -93,7 +93,7 @@
         <term>.branches := <expression>.branches;
     }
     |
-    terminal <expression'>
+    terminal <annotation> <expression'>
     {
         terminal:
             start := makenode()
@@ -123,7 +123,7 @@
         return { <term> }
     }
     |
-    nonterm <expression'>
+    nonterm <annotation> <expression'>
     {
         nonterm:
             start := makenode()
@@ -154,7 +154,11 @@
             <term>.final := final
         return { <term> }
     }
+    |
+    ε <annotation>
 
+<annotation>=>
+    integer {setannotation(edge, integer.val) | ε
 
 <closure>=>
     * { <closure>.curr := kleenestar; }

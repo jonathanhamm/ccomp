@@ -63,6 +63,7 @@ struct nfa_node_s
 
 struct nfa_edge_s
 {
+    int annotation;
     token_s *token;
     nfa_node_s *state;
 };
