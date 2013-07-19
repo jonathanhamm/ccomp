@@ -545,8 +545,15 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             term = clos_nfa;
             break;
         case CLOSTYPE_POS:
+            clos_nfa = nfa_();
+            clos_nfa->start = term->start;
+            clos_nfa->final = nfa_node_s_();
+            addedge(term->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
+            addcycle(clos_nfa->final, clos_nfa->start);
+            term = clos_nfa;
             break;
         case CLOSTYPE_ORNULL:
+            addedge(term->start, nfa_edge_s_(make_epsilon(), term->final));
             break;
         case CLOSTYPE_NONE:
             break;
@@ -858,59 +865,7 @@ void addmachine (lex_s *lex, token_s *tok)
 
 token_s *lex (lex_s *lex, u_char *buf)
 {
-    int32_t tmp;
-    uint16_t i, j, threadsmade;
-    lexargs_s *largs, *chosen;
-    pthread_t *threads;
-    mach_s *machine;
-    /*
-    largs = malloc(lex->nmachs * sizeof(*largs));
-    threads = malloc(lex->nmachs * sizeof(*threads));
-    if (!(largs && threads)) {
-        perror("Memory Allocation Error");
-        return NULL;
-    }
-    while (*buf != UEOF) {
-        while (*buf <= ' ')
-            buf++;
-        for (i = 0, threadsmade = 0, machine = lex->machs; machine; i++, machine = machine->next) {
-            for (j = 0, tmp = 0; j < machine->start->nbranches; j++) {
-                tmp = rlmatch (lex, machine, machine->start->branches[j], buf);
-                if (tmp) {
-                    printf("at machine: %s\n", machine->nterm->lexeme);
-                    largs[threadsmade].accepted = false;
-                    largs[threadsmade].bread = 0;
-                    largs[threadsmade].buf = buf;
-                    largs[threadsmade].lex = lex;
-                    largs[threadsmade].machine = machine;
-                    pthread_create(&threads[threadsmade], NULL, (void *(*)(void *))mscan, &largs[threadsmade]);
-                    threadsmade++;
-                    break;
-                }
-            }
-        }
-        for (i = 0; i < threadsmade; i++)
-            pthread_join(threads[i], NULL);
-        chosen = NULL;
-        for (i = 0; i < threadsmade; i++) {
-            printf("checking with: %s\n", largs[i].machine->start->token->lexeme);
-            if (largs[i].accepted && (!chosen || largs[i].bread > chosen->bread)) {
-                tmp = largs[i].bread;
-                chosen = &largs[i];
-            }
-        }
-        if (chosen) {
-            char c = *(buf + chosen->bread);
-            *(buf + tmp) = '\0';
-            printf("\n\nsuccessfully parsed %s, %d from %s\n\n", buf, chosen->bread, chosen->machine->nterm->lexeme);
-            *(buf + chosen->bread) = c;
-            buf += chosen->bread;
-        }
-        else
-            printf("lexical error %s\n", buf);
-    }
-    free(largs);
-    free(threads);*/
+    
 }
 
 mach_s *getmach(lex_s *lex, u_char *id)
