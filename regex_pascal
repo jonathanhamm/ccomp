@@ -40,7 +40,7 @@ numlreal
     . <digits> | \E
         
 <optional_exponent>=>
-     E ( \+ | - | \E ) <digits> | \E 
+    ( E ( \+ | - | \E ) <digits> ) | \E 
 
 <num>=>
     <digits> <optional_fraction> <optional_exponent>

@@ -506,18 +506,18 @@ int bob = 0;
 nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
     exp__s exp_;
-    nfa_s *nfa, *term;
+    nfa_s *un_nfa, *clos_nfa, *term;
     
     term = prx_term(lex, curr, unfa, concat);
-    nfa = term;
     switch (prx_closure(lex, curr)) {
         case CLOSTYPE_KLEENE:
-            nfa = nfa_();
-            nfa->start = nfa_node_s_();
-            nfa->final = nfa_node_s_();
-            addedge(nfa->start, nfa_edge_s_(make_epsilon(), term->start));
-            addedge(term->final, nfa_edge_s_(make_epsilon(), nfa->final));
+            clos_nfa = nfa_();
+            clos_nfa->start = nfa_node_s_();
+            clos_nfa->final = nfa_node_s_();
+            addedge(clos_nfa->start, nfa_edge_s_(make_epsilon(), term->start));
+            addedge(term->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
             addcycle(term->final, term->start);
+            term = clos_nfa;
             break;
         case CLOSTYPE_POS:
             break;
@@ -535,14 +535,14 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             addedge(term->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
         }
         else {
-            nfa = nfa_();
-            nfa->start = nfa_node_s_();
-            nfa->final = nfa_node_s_();
-            addedge(nfa->start, nfa_edge_s_(make_epsilon(), term->start));
-            addedge(nfa->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
-            addedge(term->final, nfa_edge_s_(make_epsilon(), nfa->final));
-            addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), nfa->final));
-            *unfa = nfa;
+            un_nfa = nfa_();
+            un_nfa->start = nfa_node_s_();
+            un_nfa->final = nfa_node_s_();
+            addedge(un_nfa->start, nfa_edge_s_(make_epsilon(), term->start));
+            addedge(un_nfa->start, nfa_edge_s_(make_epsilon(), exp_.nfa->start));
+            addedge(term->final, nfa_edge_s_(make_epsilon(), un_nfa->final));
+            addedge(exp_.nfa->final, nfa_edge_s_(make_epsilon(), un_nfa->final));
+            *unfa = un_nfa;
         }
         *concat = term;
     }
@@ -601,9 +601,15 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             *curr = (*curr)->next;
-            *concat = *unfa;
             *unfa = backup1;
-            return nfa;
+            if (NULL_1) {
+                *concat = NULL_1;
+                return NULL_1;
+            }
+            else {
+                *concat = nfa;
+                return nfa;
+            }
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
