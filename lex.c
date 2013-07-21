@@ -446,6 +446,7 @@ void reparent (nfa_node_s *parent, nfa_node_s *oldparent)
     
     for (i = 0; i < oldparent->nedges; i++)
         addedge (parent, oldparent->edges[i]);
+    free(oldparent);
 }
 
 void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
@@ -453,21 +454,14 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
     int i;
     
     for (i = unfa->start->nedges-1; i >= 0; i--) {
-        printf("comparing: %p %p\n", unfa->start->edges[i]->state, concat->start);
         if (unfa->start->edges[i]->state == concat->start) {
             reparent (insert->final, concat->start);
             insert->final = concat->final;
-            if (unfa->start == insert->start)
-                asm("hlt");
             unfa->start->edges[i]->state = insert->start;
-            
-            printf("------------------------------------ insert performed ------------------------------------\n");
-            //free(insert);
-            //free(concat);
-            break;
+            free(concat);
+            return;
         }
     }
-    printf("\n");
 }
 
 /******************************************************************************************************/
@@ -513,13 +507,14 @@ void prx_texp (lex_s *lex, token_s **curr)
             nterm->type.attribute = LEXATTR_DEFAULT;
             nterm->next = NULL;
             nterm->prev = NULL;
-            snprintf(nterm->lexeme, MAX_LEXLEN, "Start: %s", (*curr)->prev->prev->lexeme);
+           // snprintf(nterm->lexeme, MAX_LEXLEN, "Start: %s", (*curr)->prev->prev->lexeme);
+            strcpy(nterm->lexeme, (*curr)->prev->prev->lexeme);
             lex->machs->nfa = prx_expression(lex , curr, &uparent, &concat);
             if (uparent)
                 lex->machs->nfa = uparent;
-            printf("%s: %d %s\n", nterm->lexeme, lex->machs->nfa->start->nedges, lex->machs->nfa->start->edges[0]->token->lexeme);
-            print_nfa(lex->machs->nfa->start, lex->machs->nfa->final);
-            printf("\n\n");
+            //printf("%s: %d %s\n", nterm->lexeme, lex->machs->nfa->start->nedges, lex->machs->nfa->start->edges[0]->token->lexeme);
+            //print_nfa(lex->machs->nfa->start, lex->machs->nfa->final);
+            //printf("\n\n");
         }
         else
             printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -540,8 +535,10 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             clos_nfa->start = nfa_node_s_();
             clos_nfa->final = nfa_node_s_();
             addedge(clos_nfa->start, nfa_edge_s_(make_epsilon(), term->start));
+            addedge(clos_nfa->start, nfa_edge_s_(make_epsilon(), clos_nfa->final));
             addedge(term->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
-            addcycle(term->final, term->start);
+            //addcycle(term->final, term->start);
+            addedge(term->final, nfa_edge_s_(make_epsilon(), term->start));
             term = clos_nfa;
             break;
         case CLOSTYPE_POS:
@@ -549,7 +546,8 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             clos_nfa->start = term->start;
             clos_nfa->final = nfa_node_s_();
             addedge(term->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
-            addcycle(clos_nfa->final, clos_nfa->start);
+            //addcycle(clos_nfa->final, clos_nfa->start);
+            addedge(clos_nfa->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
             term = clos_nfa;
             break;
         case CLOSTYPE_ORNULL:
@@ -686,7 +684,7 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             return NULL;
     }
     return nfa;
-} 
+}
 
 int prx_closure (lex_s *lex, token_s **curr)
 {
@@ -859,20 +857,165 @@ void addmachine (lex_s *lex, token_s *tok)
     if (lex->machs)
         nm->next = lex->machs;
     lex->machs = nm;
-    lex->curr = nm;
     lex->nmachs++;
+}
+
+int tokmatch(u_char *buf, token_s *tok)
+{
+    uint16_t i, len;
+    
+    if (*buf == UEOF)
+        for(;;)printf("EOF\n");
+    
+   // if (*buf == '4')
+     //   asm("hlt");
+    len = strlen(tok->lexeme);
+    for (i = 0; i < len; i++) {
+        if (buf[i] == UEOF)
+            for(;;)printf("EOF\n");
+        if (buf[i] != tok->lexeme[i])
+            return 0;
+    }
+    printf("matched: %s %d\n", tok->lexeme, len);
+    return len;
+}
+
+typedef struct match_s match_s;
+
+struct match_s
+{
+    int n;
+    bool success;
+};
+
+typedef struct cycle_s cycle_s;
+
+struct cycle_s
+{
+    cycle_s *next;
+    void *ptr;
+};
+
+void cyc_push (cycle_s **stack, void *ptr)
+{
+    cycle_s *node;
+    
+    node = malloc(sizeof(*node));
+    if (!node) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    node->ptr = ptr;
+    node->next = *stack;
+    *stack = node;
+}
+
+void cyc_clear (cycle_s **stack)
+{
+    free_llist (*stack);
+    *stack = NULL;
+}
+
+bool cyc_search (cycle_s *stack, void *ptr)
+{
+    while (stack) {
+        if (stack->ptr == ptr) {
+            return true;
+        }
+        stack = stack->next;
+    }
+    return false;
+}
+
+bool test_and_push (cycle_s **stack, void *ptr)
+{
+    if (cyc_search (*stack, ptr))
+        return true;
+    cyc_push(stack, ptr);
+    return false;
+}
+
+match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, cycle_s **stack, u_char *buf)
+{
+    int tmatch, tmpmatch;
+    uint16_t i;
+    mach_s *tmp;
+    match_s curr, result;
+    
+   // printf("call %s\n", buf);
+    curr.n = 0;
+    curr.success = false;
+    if (state == nfa->final)
+        curr.success = true;
+    for (i = 0; i < state->nedges; i++) {
+        switch (state->edges[i]->token->type.val) {
+            case LEXTYPE_EPSILON:
+                result = nfa_match (lex, nfa, state->edges[i]->state, stack, buf);
+                if (result.success) {
+                    curr.success = true;
+                    if (result.n > curr.n)
+                        curr.n = result.n;
+                }
+                break;
+            case LEXTYPE_NONTERM:
+                tmp = getmach(lex, state->edges[i]->token->lexeme);
+                result = nfa_match (lex, tmp->nfa, tmp->nfa->start, stack, buf);
+                if (result.success) {
+                    tmpmatch = result.n;
+                    result = nfa_match(lex, nfa, state->edges[i]->state, stack, &buf[result.n]);
+                    if (result.success) {
+                        curr.success = true;
+                        if (result.n + tmpmatch > curr.n)
+                            curr.n = result.n + tmpmatch;
+                    }
+                }
+                break;
+            default:
+                tmatch = tokmatch(buf, state->edges[i]->token);
+                if (tmatch) {
+                    result = nfa_match(lex, nfa, state->edges[i]->state, stack, &buf[tmatch]);
+                    if (result.success) {
+                        curr.success = true;
+                        if (result.n + tmatch > curr.n)
+                            curr.n = result.n + tmatch;
+                    }
+                }
+                break;
+        }
+    }
+    return curr;
 }
 
 token_s *lex (lex_s *lex, u_char *buf)
 {
+    nfa_s *nfa;
+    mach_s *mach;
+    match_s res;
+    uint16_t i;
+    cycle_s *stack;
     
+    stack = NULL;
+    for (mach = lex->machs; mach; mach = mach->next) {
+        printf("\n\nattempting to match from %s\n", mach->nterm->lexeme);
+        while (*buf <= ' ')
+            buf++;
+        res = nfa_match(lex, mach->nfa, mach->nfa->start, &stack, buf);
+        printf("out\n");
+        if (res.success && res.n) {
+            u_char c = buf[res.n];
+            buf[res.n] = '\0';
+            printf("-------------------->Successfully Matched %s\n", buf);
+            buf[res.n] = c;
+        }
+            
+    }
 }
 
 mach_s *getmach(lex_s *lex, u_char *id)
 {
     mach_s *iter;
-
-    for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, id); iter = iter->next);
+    
+    for (iter = lex->machs; strcmp(iter->nterm->lexeme, id); iter = iter->next);
     return iter;
 }
 

@@ -79,7 +79,6 @@ struct mach_s
 struct lex_s
 {
     uint16_t nmachs;
-    mach_s *curr;
     mach_s *machs;
     idtable_s *kwtable;
 };

@@ -5,7 +5,6 @@ int main(int argc, const char *argv[])
 {
     token_s *tokens;
     
-    printf("%s\n%s\n", argv[1], argv[2]);
     if (argc == 1)
         tokens = lex (buildlex ("regex_pascal"), readfile ("samples/lex_sample1"));
     else if (argc == 2)

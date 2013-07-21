@@ -43,7 +43,7 @@ numlreal
     E ( \+ | - | \E ) <digits> | \E 
 
 <num>=>
-    <digits> <optional_fraction>{1} <optional_exponent>{2}
+    <digits> <optional_fraction> <optional_exponent>
     
 <relop>=>
     = | <> | < | <= | >= | >
