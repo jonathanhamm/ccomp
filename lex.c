@@ -865,14 +865,11 @@ int tokmatch(u_char *buf, token_s *tok)
     uint16_t i, len;
     
     if (*buf == UEOF)
-        for(;;)printf("EOF\n");
-    
-   // if (*buf == '4')
-     //   asm("hlt");
+        return EOF;
     len = strlen(tok->lexeme);
     for (i = 0; i < len; i++) {
         if (buf[i] == UEOF)
-            for(;;)printf("EOF\n");
+            return EOF;
         if (buf[i] != tok->lexeme[i])
             return 0;
     }
@@ -885,97 +882,54 @@ typedef struct match_s match_s;
 struct match_s
 {
     int n;
+    int attribute;
     bool success;
 };
 
-typedef struct cycle_s cycle_s;
-
-struct cycle_s
-{
-    cycle_s *next;
-    void *ptr;
-};
-
-void cyc_push (cycle_s **stack, void *ptr)
-{
-    cycle_s *node;
-    
-    node = malloc(sizeof(*node));
-    if (!node) {
-        perror("Memory Allocation Error");
-        exit(EXIT_FAILURE);
-    }
-    node->ptr = ptr;
-    node->next = *stack;
-    *stack = node;
-}
-
-void cyc_clear (cycle_s **stack)
-{
-    free_llist (*stack);
-    *stack = NULL;
-}
-
-bool cyc_search (cycle_s *stack, void *ptr)
-{
-    while (stack) {
-        if (stack->ptr == ptr) {
-            return true;
-        }
-        stack = stack->next;
-    }
-    return false;
-}
-
-bool test_and_push (cycle_s **stack, void *ptr)
-{
-    if (cyc_search (*stack, ptr))
-        return true;
-    cyc_push(stack, ptr);
-    return false;
-}
-
-match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, cycle_s **stack, u_char *buf)
+match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
 {
     int tmatch, tmpmatch;
     uint16_t i;
     mach_s *tmp;
     match_s curr, result;
-    
-   // printf("call %s\n", buf);
+
     curr.n = 0;
+    curr.attribute = 0;
     curr.success = false;
     if (state == nfa->final)
         curr.success = true;
     for (i = 0; i < state->nedges; i++) {
         switch (state->edges[i]->token->type.val) {
             case LEXTYPE_EPSILON:
-                result = nfa_match (lex, nfa, state->edges[i]->state, stack, buf);
+                result = nfa_match (lex, nfa, state->edges[i]->state, buf);
                 if (result.success) {
                     curr.success = true;
+                    curr.attribute = state->edges[i]->annotation;
                     if (result.n > curr.n)
                         curr.n = result.n;
                 }
                 break;
             case LEXTYPE_NONTERM:
                 tmp = getmach(lex, state->edges[i]->token->lexeme);
-                result = nfa_match (lex, tmp->nfa, tmp->nfa->start, stack, buf);
+                result = nfa_match (lex, tmp->nfa, tmp->nfa->start, buf);
                 if (result.success) {
                     tmpmatch = result.n;
-                    result = nfa_match(lex, nfa, state->edges[i]->state, stack, &buf[result.n]);
+                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n]);
                     if (result.success) {
                         curr.success = true;
+                        curr.attribute = state->edges[i]->annotation;
                         if (result.n + tmpmatch > curr.n)
                             curr.n = result.n + tmpmatch;
                     }
                 }
                 break;
-            default:
+            default: /* case LEXTYPE_TERM */
                 tmatch = tokmatch(buf, state->edges[i]->token);
-                if (tmatch) {
-                    result = nfa_match(lex, nfa, state->edges[i]->state, stack, &buf[tmatch]);
+                if (tmatch && tmpmatch != EOF) {
+                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch]);
                     if (result.success) {
                         curr.success = true;
+                        curr.attribute = state->edges[i]->annotation;
                         if (result.n + tmatch > curr.n)
                             curr.n = result.n + tmatch;
                     }
@@ -990,24 +944,32 @@ token_s *lex (lex_s *lex, u_char *buf)
 {
     nfa_s *nfa;
     mach_s *mach;
-    match_s res;
+    match_s res, best;
     uint16_t i;
-    cycle_s *stack;
     
-    stack = NULL;
-    for (mach = lex->machs; mach; mach = mach->next) {
-        printf("\n\nattempting to match from %s\n", mach->nterm->lexeme);
-        while (*buf <= ' ')
-            buf++;
-        res = nfa_match(lex, mach->nfa, mach->nfa->start, &stack, buf);
-        printf("out\n");
-        if (res.success && res.n) {
-            u_char c = buf[res.n];
-            buf[res.n] = '\0';
-            printf("-------------------->Successfully Matched %s\n", buf);
-            buf[res.n] = c;
+    while (*buf != UEOF) {
+        best.attribute = 0;
+        best.n = 0;
+        best.success = false;
+        for (mach = lex->machs; mach; mach = mach->next) {
+            printf("\n\nattempting to match from %s\n", mach->nterm->lexeme);
+            while (*buf <= ' ')
+                buf++;
+            res = nfa_match(lex, mach->nfa, mach->nfa->start, buf);
+            if (res.success && res.n > best.n)
+                best = res;
         }
-            
+        if (best.success) {
+            u_char c = buf[best.n];
+            buf[best.n] = '\0';
+            printf("-------------------->Successfully Matched %s\n", buf);
+            buf[best.n] = c;
+            buf += best.n;
+        }
+        else {
+            printf ("Done\n");
+            break;
+        }
     }
 }
 
