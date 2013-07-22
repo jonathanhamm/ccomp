@@ -15,4 +15,6 @@ extern u_char *readfile (const char *file);
 
 extern void free_llist (void *list);
 
+extern void println (u_char *buf);
+
 #endif

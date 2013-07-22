@@ -27,7 +27,7 @@ u_char *readfile (const char *file)
             bsize *= 2;
             buf = realloc(buf, bsize);
             if (!buf) {
-                perror("Heap Allocation Error");
+                perror("Memory Allocation Error");
                 fclose(f);
                 return NULL;
             }
@@ -48,4 +48,14 @@ void free_llist (void *list)
         list = *(void **)list;
         free(backup);
     }
+}
+
+void println (u_char *buf)
+{
+    do {
+        if (*buf == UEOF)
+            return;
+        putchar(*buf);
+    }
+    while (*buf++ != '\n');
 }

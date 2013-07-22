@@ -146,6 +146,13 @@ lex_s *buildlex (const char *file)
                         lbuf[bpos] = buf[i];
                     }
                 }
+                else if (buf[i] == 'a') {
+                    if (buf[i+1] == 'u')
+                    if (buf[i+2] == 't')
+                    if (buf[i+3] == 'o')
+                    if (buf[i+4] <= ' ')
+                        strncpy(lbuf, buf, 4);
+                }
                 while (buf[i] <= ' ')
                     i++;
                 if (buf[i] == '}') {
@@ -706,7 +713,11 @@ int prx_closure (lex_s *lex, token_s **curr)
 void prx_annotation (nfa_edge_s *edge, token_s **curr)
 {
     if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-        edge->annotation = atoi((*curr)->lexeme);
+        if (!strcmp((*curr)->lexeme, "auto")) {
+            
+        }
+        else
+            edge->annotation = atoi((*curr)->lexeme);
         *curr = (*curr)->next;
     }
 }
@@ -945,13 +956,16 @@ token_s *lex (lex_s *lex, u_char *buf)
     token_s *head = NULL, *tlist = NULL;
     
     c[1] = '\0';
+    println(buf);
     while (*buf != UEOF) {
         best.attribute = 0;
         best.n = 0;
         best.success = false;
         while (*buf <= ' ') {
-            if (*buf == '\n')
+            if (*buf == '\n') {
                 lineno++;
+                println(buf+1);
+            }
             buf++;
         }
         if (*buf == UEOF)
