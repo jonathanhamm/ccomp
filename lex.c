@@ -428,23 +428,6 @@ void addedge (nfa_node_s *start, nfa_edge_s *edge)
     start->nedges++;
 }
 
-void addcycle (nfa_node_s *start, nfa_node_s *dest)
-{
-    nfa_edge_s *edge;
-    
-    if (start->cycles)
-        start->cycles = realloc(start->cycles, sizeof(*start->cycles) * (start->ncycles+1));
-    else
-        start->cycles = malloc(sizeof(*start->cycles));
-    if (!start->cycles) {
-        perror("Memory Allocation error");
-        exit(EXIT_FAILURE);
-    }
-    edge = nfa_edge_s_(make_epsilon(), dest);
-    start->cycles[start->ncycles] = edge;
-    start->ncycles++;
-}
-
 void reparent (nfa_node_s *parent, nfa_node_s *oldparent)
 {
     uint16_t i;
@@ -487,8 +470,8 @@ void print_nfa(nfa_node_s *start, nfa_node_s *final)
         else
             printf("aaaaaaa\n");
     }
-    for (i = 0; i < start->ncycles; i++)
-        printf("cycle: %s to %p\n", start->cycles[i]->token->lexeme, start->cycles[i]->state);
+    //for (i = 0; i < start->ncycles; i++)
+      //  printf("cycle: %s to %p\n", start->cycles[i]->token->lexeme, start->cycles[i]->state);
     printf("end loop\n");
 }
 
@@ -516,14 +499,10 @@ void prx_texp (lex_s *lex, token_s **curr)
             nterm->type.attribute = LEXATTR_DEFAULT;
             nterm->next = NULL;
             nterm->prev = NULL;
-           // snprintf(nterm->lexeme, MAX_LEXLEN, "Start: %s", (*curr)->prev->prev->lexeme);
             strcpy(nterm->lexeme, (*curr)->prev->prev->lexeme);
             lex->machs->nfa = prx_expression(lex , curr, &uparent, &concat);
             if (uparent)
                 lex->machs->nfa = uparent;
-            //printf("%s: %d %s\n", nterm->lexeme, lex->machs->nfa->start->nedges, lex->machs->nfa->start->edges[0]->token->lexeme);
-            //print_nfa(lex->machs->nfa->start, lex->machs->nfa->final);
-            //printf("\n\n");
         }
         else
             printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -546,7 +525,6 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             addedge(clos_nfa->start, nfa_edge_s_(make_epsilon(), term->start));
             addedge(clos_nfa->start, nfa_edge_s_(make_epsilon(), clos_nfa->final));
             addedge(term->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
-            //addcycle(term->final, term->start);
             addedge(term->final, nfa_edge_s_(make_epsilon(), term->start));
             term = clos_nfa;
             break;
@@ -555,7 +533,6 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             clos_nfa->start = term->start;
             clos_nfa->final = nfa_node_s_();
             addedge(term->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
-            //addcycle(clos_nfa->final, clos_nfa->start);
             addedge(clos_nfa->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
             term = clos_nfa;
             break;
@@ -1019,6 +996,7 @@ token_s *lex (lex_s *lex, u_char *buf)
         else
             buf++;
     }
+    addtok(&tlist, "$", lineno, lex->typecount+1, LEXATTR_DEFAULT);
     for(tlist = head; tlist; tlist = tlist->next)
         printf("%s %d %d\n", tlist->lexeme, tlist->type.val, tlist->type.attribute);
     return head;

@@ -56,9 +56,7 @@ struct nfa_s
 struct nfa_node_s
 {
     uint16_t nedges;
-    uint16_t ncycles;
     nfa_edge_s **edges;
-    nfa_edge_s **cycles;
 };
 
 struct nfa_edge_s
