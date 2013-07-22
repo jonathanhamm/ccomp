@@ -21,6 +21,8 @@ typedef struct nfa_node_s nfa_node_s;
 typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
 
+typedef uint32_t (*annotation_f) (token_s **, u_char *buf);
+
 struct token_s
 {
     struct {
@@ -84,12 +86,14 @@ struct lex_s
 };
 
 extern token_s *lex (lex_s *lex, u_char *buf);
-extern lex_s *buildlex (const char *file);
+extern lex_s *buildlex (const char *file, annotation_f anotate);
+extern uint32_t regex_annotate (token_s **tlist, u_char *buf);
 extern idtable_s *idtable_s_ (void);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
 extern void idtable_insert (idtable_s *table, u_char *str);
 extern int idtable_lookup (idtable_s *table, u_char *str);
 extern int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute);
+
 
 #endif

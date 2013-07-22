@@ -50,8 +50,9 @@ void free_llist (void *list)
     }
 }
 
-void println (u_char *buf)
+void println (uint16_t no, u_char *buf)
 {
+    printf("%6d: ", no);
     do {
         if (*buf == UEOF)
             return;

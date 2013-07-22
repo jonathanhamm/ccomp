@@ -35,6 +35,8 @@
 #define LEXATTR_CHARDIG     0
 #define LEXATTR_NCHARDIG    1
 #define LEXATTR_BEGINDIG    2
+#define LEXATTR_NUM         0
+#define LEXATTR_WORD        1
 
 #define CLOSTYPE_NONE       0
 #define CLOSTYPE_KLEENE     1
@@ -96,16 +98,15 @@ static void addcycle (nfa_node_s *start, nfa_node_s *dest);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, u_char *id);
 
-lex_s *buildlex (const char *file)
+lex_s *buildlex (const char *file, annotation_f af)
 {
-    uint32_t i, j, lineno;
+    uint32_t i, j, lineno, tmp;
     u_char *buf;
     uint8_t bpos;
     u_char lbuf[2*MAX_LEXLEN + 1];
-    token_s *list, *backup;
+    token_s *list = NULL, *backup;
     lex_s *lex;
     
-    list = NULL;
     buf = readfile(file);
     if (!buf)
         return NULL;
@@ -134,7 +135,7 @@ lex_s *buildlex (const char *file)
                 addtok (&list, "EOL", lineno, LEXTYPE_EOL, LEXATTR_DEFAULT);
                 break;
             case '{':
-                i++;
+                /*i++;
                 while (buf[i] <= ' ')
                     i++;
                 if (buf[i] >= '0' && buf[i] <= '9') {
@@ -161,6 +162,13 @@ lex_s *buildlex (const char *file)
                 }
                 else {
                     perror("Lexical Error: Too Long Annotation ID");
+                    exit(EXIT_FAILURE);
+                }*/
+                tmp = af(&list, &buf[i]);
+                if (tmp)
+                    i += tmp;
+                else {
+                    perror("Error Parsing Regex");
                     exit(EXIT_FAILURE);
                 }
                 break;
@@ -315,6 +323,42 @@ doublebreak_:
     return lex;
 }
 
+int bob =0;
+
+uint32_t regex_annotate (token_s **tlist, u_char *buf)
+{
+    uint32_t bpos = 0;
+    u_char tmpbuf[MAX_LEXLEN+1];
+
+    buf++;
+    while (buf[bpos] != '}') {
+        while (buf[bpos] <= ' ')
+            bpos++;
+        if ((buf[bpos] >= 'a' && buf[bpos] <= 'z') || (buf[bpos] >= 'A' && buf[bpos] <= 'Z')) {
+            tmpbuf[bpos] = buf[bpos];
+            for (bpos++; ((buf[bpos] >= 'a' && buf[bpos] <= 'z') || (buf[bpos] >= 'A' && buf[bpos] <= 'Z')); bpos++) {
+                if (bpos == MAX_LEXLEN)
+                    return false;
+                tmpbuf[bpos] = buf[bpos];
+            }
+            tmpbuf[bpos] = '\0';
+            addtok(tlist, tmpbuf, 0, LEXTYPE_ANNOTATE, LEXATTR_WORD);
+        }
+        else if (buf[bpos] >= '0' && buf[bpos] <= '9') {
+            tmpbuf[bpos] = buf[bpos];
+            for (bpos++; buf[bpos] >= '0' && buf[bpos] <= '9'; bpos++) {
+                if (bpos == MAX_LEXLEN)
+                    return false;
+                tmpbuf[bpos] = buf[bpos];
+            }
+            tmpbuf[bpos] = '\0';
+            addtok(tlist, tmpbuf, 0, LEXTYPE_ANNOTATE, LEXATTR_NUM);
+        }
+    }
+    return bpos+1;
+}
+
+
 int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute)
 {
     token_s *ntok;
@@ -334,7 +378,6 @@ int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uin
         (*tlist)->next = ntok;
         ntok->prev = *tlist;
         *tlist = ntok;
-        
     }
     return 0;
 }
@@ -614,20 +657,20 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
     exp__s exp_;
     nfa_edge_s *edge;
-    nfa_s *nfa, *NULL_1 = NULL, *NULL_2 = NULL, *backup1, *u_nfa;
+    nfa_s *nfa, *unfa_ = NULL, *concat_ = NULL, *backup1, *u_nfa;
     
     switch((*curr)->type.val) {
         case LEXTYPE_OPENPAREN:
             *curr = (*curr)->next;
             backup1 = *unfa;
-            nfa = prx_expression(lex, curr, &NULL_1, &NULL_2);
+            nfa = prx_expression(lex, curr, &unfa_, &concat_);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             *curr = (*curr)->next;
             *unfa = backup1;
-            if (NULL_1) {
-                *concat = NULL_1;
-                return NULL_1;
+            if (unfa_) {
+                *concat = unfa_;
+                return unfa_;
             }
             else {
                 *concat = nfa;
@@ -956,15 +999,15 @@ token_s *lex (lex_s *lex, u_char *buf)
     token_s *head = NULL, *tlist = NULL;
     
     c[1] = '\0';
-    println(buf);
+    println(lineno, buf);
     while (*buf != UEOF) {
         best.attribute = 0;
         best.n = 0;
         best.success = false;
         while (*buf <= ' ') {
             if (*buf == '\n') {
+                println(lineno, buf+1);
                 lineno++;
-                println(buf+1);
             }
             buf++;
         }
@@ -982,13 +1025,17 @@ token_s *lex (lex_s *lex, u_char *buf)
         c[0] = buf[best.n];
         buf[best.n] = '\0';
         if (best.success) {
-            type = idtable_lookup(lex->kwtable, buf);
-            if (type > 0)
-                addtok(&tlist, buf, lineno, type, res.attribute);
+            if (best.n <= MAX_LEXLEN) {
+                type = idtable_lookup(lex->kwtable, buf);
+                if (type > 0)
+                    addtok(&tlist, buf, lineno, type, res.attribute);
+                else
+                    addtok(&tlist, buf, lineno, bmach->tokid, res.attribute);
+                if (!head)
+                    head = tlist;
+            }
             else
-                addtok(&tlist, buf, lineno, bmach->tokid, res.attribute);
-            if (!head)
-                head = tlist;
+                printf("%6s\tLexical Error: at line: %d: Token too long: %s\n", " ", lineno, buf);
         }
         else {
             type = idtable_lookup(lex->kwtable, c);
@@ -999,9 +1046,9 @@ token_s *lex (lex_s *lex, u_char *buf)
             }
             else {
                 if (best.n)
-                    printf("Lexical Error: %s at line: %d\n", buf, lineno);
+                    printf("%6s\tLexical Error: at line: %d: Unknown Character: %s\n", " ", lineno, buf);
                 else
-                    printf("Lexical Error: %s at line: %d\n", c, lineno);
+                    printf("%6s\tLexical Error: at line: %d: Unknown Character: %s\n", " ", lineno, c);
             }
         }
         buf[best.n] = c[0];
