@@ -71,6 +71,7 @@ struct nfa_edge_s
 
 struct mach_s
 {
+    uint16_t tokid;
     token_s *nterm;
     nfa_s  *nfa;
     mach_s *next;
@@ -78,6 +79,7 @@ struct mach_s
 
 struct lex_s
 {
+    uint16_t typecount;
     uint16_t nmachs;
     mach_s *machs;
     idtable_s *kwtable;

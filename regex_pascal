@@ -22,6 +22,14 @@ or
 numint
 numreal
 numlreal
+:
+;
+\(
+\)
+.
+,
+[
+]
 
 <letter>=>
     a | b | c | d | e | f | g | h | i | j | k | l | m | n | o | p | q | r | s | t | u | v | w | x | y | z |
@@ -43,7 +51,7 @@ numlreal
     E ( \+ | - | \E ) <digits> | \E 
 
 <num>=>
-    <digits> <optional_fraction> <optional_exponent>
+    <digits> <optional_fraction>{1} <optional_exponent>{2}
     
 <relop>=>
     = | <> | < | <= | >= | >

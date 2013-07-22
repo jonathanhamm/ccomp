@@ -56,7 +56,7 @@
 <type>=>
 	<standard_type>
 	|
-	array[numint..numint] of <standard_type>
+	array[num..num] of <standard_type>
 
 <standard_type>=>
 	integer
@@ -182,7 +182,7 @@
 <factor>=>
 	id <factor'>
 	|
-	<num>
+	num
 	|
 	( <expression> )
 	|
@@ -194,6 +194,3 @@
 
 <sign>=>
 	+ | -
-
-<num>=>
-	numint | numreal | numlreal

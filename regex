@@ -18,7 +18,7 @@
     ε
 
 <texp>=>
-    nonterm prodsym <expression>
+    nonterm <tokenid> prodsym <expression>
     {
         addgraph(nonterm);
     }
@@ -159,6 +159,9 @@
 
 <annotation>=>
     integer {setannotation(edge, integer.val) | ε
+    
+<tokenid>=>
+    { integer } | ε
 
 <closure>=>
     * { <closure>.curr := kleenestar; }

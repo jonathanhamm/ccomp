@@ -88,6 +88,8 @@ static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s *
 static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static int prx_closure (lex_s *lex, token_s **curr);
 static void prx_annotation (nfa_edge_s *edge, token_s **curr);
+static int prx_tokenid (mach_s *mach, token_s **curr);
+
 
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
 
@@ -159,7 +161,15 @@ lex_s *buildlex (const char *file)
                 if (buf[i+1] == '>') {
                     addtok (&list, "=>", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT);
                     if (list->prev) {
-                        if (list->prev->type.val ==  LEXTYPE_NONTERM && list->prev->prev) {
+                        if (list->prev->type.val == LEXTYPE_ANNOTATE) {
+                            if (list->prev->prev) {
+                                if (list->prev->prev->type.val ==  LEXTYPE_NONTERM && list->prev->prev->prev) {
+                                    if (list->prev->prev->prev->type.val == LEXTYPE_EOL)
+                                        list->prev->prev->prev->type.attribute = LEXATTR_EOLNEWPROD;
+                                }
+                            }
+                        }
+                        else if (list->prev->type.val ==  LEXTYPE_NONTERM && list->prev->prev) {
                             if (list->prev->prev->type.val == LEXTYPE_EOL)
                                 list->prev->prev->type.attribute = LEXATTR_EOLNEWPROD;
                         }
@@ -280,13 +290,13 @@ doublebreak_:
     }
     token_s *iter;
     for (iter = list; iter; iter = iter->next)
-        printf("%s\n", iter->lexeme);
+        printf("%s %d\n", iter->lexeme, iter->type.val);
     lex = lex_s_();
     parseregex(lex, &list);
     printf("\n\n---------\n\n");
     mach_s *curr = lex->machs;
     for (; curr; curr = curr->next) {
-        printf("%s\n", curr->nterm->lexeme);
+        printf("%s %d\n", curr->nterm->lexeme, curr->nterm->type.val);
        /* for (mcurr = curr->start; mcurr; ) {
             printf("%s\n", mcurr->token->lexeme);
             if (mcurr->branches)
@@ -301,12 +311,7 @@ doublebreak_:
 int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute)
 {
     token_s *ntok;
-    
-  /*  if(lexeme[0] >= 0x80) {
-        printf("%s   %u , %d\n", lexeme, lexeme[0], lineno);
-        asm("hlt");
-    }*/
-    
+        
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");
@@ -324,7 +329,6 @@ int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uin
         *tlist = ntok;
         
     }
-    printf("lexeme: %s\n", lexeme);
     return 0;
 }
 
@@ -357,6 +361,7 @@ void prx_keywords (lex_s *lex, token_s **curr)
 
 void prx_tokens (lex_s *lex, token_s **curr)
 {
+    lex->typecount = lex->kwtable->typecount;
     prx_texp (lex, curr);
     prx_tokens_(lex, curr);
 }
@@ -495,6 +500,10 @@ void prx_texp (lex_s *lex, token_s **curr)
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
         *curr = (*curr)->next;
+        if (!prx_tokenid (lex->machs, curr)) {
+            lex->typecount++;
+            lex->machs->tokid = lex->typecount;
+        }
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
             nterm = malloc(sizeof(*nterm));
@@ -725,6 +734,16 @@ void prx_annotation (nfa_edge_s *edge, token_s **curr)
     }
 }
 
+int prx_tokenid (mach_s *mach, token_s **curr)
+{
+    if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
+        mach->tokid = atoi((*curr)->lexeme);
+        *curr = (*curr)->next;
+        return 1;
+    }
+    return 0;
+}
+
 lex_s *lex_s_ (void)
 {
     lex_s *lex;
@@ -770,7 +789,7 @@ int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str)
 {
     int search;
     idtnode_s *nnode;
-        
+    
     if (!trie->nchildren) {
         search = 0; 
         trie->children = malloc(sizeof(*trie->children));
@@ -873,7 +892,6 @@ int tokmatch(u_char *buf, token_s *tok)
         if (buf[i] != tok->lexeme[i])
             return 0;
     }
-    printf("matched: %s %d\n", tok->lexeme, len);
     return len;
 }
 
@@ -889,7 +907,7 @@ struct match_s
 match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
 {
     int tmatch, tmpmatch;
-    uint16_t i;
+    uint16_t i, type;
     mach_s *tmp;
     match_s curr, result;
 
@@ -904,7 +922,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
                 result = nfa_match (lex, nfa, state->edges[i]->state, buf);
                 if (result.success) {
                     curr.success = true;
-                    curr.attribute = state->edges[i]->annotation;
+                    curr.attribute = (result.attribute > state->edges[i]->annotation) ? result.success : state->edges[i]->annotation;
                     if (result.n > curr.n)
                         curr.n = result.n;
                 }
@@ -917,7 +935,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n]);
                     if (result.success) {
                         curr.success = true;
-                        curr.attribute = state->edges[i]->annotation;
+                        curr.attribute = (result.attribute > state->edges[i]->annotation) ? result.success : state->edges[i]->annotation;
                         if (result.n + tmpmatch > curr.n)
                             curr.n = result.n + tmpmatch;
                     }
@@ -925,11 +943,11 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
                 break;
             default: /* case LEXTYPE_TERM */
                 tmatch = tokmatch(buf, state->edges[i]->token);
-                if (tmatch && tmpmatch != EOF) {
+                if (tmatch && tmatch != EOF) {
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch]);
                     if (result.success) {
                         curr.success = true;
-                        curr.attribute = state->edges[i]->annotation;
+                        curr.attribute = (result.attribute > state->edges[i]->annotation) ? result.success : state->edges[i]->annotation;
                         if (result.n + tmatch > curr.n)
                             curr.n = result.n + tmatch;
                     }
@@ -942,35 +960,68 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
 
 token_s *lex (lex_s *lex, u_char *buf)
 {
-    nfa_s *nfa;
-    mach_s *mach;
+    int type;
+    mach_s *mach, *bmach;
     match_s res, best;
-    uint16_t i;
+    uint16_t lineno = 1;
+    u_char c[2];
+    token_s *head = NULL, *tlist = NULL;
     
+    c[1] = '\0';
     while (*buf != UEOF) {
         best.attribute = 0;
         best.n = 0;
         best.success = false;
-        for (mach = lex->machs; mach; mach = mach->next) {
-            printf("\n\nattempting to match from %s\n", mach->nterm->lexeme);
-            while (*buf <= ' ')
-                buf++;
-            res = nfa_match(lex, mach->nfa, mach->nfa->start, buf);
-            if (res.success && res.n > best.n)
-                best = res;
+        while (*buf <= ' ') {
+            if (*buf == '\n')
+                lineno++;
+            buf++;
         }
+        if (*buf == UEOF)
+            break;
+        for (mach = lex->machs; mach; mach = mach->next) {
+            if (*buf == UEOF)
+                break;
+            res = nfa_match(lex, mach->nfa, mach->nfa->start, buf);
+            if (res.success && res.n > best.n) {
+                best = res;
+                bmach = mach;
+            }
+        }
+        c[0] = buf[best.n];
+        buf[best.n] = '\0';
         if (best.success) {
-            u_char c = buf[best.n];
-            buf[best.n] = '\0';
-            printf("-------------------->Successfully Matched %s\n", buf);
-            buf[best.n] = c;
-            buf += best.n;
+            type = idtable_lookup(lex->kwtable, buf);
+            if (type > 0)
+                addtok(&tlist, buf, lineno, type, res.attribute);
+            else
+                addtok(&tlist, buf, lineno, bmach->tokid, res.attribute);
+            if (!head)
+                head = tlist;
         }
         else {
-            printf ("Done\n");
-            break;
+            type = idtable_lookup(lex->kwtable, c);
+            if (type > 0) {
+                addtok(&tlist, c, lineno, type, LEXATTR_DEFAULT);
+                if (!head)
+                    head = tlist;
+            }
+            else {
+                if (best.n)
+                    printf("Lexical Error: %s at line: %d\n", buf, lineno);
+                else
+                    printf("Lexical Error: %s at line: %d\n", c, lineno);
+            }
         }
+        buf[best.n] = c[0];
+        if (best.n)
+            buf += best.n;
+        else
+            buf++;
     }
+    for(tlist = head; tlist; tlist = tlist->next)
+        printf("%s %d %d\n", tlist->lexeme, tlist->type.val, tlist->type.attribute);
+    return head;
 }
 
 mach_s *getmach(lex_s *lex, u_char *id)
@@ -980,14 +1031,3 @@ mach_s *getmach(lex_s *lex, u_char *id)
     for (iter = lex->machs; strcmp(iter->nterm->lexeme, id); iter = iter->next);
     return iter;
 }
-
-
-void mscan (lexargs_s *args)
-{
-    pnonterm_s result;
-    
-    //result = callnonterm (args->lex, args->buf, args->machine, args->machine->start);
-    args->bread = result.offset;
-    args->accepted = result.success;
-}
-
