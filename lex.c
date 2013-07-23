@@ -1024,14 +1024,14 @@ token_s *lex (lex_s *lex, u_char *buf)
             if (*buf == UEOF)
                 break;
             res = nfa_match(lex, mach->nfa, mach->nfa->start, buf);
-            if (res.success && res.n > best.n) {
+            if (res.success && !mach->composite && res.n > best.n) {
                 best = res;
                 bmach = mach;
             }
         }
         c[0] = buf[best.n];
         buf[best.n] = '\0';
-        if (best.success && !bmach->composite) {
+        if (best.success) {
             if (best.n <= MAX_LEXLEN) {
                 type = idtable_lookup(lex->kwtable, buf);
                 if (type > 0)
@@ -1054,6 +1054,7 @@ token_s *lex (lex_s *lex, u_char *buf)
         else {
             type = idtable_lookup(lex->kwtable, c);
             if (type > 0) {
+                if (c[0] == '.')
                 addtok(&tlist, c, lineno, type, LEXATTR_DEFAULT);
                 if (!head)
                     head = tlist;
