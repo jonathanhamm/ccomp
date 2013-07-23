@@ -51,6 +51,7 @@ typedef struct exp__s exp__s;
 typedef struct nodelist_s nodelist_s;
 typedef struct lexargs_s lexargs_s;
 typedef struct pnonterm_s pnonterm_s;
+typedef struct match_s match_s;
 
 struct exp__s
 {
@@ -73,11 +74,19 @@ struct pnonterm_s
     uint32_t offset;
 };
 
+struct match_s
+{
+    int n;
+    int attribute;
+    bool success;
+};
+
 static void printlist (token_s *list);
 static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
 static uint16_t bsearch_tr (idtnode_s *tnode, u_char key);
 static int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str, int type, int att);
 static idtlookup_s trie_lookup (idtnode_s *trie, u_char *str);
+static uint32_t regex_annotate (token_s **tlist, u_char *buf);
 
 static lex_s *lex_s_ (void);
 static void parseregex (lex_s *lex, token_s **curr);
@@ -98,14 +107,26 @@ static void addcycle (nfa_node_s *start, nfa_node_s *dest);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, u_char *id);
 
-lex_s *buildlex (const char *file, annotation_f af)
+lex_s *buildlex (const char *file)
+{
+    token_s *list, *iter;
+    lex_s *lex;
+    
+    lex = lex_s_();
+    list = lexspec (file, regex_annotate);
+    for (iter = list; iter; iter = iter->next)
+        printf("%s %d\n", iter->lexeme, iter->lineno);
+    parseregex(lex, &list);
+    return lex;
+}
+
+token_s *lexspec (const char *file, annotation_f af)
 {
     uint32_t i, j, lineno, tmp;
     u_char *buf;
     uint8_t bpos;
     u_char lbuf[2*MAX_LEXLEN + 1];
     token_s *list = NULL, *backup;
-    lex_s *lex;
     
     buf = readfile(file);
     if (!buf)
@@ -135,35 +156,6 @@ lex_s *buildlex (const char *file, annotation_f af)
                 addtok (&list, "EOL", lineno, LEXTYPE_EOL, LEXATTR_DEFAULT);
                 break;
             case '{':
-                /*i++;
-                while (buf[i] <= ' ')
-                    i++;
-                if (buf[i] >= '0' && buf[i] <= '9') {
-                    for (bpos = 0; buf[i] >= '0' && buf[i] <= '9'; i++, bpos++) {
-                        if (bpos == MAX_LEXLEN) {
-                            perror("Lexical Error: Too Long Annotation ID");
-                            exit(EXIT_FAILURE);
-                        }
-                        lbuf[bpos] = buf[i];
-                    }
-                }
-                else if (buf[i] == 'a') {
-                    if (buf[i+1] == 'u')
-                    if (buf[i+2] == 't')
-                    if (buf[i+3] == 'o')
-                    if (buf[i+4] <= ' ')
-                        strncpy(lbuf, buf, 4);
-                }
-                while (buf[i] <= ' ')
-                    i++;
-                if (buf[i] == '}') {
-                    lbuf[bpos] = '\0';
-                    addtok (&list, lbuf, lineno, LEXTYPE_ANNOTATE, LEXATTR_DEFAULT);
-                }
-                else {
-                    perror("Lexical Error: Too Long Annotation ID");
-                    exit(EXIT_FAILURE);
-                }*/
                 tmp = af(&list, &buf[i]);
                 if (tmp)
                     i += tmp;
@@ -303,24 +295,7 @@ doublebreak_:
             list->prev = NULL;
         free(backup);
     }
-    token_s *iter;
-    for (iter = list; iter; iter = iter->next)
-        printf("%s %d\n", iter->lexeme, iter->type.val);
-    lex = lex_s_();
-    parseregex(lex, &list);
-    printf("\n\n---------\n\n");
-    mach_s *curr = lex->machs;
-    for (; curr; curr = curr->next) {
-        printf("%s %d\n", curr->nterm->lexeme, curr->nterm->type.val);
-       /* for (mcurr = curr->start; mcurr; ) {
-            printf("%s\n", mcurr->token->lexeme);
-            if (mcurr->branches)
-                mcurr = mcurr->branches[0];
-            else
-                break;
-        }*/
-    }
-    return lex;
+    return list;
 }
 
 uint32_t regex_annotate (token_s **tlist, u_char *buf)
@@ -355,7 +330,6 @@ uint32_t regex_annotate (token_s **tlist, u_char *buf)
     }
     return bpos+1;
 }
-
 
 int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute)
 {
@@ -500,28 +474,6 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
     }
 }
 
-/******************************************************************************************************/
-
-void print_nfa(nfa_node_s *start, nfa_node_s *final)
-{
-    uint16_t i;
- 
-    if (start == final) {
-        printf("breakout\n");
-        return;
-    }
-    printf("start->nedges: %d\n", start->nedges);
-    for (i = 0; i < start->nedges; i++) {
-        printf("edge: %s to %p\n", start->edges[i]->token->lexeme, start->edges[i]->state);
-        if (start != start->edges[i]->state)
-           print_nfa(start->edges[i]->state, final);
-        else
-            printf("aaaaaaa\n");
-    }
-    //for (i = 0; i < start->ncycles; i++)
-      //  printf("cycle: %s to %p\n", start->cycles[i]->token->lexeme, start->cycles[i]->state);
-    printf("end loop\n");
-}
 
 void prx_texp (lex_s *lex, token_s **curr)
 {
@@ -826,10 +778,8 @@ int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str, int type, int a
     int search;
     idtnode_s *nnode;
     
-    if (!trie->nchildren) {
+    if (!trie->nchildren)
         search = 0; 
-        trie->children = malloc(sizeof(*trie->children));
-    }
     else {
         search = bsearch_tr(trie, *str);
         if (search & 0x8000)
@@ -838,7 +788,7 @@ int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str, int type, int a
             return trie_insert(table, trie->children[search], str+1, type, att);
     }
     nnode = calloc (1, sizeof(*nnode));
-    if (!(nnode && trie->children)) {
+    if (!nnode) {
         perror("Memory Allocation Error");
         return -1;
     }
@@ -861,6 +811,10 @@ void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child)
     uint8_t i, j, n;
     idtnode_s **children;
     
+    if (tnode->nchildren)
+        tnode->children = realloc(tnode->children, sizeof(*tnode->children) * (tnode->nchildren + 1));
+    else
+        tnode->children = malloc(sizeof(*tnode->children));
     children = tnode->children;
     n = tnode->nchildren - index;
     for (i = 0, j = tnode->nchildren; i < n; i++, j--)
@@ -934,15 +888,6 @@ int tokmatch(u_char *buf, token_s *tok)
     }
     return len;
 }
-
-typedef struct match_s match_s;
-
-struct match_s
-{
-    int n;
-    int attribute;
-    bool success;
-};
 
 match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
 {
