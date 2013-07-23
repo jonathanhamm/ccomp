@@ -1,5 +1,5 @@
 <program>=>
-	program id ( <identifier_list> ) ;
+	program id \( <identifier_list> \) ;
 	<program'>
 	<compound_statement>
 	.
@@ -89,7 +89,7 @@
 	\E
 
 <arguments>=>
-	( <parameter_list> )
+	\( <parameter_list> \)
 <parameter_list>=>
 	id : <type> <parameter_list'>
 <parameter_list'>=>
@@ -141,7 +141,7 @@
 <procedure_statement>=>
 	call id <procedure_statement'>
 <procedure_statement'>=>
-	( <expression_list> )
+	\( <expression_list> \)
 	|
 	\E
 	
@@ -193,4 +193,4 @@
 	\E
 
 <sign>=>
-	+ | -
+	\+ | \-

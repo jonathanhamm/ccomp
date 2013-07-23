@@ -12,6 +12,40 @@
 #define NULLSETSTR_(null) #null
 #define NULLSETSTR  NULLSETSTR_(NULLSET)
 
+#define LEXTYPE_ERROR       0
+#define LEXTYPE_TERM        1
+#define LEXTYPE_EOL         2
+#define LEXTYPE_UNION       3
+#define LEXTYPE_KLEENE      4
+#define LEXTYPE_POSITIVE    5
+#define LEXTYPE_ORNULL      6
+#define LEXTYPE_RANDCHAR    8
+#define LEXTYPE_EPSILON     11
+#define LEXTYPE_PRODSYM     12
+#define LEXTYPE_NONTERM     13
+#define LEXTYPE_OPENPAREN   14
+#define LEXTYPE_CLOSEPAREN  15
+#define LEXTYPE_EOF         16
+#define LEXTYPE_NULLSET     17
+#define LEXTYPE_START       18
+#define LEXTYPE_ANNOTATE    19
+
+#define LEXATTR_DEFAULT     0
+#define LEXATTR_WSPACEEOL   1
+#define LEXATTR_ERRTOOLONG  0
+#define LEXATTR_EOLNEWPROD  1
+#define LEXATTR_CHARDIG     0
+#define LEXATTR_NCHARDIG    1
+#define LEXATTR_BEGINDIG    2
+#define LEXATTR_NUM         0
+#define LEXATTR_WORD        1
+
+#define CLOSTYPE_NONE       0
+#define CLOSTYPE_KLEENE     1
+#define CLOSTYPE_POS        2
+#define CLOSTYPE_ORNULL     3
+
+
 typedef struct idtlookup_s idtlookup_s;
 typedef struct lex_s lex_s;
 typedef struct idtable_s idtable_s;
@@ -95,6 +129,7 @@ struct lex_s
     mach_s *machs;
     idtable_s *kwtable;
     idtable_s *idtable;
+    hash_s *tok_hash;
 };
 
 extern token_s *lex (lex_s *lex, u_char *buf);
@@ -106,5 +141,6 @@ extern void addmachine (lex_s *lex, token_s *tok);
 extern void idtable_insert (idtable_s *table, u_char *str, int type, int att);
 extern idtlookup_s idtable_lookup (idtable_s *table, u_char *str);
 extern int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute);
+extern u_char *getname(lex_s *lex, int token_val);
 
 #endif

@@ -60,7 +60,7 @@ numlreal
     \+ {0} | - {1} | or {2}
 
 <mulop>=>
-    \* | / | div | mod | and
+    \* {0} | / {2} | div {3} | mod {4} | and {5}
 
 <assignop>=>
     :=

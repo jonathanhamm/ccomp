@@ -10,39 +10,6 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#define LEXTYPE_ERROR       0
-#define LEXTYPE_TERM        1
-#define LEXTYPE_EOL         2
-#define LEXTYPE_UNION       3
-#define LEXTYPE_KLEENE      4
-#define LEXTYPE_POSITIVE    5
-#define LEXTYPE_ORNULL      6
-#define LEXTYPE_RANDCHAR    8
-#define LEXTYPE_EPSILON     11
-#define LEXTYPE_PRODSYM     12
-#define LEXTYPE_NONTERM     13
-#define LEXTYPE_OPENPAREN   14
-#define LEXTYPE_CLOSEPAREN  15
-#define LEXTYPE_EOF         16
-#define LEXTYPE_NULLSET     17
-#define LEXTYPE_START       18
-#define LEXTYPE_ANNOTATE    19
-
-#define LEXATTR_DEFAULT     0
-#define LEXATTR_WSPACEEOL   1
-#define LEXATTR_ERRTOOLONG  0
-#define LEXATTR_EOLNEWPROD  1
-#define LEXATTR_CHARDIG     0
-#define LEXATTR_NCHARDIG    1
-#define LEXATTR_BEGINDIG    2
-#define LEXATTR_NUM         0
-#define LEXATTR_WORD        1
-
-#define CLOSTYPE_NONE       0
-#define CLOSTYPE_KLEENE     1
-#define CLOSTYPE_POS        2
-#define CLOSTYPE_ORNULL     3
-
 #define OP_NOP              0
 #define OP_CONCAT           1
 #define OP_UNION            2
@@ -189,7 +156,7 @@ token_s *lexspec (const char *file, annotation_f af)
             case '<':
                 lbuf[0] = '<';
                 for (bpos = 1, i++, j = i; ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')
-                                || (buf[i] >= '0' && buf[i] <= '9') || buf[i] == '_'); bpos++, i++)
+                                || (buf[i] >= '0' && buf[i] <= '9') || buf[i] == '_' || buf[i] == '\''); bpos++, i++)
                 {
                     if (bpos == MAX_LEXLEN) {
                         addtok (&list, lbuf, lineno, LEXTYPE_ERROR, LEXATTR_ERRTOOLONG);
@@ -337,7 +304,8 @@ uint32_t regex_annotate (token_s **tlist, u_char *buf, uint32_t *lineno)
 int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute)
 {
     token_s *ntok;
-        
+    
+    printf("adding: %s\n", lexeme);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");
@@ -745,6 +713,7 @@ lex_s *lex_s_ (void)
     }
     lex->kwtable = idtable_s_();
     lex->idtable = idtable_s_();
+    lex->tok_hash = hash_();
     return lex;
 }
 
@@ -1038,6 +1007,15 @@ mach_s *getmach(lex_s *lex, u_char *id)
 {
     mach_s *iter;
     
-    for (iter = lex->machs; strcmp(iter->nterm->lexeme, id); iter = iter->next);
+    for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, id); iter = iter->next);
+    if (!iter) {
+        printf("Regex Error: Regex %s never defined", id);
+        exit(EXIT_FAILURE);
+    }
     return iter;
+}
+
+u_char *getname(lex_s *lex, int token_val)
+{
+    return hashlookup(lex->tok_hash, token_val);
 }

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno);
+
 static void pp_start (token_s **curr);
 static void pp_nonterminal (token_s **curr);
 static void pp_nonterminals (token_s **curr);
@@ -17,8 +19,9 @@ parse_s *build_parse (const char *file)
 {
     u_char *buf;
     parse_s *parse;
+    token_s *list, *iter;
     
-    buf = readfile(file);
+    list = lexspec (file, cfg_annotate);
     parse = calloc(1, sizeof(*parse));
     if (!parse) {
         perror("Memory Allocation Error");
@@ -26,6 +29,14 @@ parse_s *build_parse (const char *file)
     }
     
     return parse;
+}
+
+uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno)
+{
+    uint32_t i;
+    
+    for (i = 1; buf[i] != '}'; i++);
+    return i+1;
 }
 
 void pp_start (token_s **curr)
@@ -36,7 +47,13 @@ void pp_start (token_s **curr)
 
 void pp_nonterminal (token_s **curr)
 {
-    
+    if ((*curr)->type.val == LEXTYPE_NONTERM) {
+        *curr = (*curr)->next;
+        if ((*curr)->type.val == LEXTYPE_PRODSYM) {
+            *curr = (*curr)->next;
+            pp_production (curr);
+        }
+    }
 }
 
 void pp_nonterminals (token_s **curr)

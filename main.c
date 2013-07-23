@@ -13,6 +13,7 @@ int main(int argc, const char *argv[])
         tokens = lex (buildlex (argv[2]), readfile (argv[1]));
     else
         perror("Argument Error");
+    build_parse ("cfg_pascal");
     return 0;
 }
 
