@@ -323,8 +323,6 @@ doublebreak_:
     return lex;
 }
 
-int bob =0;
-
 uint32_t regex_annotate (token_s **tlist, u_char *buf)
 {
     uint32_t bpos = 0;
@@ -756,11 +754,7 @@ int prx_closure (lex_s *lex, token_s **curr)
 void prx_annotation (nfa_edge_s *edge, token_s **curr)
 {
     if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-        if (!strcmp((*curr)->lexeme, "auto")) {
-            
-        }
-        else
-            edge->annotation = atoi((*curr)->lexeme);
+        edge->annotation = atoi((*curr)->lexeme);
         *curr = (*curr)->next;
     }
 }
@@ -768,9 +762,19 @@ void prx_annotation (nfa_edge_s *edge, token_s **curr)
 int prx_tokenid (mach_s *mach, token_s **curr)
 {
     if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-        mach->tokid = atoi((*curr)->lexeme);
-        *curr = (*curr)->next;
-        return 1;
+        if ((*curr)->type.attribute == LEXATTR_WORD) {
+            if (!strcmp((*curr)->lexeme, "autoinc"))
+                mach->attr_auto = true;
+            else if (!strcmp((*curr)->lexeme, "composite"))
+                mach->composite = true;
+            *curr = (*curr)->next;
+            return 0;
+        }
+        else {
+            mach->tokid = atoi((*curr)->lexeme);
+            *curr = (*curr)->next;
+            return 1;
+        }
     }
     return 0;
 }
@@ -953,7 +957,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
                 result = nfa_match (lex, nfa, state->edges[i]->state, buf);
                 if (result.success) {
                     curr.success = true;
-                    curr.attribute = (result.attribute > state->edges[i]->annotation) ? result.success : state->edges[i]->annotation;
+                    curr.attribute = (state->edges[i]->annotation > 0) ? state->edges[i]->annotation : result.attribute;
                     if (result.n > curr.n)
                         curr.n = result.n;
                 }
@@ -966,7 +970,10 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n]);
                     if (result.success) {
                         curr.success = true;
-                        curr.attribute = (result.attribute > state->edges[i]->annotation) ? result.success : state->edges[i]->annotation;
+                        if (result.n > 0 && result.attribute > 0)
+                            curr.attribute = result.attribute;
+                        else if (tmpmatch > 0 && state->edges[i]->annotation > 0)
+                            curr.attribute = state->edges[i]->annotation;
                         if (result.n + tmpmatch > curr.n)
                             curr.n = result.n + tmpmatch;
                     }
@@ -978,7 +985,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch]);
                     if (result.success) {
                         curr.success = true;
-                        curr.attribute = (result.attribute > state->edges[i]->annotation) ? result.success : state->edges[i]->annotation;
+                        curr.attribute = (state->edges[i]->annotation > 0) ? state->edges[i]->annotation : result.attribute;
                         if (result.n + tmatch > curr.n)
                             curr.n = result.n + tmatch;
                     }
@@ -1024,13 +1031,20 @@ token_s *lex (lex_s *lex, u_char *buf)
         }
         c[0] = buf[best.n];
         buf[best.n] = '\0';
-        if (best.success) {
+        if (best.success && !bmach->composite) {
             if (best.n <= MAX_LEXLEN) {
                 type = idtable_lookup(lex->kwtable, buf);
                 if (type > 0)
                     addtok(&tlist, buf, lineno, type, res.attribute);
-                else
-                    addtok(&tlist, buf, lineno, bmach->tokid, res.attribute);
+                else {
+                    if (bmach->attr_auto) {
+                        bmach->attrcount++;
+                        addtok(&tlist, buf, lineno, bmach->tokid, bmach->attrcount);
+                    }
+                    else {
+                        addtok(&tlist, buf, lineno, bmach->tokid, best.attribute);
+                    }
+                }
                 if (!head)
                     head = tlist;
             }

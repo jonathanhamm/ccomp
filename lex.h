@@ -71,6 +71,9 @@ struct nfa_edge_s
 
 struct mach_s
 {
+    bool    attr_auto;
+    bool    composite;
+    uint16_t attrcount;
     uint16_t tokid;
     token_s *nterm;
     nfa_s  *nfa;
