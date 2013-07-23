@@ -22,7 +22,7 @@ typedef struct nfa_node_s nfa_node_s;
 typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
 
-typedef uint32_t (*annotation_f) (token_s **, u_char *buf);
+typedef uint32_t (*annotation_f) (token_s **, u_char *, uint32_t *);
 
 struct idtlookup_s
 {

@@ -86,7 +86,7 @@ static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
 static uint16_t bsearch_tr (idtnode_s *tnode, u_char key);
 static int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str, int type, int att);
 static idtlookup_s trie_lookup (idtnode_s *trie, u_char *str);
-static uint32_t regex_annotate (token_s **tlist, u_char *buf);
+static uint32_t regex_annotate (token_s **tlist, u_char *buf, uint32_t *lineno);
 
 static lex_s *lex_s_ (void);
 static void parseregex (lex_s *lex, token_s **curr);
@@ -156,7 +156,7 @@ token_s *lexspec (const char *file, annotation_f af)
                 addtok (&list, "EOL", lineno, LEXTYPE_EOL, LEXATTR_DEFAULT);
                 break;
             case '{':
-                tmp = af(&list, &buf[i]);
+                tmp = af(&list, &buf[i], &lineno);
                 if (tmp)
                     i += tmp;
                 else {
@@ -298,15 +298,18 @@ doublebreak_:
     return list;
 }
 
-uint32_t regex_annotate (token_s **tlist, u_char *buf)
+uint32_t regex_annotate (token_s **tlist, u_char *buf, uint32_t *lineno)
 {
     uint32_t bpos = 0;
     u_char tmpbuf[MAX_LEXLEN+1];
 
     buf++;
     while (buf[bpos] != '}') {
-        while (buf[bpos] <= ' ')
+        while (buf[bpos] <= ' ') {
+            if (buf[bpos] == '\n')
+                ++*lineno;
             bpos++;
+        }
         if ((buf[bpos] >= 'a' && buf[bpos] <= 'z') || (buf[bpos] >= 'A' && buf[bpos] <= 'Z')) {
             tmpbuf[bpos] = buf[bpos];
             for (bpos++; ((buf[bpos] >= 'a' && buf[bpos] <= 'z') || (buf[bpos] >= 'A' && buf[bpos] <= 'Z')); bpos++) {
@@ -315,7 +318,7 @@ uint32_t regex_annotate (token_s **tlist, u_char *buf)
                 tmpbuf[bpos] = buf[bpos];
             }
             tmpbuf[bpos] = '\0';
-            addtok(tlist, tmpbuf, 0, LEXTYPE_ANNOTATE, LEXATTR_WORD);
+            addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_WORD);
         }
         else if (buf[bpos] >= '0' && buf[bpos] <= '9') {
             tmpbuf[bpos] = buf[bpos];
@@ -325,7 +328,7 @@ uint32_t regex_annotate (token_s **tlist, u_char *buf)
                 tmpbuf[bpos] = buf[bpos];
             }
             tmpbuf[bpos] = '\0';
-            addtok(tlist, tmpbuf, 0, LEXTYPE_ANNOTATE, LEXATTR_NUM);
+            addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_NUM);
         }
     }
     return bpos+1;
@@ -1008,7 +1011,6 @@ token_s *lex (lex_s *lex, u_char *buf)
         else {
             lookup = idtable_lookup(lex->kwtable, c);
             if (lookup.type > 0) {
-                if (c[0] == '.')
                 addtok(&tlist, c, lineno, lookup.type, LEXATTR_DEFAULT);
                 if (!head)
                     head = tlist;
