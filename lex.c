@@ -76,8 +76,8 @@ struct pnonterm_s
 static void printlist (token_s *list);
 static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
 static uint16_t bsearch_tr (idtnode_s *tnode, u_char key);
-static int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str);
-static int trie_lookup (idtnode_s *trie, u_char *str);
+static int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str, int type, int att);
+static idtlookup_s trie_lookup (idtnode_s *trie, u_char *str);
 
 static lex_s *lex_s_ (void);
 static void parseregex (lex_s *lex, token_s **curr);
@@ -402,7 +402,7 @@ void parseregex (lex_s *lex, token_s **list)
 void prx_keywords (lex_s *lex, token_s **curr)
 {
     while ((*curr)->type.val == LEXTYPE_TERM) {
-        idtable_insert(lex->kwtable, (*curr)->lexeme);
+        idtable_insert(lex->kwtable, (*curr)->lexeme, -1, -1);
         *curr = (*curr)->next;
     }
 }
@@ -789,6 +789,7 @@ lex_s *lex_s_ (void)
         return NULL;
     }
     lex->kwtable = idtable_s_();
+    lex->idtable = idtable_s_();
     return lex;
 }
 
@@ -809,18 +810,18 @@ idtable_s *idtable_s_ (void)
     return table;
 }
 
-void idtable_insert (idtable_s *table, u_char *str)
+void idtable_insert (idtable_s *table, u_char *str, int type, int att)
 {
     table->typecount++;
-    trie_insert(table, table->root, str);
+    trie_insert(table, table->root, str, type, att);
 }
 
-int idtable_lookup (idtable_s *table, u_char *str)
+idtlookup_s idtable_lookup (idtable_s *table, u_char *str)
 {
     return trie_lookup(table->root, str);
 }
 
-int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str)
+int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str, int type, int att)
 {
     int search;
     idtnode_s *nnode;
@@ -834,7 +835,7 @@ int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str)
         if (search & 0x8000)
             search &= ~0x8000;
         else
-            return trie_insert(table, trie->children[search], str+1);
+            return trie_insert(table, trie->children[search], str+1, type, att);
     }
     nnode = calloc (1, sizeof(*nnode));
     if (!(nnode && trie->children)) {
@@ -843,12 +844,16 @@ int trie_insert (idtable_s *table, idtnode_s *trie, u_char *str)
     }
     nnode->c = *str;
     if (!*str) {
-        nnode->type = table->typecount;
+       if (type < 0)
+            nnode->type = table->typecount;
+        else
+            nnode->type = type;
+        nnode->att = att;
         parray_insert (trie, search, nnode);
         return 1;
     }
     parray_insert (trie, search, nnode);
-    return trie_insert(table, trie->children[search], str+1);
+    return trie_insert(table, trie->children[search], str+1, type, att);
 }
 
 void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child)
@@ -864,15 +869,15 @@ void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child)
     tnode->nchildren++;
 }
 
-int trie_lookup (idtnode_s *trie, u_char *str)
+idtlookup_s trie_lookup (idtnode_s *trie, u_char *str)
 {
     uint16_t search;
     
     search = bsearch_tr(trie, *str);
     if (search & 0x8000)
-        return -(search & ~0x8000);
+        return (idtlookup_s){.type = -(search & ~0x8000), .att = 0};
     if (!*str)
-        return trie->children[search]->type;
+        return (idtlookup_s){.type = trie->children[search]->type, .att = trie->children[search]->att};
     return trie_lookup(trie->children[search], str+1);
 }
 
@@ -998,11 +1003,11 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
 
 token_s *lex (lex_s *lex, u_char *buf)
 {
-    int type;
     mach_s *mach, *bmach;
     match_s res, best;
     uint16_t lineno = 1;
     u_char c[2];
+    idtlookup_s lookup;
     token_s *head = NULL, *tlist = NULL;
     
     c[1] = '\0';
@@ -1033,13 +1038,17 @@ token_s *lex (lex_s *lex, u_char *buf)
         buf[best.n] = '\0';
         if (best.success) {
             if (best.n <= MAX_LEXLEN) {
-                type = idtable_lookup(lex->kwtable, buf);
-                if (type > 0)
-                    addtok(&tlist, buf, lineno, type, res.attribute);
+                lookup = idtable_lookup(lex->kwtable, buf);
+                if (lookup.type > 0)
+                    addtok(&tlist, buf, lineno, lookup.type, res.attribute);
                 else {
-                    if (bmach->attr_auto) {
+                    lookup = idtable_lookup(lex->idtable, buf);
+                    if (lookup.type > 0)
+                        addtok(&tlist, buf, lineno, lookup.type, lookup.att);
+                    else if (bmach->attr_auto) {
                         bmach->attrcount++;
                         addtok(&tlist, buf, lineno, bmach->tokid, bmach->attrcount);
+                        idtable_insert(lex->idtable, buf, bmach->tokid, bmach->attrcount);
                     }
                     else {
                         addtok(&tlist, buf, lineno, bmach->tokid, best.attribute);
@@ -1052,10 +1061,10 @@ token_s *lex (lex_s *lex, u_char *buf)
                 printf("%6s\tLexical Error: at line: %d: Token too long: %s\n", " ", lineno, buf);
         }
         else {
-            type = idtable_lookup(lex->kwtable, c);
-            if (type > 0) {
+            lookup = idtable_lookup(lex->kwtable, c);
+            if (lookup.type > 0) {
                 if (c[0] == '.')
-                addtok(&tlist, c, lineno, type, LEXATTR_DEFAULT);
+                addtok(&tlist, c, lineno, lookup.type, LEXATTR_DEFAULT);
                 if (!head)
                     head = tlist;
             }

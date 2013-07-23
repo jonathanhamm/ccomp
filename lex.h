@@ -12,6 +12,7 @@
 #define NULLSETSTR_(null) #null
 #define NULLSETSTR  NULLSETSTR_(NULLSET)
 
+typedef struct idtlookup_s idtlookup_s;
 typedef struct lex_s lex_s;
 typedef struct idtable_s idtable_s;
 typedef struct idtnode_s idtnode_s;
@@ -22,6 +23,12 @@ typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
 
 typedef uint32_t (*annotation_f) (token_s **, u_char *buf);
+
+struct idtlookup_s
+{
+    int type;
+    int att;
+};
 
 struct token_s
 {
@@ -39,6 +46,7 @@ struct idtnode_s
 {
     u_char c;
     uint16_t type;
+    uint16_t att;
     uint8_t nchildren;
     idtnode_s **children;
 };
@@ -86,6 +94,7 @@ struct lex_s
     uint16_t nmachs;
     mach_s *machs;
     idtable_s *kwtable;
+    idtable_s *idtable;
 };
 
 extern token_s *lex (lex_s *lex, u_char *buf);
@@ -94,9 +103,8 @@ extern uint32_t regex_annotate (token_s **tlist, u_char *buf);
 extern idtable_s *idtable_s_ (void);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
-extern void idtable_insert (idtable_s *table, u_char *str);
-extern int idtable_lookup (idtable_s *table, u_char *str);
+extern void idtable_insert (idtable_s *table, u_char *str, int type, int att);
+extern idtlookup_s idtable_lookup (idtable_s *table, u_char *str);
 extern int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute);
-
 
 #endif

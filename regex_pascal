@@ -54,10 +54,10 @@ numlreal
     <digits> <optional_fraction>{1} <optional_exponent>{2}
     
 <relop>=>
-    = | <> | < | <= | >= | >
+    = {0} | <> {1} | < {2} | <= {3} | >= {4} | > {5}
     
 <addop>=>
-    \+ | - | or
+    \+ {0} | - {1} | or {2}
 
 <mulop>=>
     \* | / | div | mod | and
