@@ -156,6 +156,7 @@ void pp_nonterminals (parse_s *parse, token_s **curr)
             break;
         default:
             printf("Syntax Error: Expected EOL or $ but got %s\n", (*curr)->lexeme);
+            break;
     }
 }
 
