@@ -4,14 +4,19 @@
 #include <stdlib.h>
 
 static uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno);
+static parse_s *parse_(void);
+static pda_s *pda_(token_s *token);
 
-static void pp_start (token_s **curr);
-static void pp_nonterminal (token_s **curr);
-static void pp_nonterminals (token_s **curr);
-static void pp_production (token_s **curr);
-static void pp_productions (token_s **curr);
-static void pp_tokens (token_s **curr);
-static void pp_decoration (token_s **curr);
+static void pp_start (parse_s *parse, token_s **curr);
+static void pp_nonterminal (parse_s *parse, token_s **curr);
+static void pp_nonterminals (parse_s *parse, token_s **curr);
+static void pp_production (parse_s *parse, token_s **curr);
+static void pp_productions (parse_s *parse, token_s **curr);
+static void pp_tokens (parse_s *parse, token_s **curr);
+static void pp_decoration (parse_s *parse, token_s **curr);
+
+uint16_t str_hashf (void *key);
+bool str_isequalf(void *key1, void *key2);
 
 parse_s *build_parse (const char *file)
 {
@@ -22,12 +27,8 @@ parse_s *build_parse (const char *file)
     list = lexspec (file, cfg_annotate);
     for (iter = list; iter; iter = iter->next)
         printf("%s\n", iter->lexeme);
-    parse = calloc(1, sizeof(*parse));
-    if (!parse) {
-        perror("Memory Allocation Error");
-        return NULL;
-    }
-    pp_start(&list);
+    parse = parse_();
+    pp_start(parse, &list);
     return parse;
 }
 
@@ -39,21 +40,53 @@ uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno)
     return i+1;
 }
 
-void pp_start (token_s **curr)
+parse_s *parse_(void)
 {
-    pp_nonterminal (curr);
-    pp_nonterminals (curr);
+    parse_s *parse;
+    
+    parse = malloc(sizeof(*parse));
+    if (!parse) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    parse->phash = hash_(str_hashf, str_isequalf);
+    return parse;
 }
 
-void pp_nonterminal (token_s **curr)
+pda_s *pda_(token_s *token)
 {
+    pda_s *pda;
+    
+    pda = malloc(sizeof(*pda));
+    if (!pda) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    pda->nterm = token;
+    pda->start = NULL;
+    return pda;
+}
+
+void pp_start (parse_s *parse, token_s **curr)
+{
+    pp_nonterminal(parse, curr);
+    pp_nonterminals(parse, curr);
+}
+
+void pp_nonterminal (parse_s *parse, token_s **curr)
+{
+    pda_s *pda;
+    
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
+        pda = pda_(*curr);
+        if (!hash_pda (parse, (*curr)->lexeme, pda))
+            printf("Error: Redefinition of production: %s\n", (*curr)->lexeme);
         *curr = (*curr)->next;
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
-            pp_production (curr);
-            pp_productions(curr);
-            pp_decoration(curr);
+            pp_production(parse, curr);
+            pp_productions(parse, curr);
+            pp_decoration(parse, curr);
         }
         else
             printf("Syntax Error: Expected '=>' but got %s\n", (*curr)->lexeme);
@@ -62,13 +95,13 @@ void pp_nonterminal (token_s **curr)
         printf("Syntax Error: Expected nonterminal but got %s\n", (*curr)->lexeme);
 }
 
-void pp_nonterminals (token_s **curr)
+void pp_nonterminals (parse_s *parse, token_s **curr)
 {
     switch ((*curr)->type.val) {
         case LEXTYPE_EOL:
             *curr = (*curr)->next;
-            pp_nonterminal(curr);
-            pp_nonterminals (curr);
+            pp_nonterminal(parse, curr);
+            pp_nonterminals(parse, curr);
             break;
         case LEXTYPE_EOF:
             break;
@@ -77,14 +110,14 @@ void pp_nonterminals (token_s **curr)
     }
 }
 
-void pp_production (token_s **curr)
+void pp_production (parse_s *parse, token_s **curr)
 {
     switch ((*curr)->type.val) {
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
             *curr = (*curr)->next;
-            pp_tokens(curr);
+            pp_tokens(parse, curr);
             break;
         default:
             printf("Syntax Error: Expected token but got %s\n", (*curr)->lexeme);
@@ -92,13 +125,13 @@ void pp_production (token_s **curr)
     }
 }
 
-void pp_productions (token_s **curr)
+void pp_productions (parse_s *parse, token_s **curr)
 {
     switch ((*curr)->type.val) {
         case LEXTYPE_UNION:
             *curr = (*curr)->next;
-            pp_production(curr);
-            pp_productions(curr);
+            pp_production(parse, curr);
+            pp_productions(parse, curr);
             break;
         case LEXTYPE_ANNOTATE:
         case LEXTYPE_NONTERM:
@@ -111,13 +144,13 @@ void pp_productions (token_s **curr)
     }
 }
 
-void pp_tokens (token_s **curr)
+void pp_tokens (parse_s *parse, token_s **curr)
 {
     switch ((*curr)->type.val) {
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
             *curr = (*curr)->next;
-            pp_tokens(curr);
+            pp_tokens(parse,curr);
             break;
         case LEXTYPE_ANNOTATE:
         case LEXTYPE_UNION:
@@ -130,7 +163,7 @@ void pp_tokens (token_s **curr)
     }
 }
 
-void pp_decoration (token_s **curr)
+void pp_decoration (parse_s *parse, token_s **curr)
 {
     switch ((*curr)->type.val) {
         case LEXTYPE_ANNOTATE:
@@ -145,4 +178,30 @@ void pp_decoration (token_s **curr)
             printf("Syntax Error: Expected annotation, nonterm, or $, but got %s\n", (*curr)->lexeme);
             break;
     }
+}
+
+pda_s *get_pda (parse_s *parser, u_char *name)
+{
+    return hashlookup (parser->phash, name);
+}
+
+bool hash_pda (parse_s *parser, u_char *name, pda_s *pda)
+{
+    return hashinsert (parser->phash, name, pda);
+}
+
+uint16_t str_hashf (void *key)
+{
+    return *(uint64_t *)key % HTABLE_SIZE;
+}
+
+bool str_isequalf(void *key1, void *key2)
+{
+    int i;
+    
+    for (i = 0; i < (MAX_LEXLEN + 1) / sizeof(uint64_t); i++) {
+        if (((uint64_t *)key1)[i] != ((uint64_t *)key2)[i])
+            return false;
+    }
+    return true;
 }

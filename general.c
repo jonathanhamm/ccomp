@@ -101,7 +101,7 @@ bool hashinsert (hash_s *hash, void *key, void *data)
         }
         else {
             for (iter = record->next; iter; iter = iter->next) {
-                if (hash->isequal(record->key, key))
+                if (hash->isequal(iter->key, key))
                     return false;
             }
             new->next = record->next;

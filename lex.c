@@ -1009,8 +1009,6 @@ token_s *lex (lex_s *lex, u_char *buf)
     }
     addtok(&tlist, "$", lineno, lex->typecount+1, LEXATTR_DEFAULT);
     hashname(lex, lex->typecount+1, "$");
-    for(tlist = head; tlist; tlist = tlist->next)
-        printf("%s %d %d\n", tlist->lexeme, tlist->type.val, tlist->type.attribute);
     return head;
 }
 

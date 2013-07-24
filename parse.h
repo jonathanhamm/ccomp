@@ -21,9 +21,15 @@ struct plrecord_s
     };
 };
 
+struct pda_s
+{
+    token_s *nterm;
+    pnode_s *start;
+};
+
 struct parse_s
 {
-    plrecord_s pda[PDATABLE_SIZE];
+    hash_s *phash;
 };
 
 struct pnode_s
@@ -34,5 +40,7 @@ struct pnode_s
 };
 
 extern parse_s *build_parse (const char *file);
+extern pda_s *get_pda (parse_s *parser, u_char *name);
+extern bool hash_pda (parse_s *parser, u_char *name, pda_s *pda);
 
 #endif
