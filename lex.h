@@ -141,7 +141,7 @@ extern void addmachine (lex_s *lex, token_s *tok);
 extern void idtable_insert (idtable_s *table, u_char *str, int type, int att);
 extern idtlookup_s idtable_lookup (idtable_s *table, u_char *str);
 extern int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute);
-extern inline bool hashname(lex_s *lex, int token_val, u_char *name);
-extern inline u_char *getname(lex_s *lex, int token_val);
+extern inline bool hashname(lex_s *lex, unsigned long token_val, u_char *name);
+extern inline u_char *getname(lex_s *lex, unsigned long token_val);
 
 #endif

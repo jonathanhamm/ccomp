@@ -1,5 +1,4 @@
 #include "general.h"
-#include "lex.h"
 #include "parse.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +20,8 @@ parse_s *build_parse (const char *file)
     token_s *list, *iter;
     
     list = lexspec (file, cfg_annotate);
+    for (iter = list; iter; iter = iter->next)
+        printf("%s\n", iter->lexeme);
     parse = calloc(1, sizeof(*parse));
     if (!parse) {
         perror("Memory Allocation Error");
@@ -64,14 +65,15 @@ void pp_nonterminal (token_s **curr)
 void pp_nonterminals (token_s **curr)
 {
     switch ((*curr)->type.val) {
-        case LEXTYPE_NONTERM:
+        case LEXTYPE_EOL:
+            *curr = (*curr)->next;
             pp_nonterminal(curr);
             pp_nonterminals (curr);
             break;
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error: Expected nonterminal or $ but got %s\n", (*curr)->lexeme);
+            printf("Syntax Error: Expected EOL or $ but got %s\n", (*curr)->lexeme);
     }
 }
 
@@ -80,6 +82,7 @@ void pp_production (token_s **curr)
     switch ((*curr)->type.val) {
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
+        case LEXTYPE_EPSILON:
             *curr = (*curr)->next;
             pp_tokens(curr);
             break;
@@ -99,6 +102,7 @@ void pp_productions (token_s **curr)
             break;
         case LEXTYPE_ANNOTATE:
         case LEXTYPE_NONTERM:
+        case LEXTYPE_EOL:
         case LEXTYPE_EOF:
             break;
         default:
@@ -116,6 +120,8 @@ void pp_tokens (token_s **curr)
             pp_tokens(curr);
             break;
         case LEXTYPE_ANNOTATE:
+        case LEXTYPE_UNION:
+        case LEXTYPE_EOL:
         case LEXTYPE_EOF:
             break;
         default:
@@ -132,6 +138,7 @@ void pp_decoration (token_s **curr)
                 *curr = (*curr)->next;
             break;
         case LEXTYPE_NONTERM:
+        case LEXTYPE_EOL:
         case LEXTYPE_EOF:
             break;
         default:

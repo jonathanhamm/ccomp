@@ -74,6 +74,9 @@ static void addcycle (nfa_node_s *start, nfa_node_s *dest);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, u_char *id);
 
+uint16_t tok_hashf (void *key);
+bool tok_isequalf(void *key1, void *key2);
+
 lex_s *buildlex (const char *file)
 {
     token_s *list, *iter;
@@ -713,7 +716,7 @@ lex_s *lex_s_ (void)
     }
     lex->kwtable = idtable_s_();
     lex->idtable = idtable_s_();
-    lex->tok_hash = hash_();
+    lex->tok_hash = hash_(tok_hashf, tok_isequalf);
     return lex;
 }
 
@@ -1023,12 +1026,22 @@ mach_s *getmach(lex_s *lex, u_char *id)
     return iter;
 }
 
-inline bool hashname(lex_s *lex, int token_val, u_char *name)
+inline bool hashname(lex_s *lex, unsigned long token_val, u_char *name)
 {
-    return hashinsert(lex->tok_hash, token_val, name);
+    return hashinsert(lex->tok_hash, (void *)token_val, name);
 }
 
-inline u_char *getname(lex_s *lex, int token_val)
+inline u_char *getname(lex_s *lex, unsigned long token_val)
 {
-    return hashlookup(lex->tok_hash, token_val);
+    return hashlookup(lex->tok_hash, (void *)token_val);
+}
+
+uint16_t tok_hashf (void *key)
+{
+    return (unsigned long)key % HTABLE_SIZE;
+}
+
+bool tok_isequalf(void *key1, void *key2)
+{
+    return key1 == key2;
 }

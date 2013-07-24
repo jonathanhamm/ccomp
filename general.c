@@ -61,23 +61,32 @@ void println (uint16_t no, u_char *buf)
     while (*buf++ != '\n');
 }
 
-inline hash_s *hash_(void)
+hash_s *hash_(hash_f hashf, isequal_f isequalf)
 {
-    return calloc(1, sizeof(hash_s));
+    hash_s *hash;
+    
+    hash = calloc(1, sizeof(*hash));
+    if (!hash) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    hash->hash = hashf;
+    hash->isequal = isequalf;
+    return hash;
 }
 
-bool hashinsert (hash_s *hash, int key, u_char *data)
+bool hashinsert (hash_s *hash, void *key, void *data)
 {
     hrecord_s *record, *new, *iter;
     
-    record = &hash->table[key % HTABLE_SIZE];
+    record = &hash->table[hash->hash(key)];
     if (!record->isoccupied) {
         record->key = key;
         record->data = data;
         record->isoccupied = true;
     }
     else {
-        if (record->key == key)
+        if (hash->isequal(record->key, key))
             return false;
         new = malloc(sizeof(*new));
         if (!new) {
@@ -92,7 +101,7 @@ bool hashinsert (hash_s *hash, int key, u_char *data)
         }
         else {
             for (iter = record->next; iter; iter = iter->next) {
-                if (key == iter->key)
+                if (hash->isequal(record->key, key))
                     return false;
             }
             new->next = record->next;
@@ -102,18 +111,18 @@ bool hashinsert (hash_s *hash, int key, u_char *data)
     return true;
 }
 
-u_char *hashlookup (hash_s *hash, int key)
+void *hashlookup (hash_s *hash, void *key)
 {
     hrecord_s *record;
     
-    record = &hash->table[key % HTABLE_SIZE];
+    record = &hash->table[hash->hash(key)];
     if (!record->isoccupied)
         return NULL;
-    if (record->key == key)
+    if (hash->isequal(record->key, key))
         return record->data;
     else {
         while (record) {
-            if (record->key == key)
+            if (hash->isequal(record->key, key))
                 return record->data;
             record = record->next;
         }
