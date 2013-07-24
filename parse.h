@@ -6,37 +6,33 @@
 
 #define PDATABLE_SIZE 19
 
-typedef struct plrecord_s plrecord_s;
-typedef struct pda_s pda_s;
 typedef struct parse_s parse_s;
+typedef struct pda_s pda_s;
+typedef struct production_s production_s;
 typedef struct pnode_s pnode_s;
 
-struct plrecord_s
+struct parse_s
 {
-    u_char str[MAX_LEXLEN + 1];
-    pda_s *pda;
-    union {
-        bool isoccupied;
-        plrecord_s *next;
-    };
+    pda_s *start;
+    hash_s *phash;
 };
 
 struct pda_s
 {
     token_s *nterm;
-    pnode_s *start;
+    uint16_t nproductions;
+    production_s *productions;
 };
 
-struct parse_s
+struct production_s
 {
-    hash_s *phash;
+    pnode_s *start;
 };
 
 struct pnode_s
 {
     token_s *token;
-    uint16_t nedges;
-    pnode_s **edges;
+    pnode_s *next;
 };
 
 extern parse_s *build_parse (const char *file);

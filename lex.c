@@ -990,7 +990,7 @@ token_s *lex (lex_s *lex, u_char *buf)
             lookup = idtable_lookup(lex->kwtable, c);
             if (lookup.type > 0) {
                 addtok(&tlist, c, lineno, lookup.type, LEXATTR_DEFAULT);
-                hashname(lex, lookup.type, c);
+                hashname(lex, lookup.type, NULL);
                 if (!head)
                     head = tlist;
             }
