@@ -124,6 +124,8 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
 {
     pda_s *pda = NULL;
     
+    if ((*curr)->type.val == LEXTYPE_EOL)
+        *curr = (*curr)->next;
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         pda = pda_(*curr);
         if (!hash_pda (parse, (*curr)->lexeme, pda))
