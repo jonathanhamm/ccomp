@@ -3,7 +3,7 @@
 	<nonterminals>
 
 <nonterminals>=>
-	<nonterminal>
+	<nonterminal> <nonterminals>
 	|
 	\E
 
@@ -11,7 +11,7 @@
 	nonterm prodsym <production> <productions> <decoration>
 
 <productions>=>
-	UNION <production>
+	UNION <production> <productions>
 	|
 	\E
 
@@ -19,7 +19,7 @@
 	token <tokens>
 
 <tokens>=>
-	token <token>
+	token <tokens>
 	|
 	\E
 

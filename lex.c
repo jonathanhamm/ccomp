@@ -956,19 +956,25 @@ token_s *lex (lex_s *lex, u_char *buf)
         if (best.success) {
             if (best.n <= MAX_LEXLEN) {
                 lookup = idtable_lookup(lex->kwtable, buf);
-                if (lookup.type > 0)
+                if (lookup.type > 0) {
                     addtok(&tlist, buf, lineno, lookup.type, res.attribute);
+                    hashname(lex, lookup.type, buf);
+                }
                 else {
                     lookup = idtable_lookup(lex->idtable, buf);
-                    if (lookup.type > 0)
+                    if (lookup.type > 0) {
                         addtok(&tlist, buf, lineno, lookup.type, lookup.att);
+                        hashname(lex, lookup.type, buf);
+                    }
                     else if (bmach->attr_auto) {
                         bmach->attrcount++;
                         addtok(&tlist, buf, lineno, bmach->tokid, bmach->attrcount);
                         idtable_insert(lex->idtable, buf, bmach->tokid, bmach->attrcount);
+                        hashname(lex, bmach->tokid, bmach->nterm->lexeme);
                     }
                     else {
                         addtok(&tlist, buf, lineno, bmach->tokid, best.attribute);
+                        hashname(lex, bmach->tokid, bmach->nterm->lexeme);
                     }
                 }
                 if (!head)
@@ -981,6 +987,7 @@ token_s *lex (lex_s *lex, u_char *buf)
             lookup = idtable_lookup(lex->kwtable, c);
             if (lookup.type > 0) {
                 addtok(&tlist, c, lineno, lookup.type, LEXATTR_DEFAULT);
+                hashname(lex, lookup.type, c);
                 if (!head)
                     head = tlist;
             }
@@ -998,6 +1005,7 @@ token_s *lex (lex_s *lex, u_char *buf)
             buf++;
     }
     addtok(&tlist, "$", lineno, lex->typecount+1, LEXATTR_DEFAULT);
+    hashname(lex, lex->typecount+1, "$");
     for(tlist = head; tlist; tlist = tlist->next)
         printf("%s %d %d\n", tlist->lexeme, tlist->type.val, tlist->type.attribute);
     return head;
@@ -1015,7 +1023,12 @@ mach_s *getmach(lex_s *lex, u_char *id)
     return iter;
 }
 
-u_char *getname(lex_s *lex, int token_val)
+inline bool hashname(lex_s *lex, int token_val, u_char *name)
+{
+    return hashinsert(lex->tok_hash, token_val, name);
+}
+
+inline u_char *getname(lex_s *lex, int token_val)
 {
     return hashlookup(lex->tok_hash, token_val);
 }
