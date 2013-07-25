@@ -22,6 +22,8 @@ struct pda_s
     token_s *nterm;
     uint16_t nproductions;
     production_s *productions;
+    llist_s *firsts;
+    llist_s *follows;
 };
 
 struct production_s

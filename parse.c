@@ -9,6 +9,7 @@ static pda_s *pda_(token_s *token);
 static production_s *addproduction (pda_s *pda);
 static pnode_s *pnode_(token_s *token);
 
+
 static void pp_start (parse_s *parse, token_s **curr);
 static void pp_nonterminal (parse_s *parse, token_s **curr);
 static void pp_nonterminals (parse_s *parse, token_s **curr);
@@ -16,6 +17,12 @@ static void pp_production (parse_s *parse, token_s **curr, pda_s *pda);
 static void pp_productions (parse_s *parse, token_s **curr, pda_s *pda);
 static pnode_s *pp_tokens (parse_s *parse, token_s **curr);
 static void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda);
+
+static bool isespsilon (production_s *production);
+static bool hasepsilson (parse_s *parser, pnode_s *nonterm);
+static llist_s *getfirsts (parse_s *parser, pda_s *pda);
+static void compute_firsts (parse_s *parser);
+
 
 uint16_t str_hashf (void *key);
 bool str_isequalf(void *key1, void *key2);
@@ -38,13 +45,17 @@ parse_s *build_parse (const char *file)
     u_char *buf;
     parse_s *parse;
     token_s *list, *iter;
+    llist_s *firsts, *fiter;
     
     list = lexspec (file, cfg_annotate);
     for (iter = list; iter; iter = iter->next)
         printf("%s\n", iter->lexeme);
     parse = parse_();
     pp_start(parse, &list);
-    printpda(parse->start);
+    compute_firsts (parse);
+    //firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
+    //for (fiter = firsts; fiter; fiter = fiter->next)
+      //  printf("%s, ", ((pnode_s *)fiter->ptr)->token->lexeme);
     return parse;
 }
 
@@ -237,6 +248,71 @@ void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda)
             printf("Syntax Error: Expected annotation, nonterm, or $, but got %s\n", (*curr)->lexeme);
             break;
     }
+}
+
+bool isespsilon (production_s *production)
+{
+    return production->start->token->type.val == LEXTYPE_EPSILON && !production->start->next;
+}
+
+bool hasepsilson (parse_s *parser, pnode_s *nonterm)
+{
+    pda_s *pda;
+    uint16_t i;
+    
+    if (!nonterm || nonterm->token->type.val != LEXTYPE_NONTERM)
+        return false;
+    pda = get_pda(parser, nonterm->token->lexeme);
+    for (i = 0; i < pda->nproductions; i++) {
+        if (isespsilon(&pda->productions[i]))
+            return true;
+    }
+    return false;
+}
+
+llist_s *getfirsts (parse_s *parser, pda_s *pda)
+{
+    uint16_t i;
+    pda_s *tmp;
+    pnode_s *iter;
+    llist_s *list = NULL;
+    
+    for (i = 0; i < pda->nproductions; i++) {
+        if (isespsilon(&pda->productions[i]))
+            llpush(&list, pda->productions[i].start);            
+        else {
+            iter = pda->productions[i].start;
+            do {
+                if (iter->token->type.val == LEXTYPE_TERM)
+                    llpush(&list, iter);
+                else {
+                    tmp = get_pda(parser, iter->token->lexeme);
+                    list = llconcat(list, getfirsts(parser, tmp));
+                }
+            }
+            while (hasepsilson(parser, iter) && (iter = iter->next));
+        }
+    }
+    return list;
+}
+
+void compute_firsts (parse_s *parser)
+{
+    pda_s *tmp;
+    hrecord_s *curr;
+    llist_s *iter;
+    hashiterator_s *iterator;
+    
+    iterator = hashiterator_(parser->phash);
+    for (curr = hashnext(iterator); curr; curr = hashnext(iterator)) {
+        tmp = (pda_s *)curr->data;
+        tmp->firsts = getfirsts(parser, tmp);
+        printf("Printing Firsts for %s\n", (char *)curr->key);
+        for (iter = tmp->firsts; iter; iter = iter->next)
+            printf("%s, ", ((pnode_s *)iter->ptr)->token->lexeme);
+        printf("\n");
+    }
+    free(iterator);
 }
 
 pda_s *get_pda (parse_s *parser, u_char *name)

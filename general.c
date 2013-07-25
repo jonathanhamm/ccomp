@@ -39,6 +39,50 @@ u_char *readfile (const char *file)
     return buf;
 }
 
+void llpush (llist_s **list, void *ptr)
+{
+    llist_s *node;
+    
+    node = malloc(sizeof(*node));
+    if (!node) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    node->ptr = ptr;
+    node->next = *list;
+    *list = node;
+}
+
+llist_s *llpop (llist_s **list)
+{
+    llist_s *backup;
+    
+    backup = *list;
+    *list = (*list)->next;
+    return backup;
+}
+
+bool llcontains (llist_s *list, void *ptr)
+{
+    while (list) {
+        if (list->ptr == ptr)
+            return true;
+        list = list->next;
+    }
+    return false;
+}
+
+llist_s *llconcat (llist_s *first, llist_s *second)
+{
+    llist_s *head;
+    
+    if (!first)
+        return second;
+    for (head = first; first->next; first = first->next);
+    first->next = second;
+    return head;
+}
+
 void free_llist (void *list)
 {
     void *backup;
@@ -95,7 +139,7 @@ bool hashinsert (hash_s *hash, void *key, void *data)
         }
         new->key = key;
         new->data = data;
-        if (record->next == (hrecord_s *)true) {
+        if (record->longint == true) {
             new->next = NULL;
             record->next = new;
         }
@@ -128,4 +172,47 @@ void *hashlookup (hash_s *hash, void *key)
         }
     }
     return NULL;
+}
+
+hashiterator_s *hashiterator_(hash_s *hash)
+{
+    hashiterator_s *iterator;
+    
+    iterator = malloc(sizeof(*iterator));
+    if (!iterator) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    iterator->hash = hash;
+    iterator->curr = NULL;
+    iterator->index = -1;
+    return iterator;
+}
+
+hrecord_s *hashnext (hashiterator_s *iterator)
+{
+    int i;
+    hash_s *hash;
+
+    if (!iterator->curr || !iterator->curr->next || iterator->curr->longint == true) {
+        hash = iterator->hash;
+        for (i = iterator->index + 1; i < HTABLE_SIZE; i++) {
+            if (hash->table[i].isoccupied) {
+                iterator->index = i;
+                iterator->curr = &hash->table[i];
+                return iterator->curr;
+            }
+        }
+    }
+    else {
+        iterator->curr = iterator->curr->next;
+        return iterator->curr;
+    }
+    return NULL;
+}
+
+inline void hiterator_reset (hashiterator_s *iterator)
+{
+    iterator->index = -1;
+    iterator->curr = NULL;
 }
