@@ -39,6 +39,7 @@
 #define LEXATTR_BEGINDIG    2
 #define LEXATTR_NUM         0
 #define LEXATTR_WORD        1
+#define LEXATTR_FAKEEOF     1
 
 #define CLOSTYPE_NONE       0
 #define CLOSTYPE_KLEENE     1

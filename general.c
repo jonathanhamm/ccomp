@@ -152,6 +152,7 @@ bool hashinsert (hash_s *hash, void *key, void *data)
             record->next = new;
         }
     }
+    hash->nitems++;
     return true;
 }
 

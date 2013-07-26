@@ -2,6 +2,21 @@
 #include "parse.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+
+typedef struct follow_s follow_s;
+
+struct follow_s
+{
+    pda_s *pda;
+    bool isfinished;
+    pthread_cond_t cond;
+    pthread_t thread;
+    parse_s *parser;
+    uint16_t index;
+    follow_s *table;
+    llist_s *list;
+};
 
 static uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno);
 static parse_s *parse_(void);
@@ -21,8 +36,9 @@ static void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda);
 static bool isespsilon (production_s *production);
 static bool hasepsilson (parse_s *parser, pnode_s *nonterm);
 static llist_s *getfirsts (parse_s *parser, pda_s *pda);
-static void compute_firsts (parse_s *parser);
-
+static void getfollows (follow_s *fparams);
+static inline pnode_s *makeEOF (void);
+static void compute_firstfollows (parse_s *parser);
 
 uint16_t str_hashf (void *key);
 bool str_isequalf(void *key1, void *key2);
@@ -52,7 +68,7 @@ parse_s *build_parse (const char *file)
         printf("%s\n", iter->lexeme);
     parse = parse_();
     pp_start(parse, &list);
-    compute_firsts (parse);
+    compute_firstfollows (parse);
     //firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
     //for (fiter = firsts; fiter; fiter = fiter->next)
       //  printf("%s, ", ((pnode_s *)fiter->ptr)->token->lexeme);
@@ -282,6 +298,8 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
             llpush(&list, pda->productions[i].start);            
         else {
             iter = pda->productions[i].start;
+            if (!iter)
+                return NULL;
             do {
                 if (iter->token->type.val == LEXTYPE_TERM)
                     llpush(&list, iter);
@@ -296,23 +314,93 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
     return list;
 }
 
-void compute_firsts (parse_s *parser)
+void getfollows (follow_s *fparams)
 {
+    pda_s *pda;
+    hrecord_s *curr;
+    hashiterator_s *iterator;
+    
+    iterator = hashiterator_(fparams->parser->phash);
+    if (fparams->pda == fparams->parser->start)
+        llpush(&fparams->list, makeEOF());
+    if (!iterator) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    for (curr = hashnext(iterator); curr; curr = hashnext(iterator)) {
+        pda = (pda_s *)curr->data;
+    }
+    free(iterator);
+    pthread_exit(0);
+}
+
+inline pnode_s *makeEOF (void)
+{
+    token_s *tok;
+    
+    tok = calloc(1, sizeof(*tok));
+    if (!tok) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    tok->lexeme[0] = '$';
+    tok->type.val = LEXTYPE_EOF;
+    tok->type.attribute = LEXATTR_FAKEEOF;
+    return pnode_(tok);
+}
+
+void compute_firstfollows (parse_s *parser)
+{
+    int i, status, nitems;
     pda_s *tmp;
     hrecord_s *curr;
     llist_s *iter;
     hashiterator_s *iterator;
+    follow_s *ftable;
     
+    nitems = parser->phash->nitems;
+    ftable = calloc(nitems, sizeof(*ftable));
+    if (!ftable) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
     iterator = hashiterator_(parser->phash);
-    for (curr = hashnext(iterator); curr; curr = hashnext(iterator)) {
+    for (curr = hashnext(iterator), i = 0; curr; curr = hashnext(iterator), i++) {
         tmp = (pda_s *)curr->data;
         tmp->firsts = getfirsts(parser, tmp);
         printf("Printing Firsts for %s\n", (char *)curr->key);
         for (iter = tmp->firsts; iter; iter = iter->next)
             printf("%s, ", ((pnode_s *)iter->ptr)->token->lexeme);
-        printf("\n");
+        printf("\n\n");
+        ftable[i].parser = parser;
+        ftable[i].table = ftable;
+        ftable[i].index = i;
+        ftable[i].pda = curr->data;
     }
     free(iterator);
+    for (i = 0; i < nitems; i++) {
+        status = pthread_cond_init(&ftable[i].cond, NULL);
+        if (status) {
+            perror("Error: Could not initialize condition variable");
+            exit(status);
+        }
+        status = pthread_create(&ftable[i].thread, NULL, (void *(*)())getfollows, &ftable[i]);
+        if (status) {
+            perror("Error: Could not start new thread");
+            exit(status);
+        }
+        
+    }
+    for (i = 0; i < nitems; i++)
+        pthread_join(ftable[i].thread, NULL);
+    for (i = 0; i < nitems; i++) {
+        status = pthread_cond_destroy(&ftable[i].cond);
+        if (status) {
+            perror("Error: Could not destroy thread condition variable");
+            exit(status);
+        }
+    }
+    free(ftable);
 }
 
 pda_s *get_pda (parse_s *parser, u_char *name)

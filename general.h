@@ -44,6 +44,7 @@ struct hash_s
 {
     hash_f hash;
     isequal_f isequal;
+    uint16_t nitems;
     hrecord_s table[HTABLE_SIZE];
 };
 
