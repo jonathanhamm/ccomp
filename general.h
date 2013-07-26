@@ -7,8 +7,6 @@
 typedef unsigned char u_char;
 #endif
 
-#define STR_TO_LONG(str) (unsigned long)*(uint8_t *)str
-
 #define HTABLE_SIZE 119
 #define UEOF (u_char)EOF
 

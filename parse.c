@@ -18,8 +18,11 @@ struct follow_s
     llist_s *list;
     llist_s *firsts;
     bool *ready;
+    pthread_mutex_t flock;
+    pthread_cond_t fcond;
     pthread_mutex_t *jlock;
     pthread_cond_t *jcond;
+    follow_s *nextwait;
 };
 
 static uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno);
@@ -45,6 +48,7 @@ static inline pnode_s *makeEOF (void);
 static follow_s *get_neighbor_params (follow_s *table, pda_s *pda);
 static llist_s *lldeep_concat_foll (llist_s *first, llist_s *second);
 static bool llpnode_contains(llist_s *list, int tok_type);
+static bool detect_deadlock (follow_s *params);
 static void compute_firstfollows (parse_s *parser);
 
 uint16_t str_hashf (void *key);
@@ -343,6 +347,7 @@ void getfollows (follow_s *fparams)
     printf("started\n");
     pthread_mutex_unlock(fparams->jlock);
 
+    
     iterator = hashiterator_(fparams->parser->phash);
     if (fparams->pda == fparams->parser->start)
         llpush(&fparams->list, makeEOF());
@@ -358,8 +363,17 @@ void getfollows (follow_s *fparams)
                     do {
                         if (!iter->next) {
                             neighbor = get_neighbor_params(fparams->table, (pda_s *)curr->data);
-                            if (!neighbor->isfinished) {
-                                pthread_join(neighbor->thread, NULL);
+                            if (!neighbor->isfinished && neighbor != fparams) {
+                                printf("%s waiting on %s\n", fparams->pda->nterm->lexeme, neighbor->pda->nterm->lexeme);
+                                fparams->nextwait = neighbor;
+                                if (!detect_deadlock(fparams)) {
+                                    pthread_mutex_lock(&neighbor->flock);
+                                    while (!neighbor->isfinished)
+                                        pthread_cond_wait(&neighbor->fcond, &neighbor->flock);
+                                    pthread_mutex_unlock(&neighbor->flock);
+                                    printf("woke up\n");
+                                }
+                                fparams->nextwait = NULL;
                             }
                             fparams->list = lldeep_concat_foll(fparams->list, neighbor->list);
                             goto nextproduction_;
@@ -374,12 +388,16 @@ void getfollows (follow_s *fparams)
                                 fparams->list = lldeep_concat_foll(fparams->list, neighbor->firsts);
                                 if (hasepsilson(fparams->parser, iter)) {
                                     if (!neighbor->isfinished) {
-                                        int result;
-                                        if ((result = pthread_join(neighbor->thread, NULL))) {
-                                          // printf("error %d %d\n", result, neighbor->thread);
-                                            //perror("22");
-                                        //    exit(EXIT_FAILURE);
+                                        printf("%s waiting on %s\n", fparams->pda->nterm->lexeme, neighbor->pda->nterm->lexeme);
+                                        fparams->nextwait = neighbor;
+                                        if (!detect_deadlock(fparams)) {
+                                            pthread_mutex_lock(&neighbor->flock);
+                                            while (!neighbor->isfinished && neighbor != fparams)
+                                                pthread_cond_wait(&neighbor->fcond, &neighbor->flock);
+                                            pthread_mutex_unlock(&neighbor->flock);
+                                            printf("woke up\n");
                                         }
+                                        fparams->nextwait = NULL;
                                     }
                                     fparams->list = lldeep_concat_foll(fparams->list, neighbor->list);
                                 }
@@ -393,7 +411,10 @@ nextproduction_:
             ;
         }
     }
+    pthread_mutex_lock(&fparams->flock);
     fparams->isfinished = true;
+    pthread_cond_broadcast(&fparams->fcond);
+    pthread_mutex_unlock(&fparams->flock);
     free(iterator);
     pthread_exit(0);
 }
@@ -453,6 +474,17 @@ bool llpnode_contains(llist_s *list, int tok_type)
     return false;
 }
 
+bool detect_deadlock (follow_s *params)
+{
+    follow_s *iter;
+    
+    for (iter = params->nextwait; iter; iter = iter->nextwait) {
+        if (iter == params)
+            return true;
+    }
+    return false;
+}
+
 void compute_firstfollows (parse_s *parser)
 {
     bool ready = false;
@@ -464,6 +496,7 @@ void compute_firstfollows (parse_s *parser)
     follow_s *ftable;
     pthread_mutex_t jlock;
     pthread_cond_t jcond;
+    void *attr = NULL;
     
     nitems = parser->phash->nitems;
     ftable = calloc(nitems, sizeof(*ftable));
@@ -497,6 +530,16 @@ void compute_firstfollows (parse_s *parser)
         ftable[i].jlock = &jlock;
         ftable[i].jcond = &jcond;
         ftable[i].ready = &ready;
+        status = pthread_mutex_init(&ftable[i].flock, NULL);
+        if (status) {
+            perror("Error: Failed to initialize mutex lock");
+            exit(EXIT_FAILURE);
+        }
+        status = pthread_cond_init(&ftable[i].fcond, NULL);
+        if (status) {
+            perror("Error: Failed to initialize condition varaible");
+            exit(EXIT_FAILURE);
+        }
     }
     free(iterator);
     for (i = 0; i < nitems; i++) {
@@ -512,8 +555,14 @@ void compute_firstfollows (parse_s *parser)
     pthread_cond_broadcast(&jcond);
     pthread_mutex_unlock(&jlock);
     
-    for (i = 0; i < nitems; i++)
-        pthread_join(ftable[i].thread, NULL);
+    for (i = 0; i < nitems; i++) {
+     
+        status = pthread_join(ftable[i].thread, &attr);
+        if (status) {
+            printf("join failure %d\n", status);
+            
+        }
+    }
     for (i = 0; i < nitems; i++) {
         printf("Printing Follows for %s\n", ftable[i].pda->nterm->lexeme);
         for (iter = ftable[i].list; iter; iter = iter->next)

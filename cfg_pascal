@@ -3,8 +3,6 @@
 	<program'>
 	<compound_statement>
 	.
-    |
-    <program'>
 	{
 		<program>.type := derp;
 		<program>.code := "derr derrr derr derr derr";
