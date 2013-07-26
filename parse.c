@@ -10,12 +10,12 @@ struct follow_s
 {
     pda_s *pda;
     bool isfinished;
-    pthread_cond_t cond;
     pthread_t thread;
     parse_s *parser;
     uint16_t index;
     follow_s *table;
     llist_s *list;
+    pthread_mutex_t mutex;
 };
 
 static uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno);
@@ -138,6 +138,7 @@ pnode_s *pnode_(token_s *token)
     }
     pnode->token = token;
     pnode->next = NULL;
+    pnode->prev = NULL;
     return pnode;
 }
 
@@ -189,6 +190,7 @@ void pp_nonterminals (parse_s *parse, token_s **curr)
 
 void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
 {
+    pnode_s *token;
     production_s *production = NULL;
     
     switch ((*curr)->type.val) {
@@ -198,7 +200,8 @@ void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
             production = addproduction(pda);
             production->start = pnode_(*curr);
             *curr = (*curr)->next;
-            production->start->next = pp_tokens(parse, curr);
+            token = pp_tokens(parse, curr);
+            production->start->next = token;
             break;
         default:
             printf("Syntax Error: Expected token but got %s\n", (*curr)->lexeme);
@@ -227,7 +230,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
 
 pnode_s *pp_tokens (parse_s *parse, token_s **curr)
 {
-    pnode_s *pnode = NULL;
+    pnode_s *pnode = NULL, *token;
     
     switch ((*curr)->type.val) {
         case LEXTYPE_TERM:
@@ -235,7 +238,11 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr)
         case LEXTYPE_EPSILON:
             pnode = pnode_(*curr);
             *curr = (*curr)->next;
-            pnode->next = pp_tokens(parse, curr);
+            token = pp_tokens(parse, curr);
+            if (token) {
+                pnode->next = token;
+                token->prev = pnode;
+            }
             break;
         case LEXTYPE_ANNOTATE:
         case LEXTYPE_UNION:
@@ -316,7 +323,9 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
 
 void getfollows (follow_s *fparams)
 {
+    uint16_t i;
     pda_s *pda;
+    pnode_s *iter;
     hrecord_s *curr;
     hashiterator_s *iterator;
     
@@ -329,8 +338,18 @@ void getfollows (follow_s *fparams)
     }
     for (curr = hashnext(iterator); curr; curr = hashnext(iterator)) {
         pda = (pda_s *)curr->data;
+        for (i = 0; i < pda->nproductions; i++) {
+            for (iter = pda->productions[i].start; iter->next; iter = iter->next);
+            do {
+                //if (iter->token == ((pda_s *)curr->data)->
+                if (get_pda(fparams->parser, iter->token->lexeme) == fparams->pda)
+                    printf("score!\n");
+            }
+            while (iter = iter->prev, hasepsilson(fparams->parser, iter));
+        }
     }
     free(iterator);
+    
     pthread_exit(0);
 }
 
@@ -379,9 +398,9 @@ void compute_firstfollows (parse_s *parser)
     }
     free(iterator);
     for (i = 0; i < nitems; i++) {
-        status = pthread_cond_init(&ftable[i].cond, NULL);
+        status = pthread_mutex_init(&ftable[i].mutex, NULL);
         if (status) {
-            perror("Error: Could not initialize condition variable");
+            perror("Error: Failed to initialize mutex");
             exit(status);
         }
         status = pthread_create(&ftable[i].thread, NULL, (void *(*)())getfollows, &ftable[i]);
@@ -389,14 +408,13 @@ void compute_firstfollows (parse_s *parser)
             perror("Error: Could not start new thread");
             exit(status);
         }
-        
     }
     for (i = 0; i < nitems; i++)
         pthread_join(ftable[i].thread, NULL);
     for (i = 0; i < nitems; i++) {
-        status = pthread_cond_destroy(&ftable[i].cond);
+        status = pthread_mutex_destroy(&ftable[i].mutex);
         if (status) {
-            perror("Error: Could not destroy thread condition variable");
+            perror("Error: Could not destroy mutex");
             exit(status);
         }
     }

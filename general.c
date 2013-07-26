@@ -165,7 +165,7 @@ void *hashlookup (hash_s *hash, void *key)
         return NULL;
     if (hash->isequal(record->key, key))
         return record->data;
-    else {
+    else if (record->longint != true) {
         while (record) {
             if (hash->isequal(record->key, key))
                 return record->data;

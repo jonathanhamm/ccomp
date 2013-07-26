@@ -35,6 +35,7 @@ struct pnode_s
 {
     token_s *token;
     pnode_s *next;
+    pnode_s *prev;
 };
 
 extern parse_s *build_parse (const char *file);
