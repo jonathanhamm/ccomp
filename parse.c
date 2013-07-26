@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <unistd.h>
 
 typedef struct follow_s follow_s;
 
@@ -15,7 +16,10 @@ struct follow_s
     uint16_t index;
     follow_s *table;
     llist_s *list;
-    pthread_mutex_t mutex;
+    llist_s *firsts;
+    bool *ready;
+    pthread_mutex_t *jlock;
+    pthread_cond_t *jcond;
 };
 
 static uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno);
@@ -38,6 +42,9 @@ static bool hasepsilson (parse_s *parser, pnode_s *nonterm);
 static llist_s *getfirsts (parse_s *parser, pda_s *pda);
 static void getfollows (follow_s *fparams);
 static inline pnode_s *makeEOF (void);
+static follow_s *get_neighbor_params (follow_s *table, pda_s *pda);
+static llist_s *lldeep_concat_foll (llist_s *first, llist_s *second);
+static bool llpnode_contains(llist_s *list, int tok_type);
 static void compute_firstfollows (parse_s *parser);
 
 uint16_t str_hashf (void *key);
@@ -324,11 +331,18 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
 void getfollows (follow_s *fparams)
 {
     uint16_t i;
-    pda_s *pda;
+    pda_s *pda, *nterm;
     pnode_s *iter;
     hrecord_s *curr;
+    follow_s *neighbor;
     hashiterator_s *iterator;
     
+    pthread_mutex_lock(fparams->jlock);
+    while (!*fparams->ready)
+        pthread_cond_wait(fparams->jcond, fparams->jlock);
+    printf("started\n");
+    pthread_mutex_unlock(fparams->jlock);
+
     iterator = hashiterator_(fparams->parser->phash);
     if (fparams->pda == fparams->parser->start)
         llpush(&fparams->list, makeEOF());
@@ -339,17 +353,48 @@ void getfollows (follow_s *fparams)
     for (curr = hashnext(iterator); curr; curr = hashnext(iterator)) {
         pda = (pda_s *)curr->data;
         for (i = 0; i < pda->nproductions; i++) {
-            for (iter = pda->productions[i].start; iter->next; iter = iter->next);
-            do {
-                //if (iter->token == ((pda_s *)curr->data)->
-                if (get_pda(fparams->parser, iter->token->lexeme) == fparams->pda)
-                    printf("score!\n");
+            for (iter = pda->productions[i].start; iter; iter = iter->next) {
+                if (get_pda(fparams->parser, iter->token->lexeme) == fparams->pda) {
+                    do {
+                        if (!iter->next) {
+                            neighbor = get_neighbor_params(fparams->table, (pda_s *)curr->data);
+                            if (!neighbor->isfinished) {
+                                pthread_join(neighbor->thread, NULL);
+                            }
+                            fparams->list = lldeep_concat_foll(fparams->list, neighbor->list);
+                            goto nextproduction_;
+                        }
+                        else {
+                            iter = iter->next;
+                            if (iter->token->type.val == LEXTYPE_TERM)
+                                llpush(&fparams->list, iter);
+                            else {
+                                nterm = get_pda (fparams->parser, iter->token->lexeme);
+                                neighbor = get_neighbor_params(fparams->table, nterm);
+                                fparams->list = lldeep_concat_foll(fparams->list, neighbor->firsts);
+                                if (hasepsilson(fparams->parser, iter)) {
+                                    if (!neighbor->isfinished) {
+                                        int result;
+                                        if ((result = pthread_join(neighbor->thread, NULL))) {
+                                          // printf("error %d %d\n", result, neighbor->thread);
+                                            //perror("22");
+                                        //    exit(EXIT_FAILURE);
+                                        }
+                                    }
+                                    fparams->list = lldeep_concat_foll(fparams->list, neighbor->list);
+                                }
+                            }
+                        }
+                    }
+                    while (hasepsilson(fparams->parser, iter));
+                }
             }
-            while (iter = iter->prev, hasepsilson(fparams->parser, iter));
+nextproduction_:
+            ;
         }
     }
+    fparams->isfinished = true;
     free(iterator);
-    
     pthread_exit(0);
 }
 
@@ -368,20 +413,73 @@ inline pnode_s *makeEOF (void)
     return pnode_(tok);
 }
 
+follow_s *get_neighbor_params (follow_s *table, pda_s *pda)
+{
+    while (table->pda != pda)
+        ++table;
+    return table;
+}
+
+llist_s *lldeep_concat_foll (llist_s *first, llist_s *second)
+{
+    llist_s *second_ = NULL, *iter = NULL;
+    
+   if (!second)
+       return first;
+    while (((pnode_s *)second->ptr)->token->type.val == LEXTYPE_EPSILON ||
+           llpnode_contains(first, ((pnode_s *)second->ptr)->token->type.val)) {
+        second = second->next;
+        if (!second)
+            return first;
+    }
+    second_ = iter = llcopy(second);
+    for (second = second->next; second; second = second->next) {
+        if (((pnode_s *)second->ptr)->token->type.val == LEXTYPE_EPSILON ||
+            llpnode_contains(first, ((pnode_s *)second->ptr)->token->type.val))
+            continue;
+        iter->next = llcopy(second);
+        iter = iter->next;
+    }
+    return llconcat (first, second_);
+}
+
+bool llpnode_contains(llist_s *list, int tok_type)
+{
+    while (list) {
+        if (((pnode_s *)list->ptr)->token->type.val == tok_type)
+            return true;
+        list = list->next;
+    }
+    return false;
+}
+
 void compute_firstfollows (parse_s *parser)
 {
+    bool ready = false;
     int i, status, nitems;
     pda_s *tmp;
     hrecord_s *curr;
     llist_s *iter;
     hashiterator_s *iterator;
     follow_s *ftable;
+    pthread_mutex_t jlock;
+    pthread_cond_t jcond;
     
     nitems = parser->phash->nitems;
     ftable = calloc(nitems, sizeof(*ftable));
     if (!ftable) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
+    }
+    status = pthread_mutex_init(&jlock, NULL);
+    if (status) {
+        perror("Error: Failed to initialize mutex lock");
+        exit(status);
+    }
+    status = pthread_cond_init(&jcond, NULL);
+    if (status) {
+        perror("Error: Failed to initialize condition variable");
+        exit(status);
     }
     iterator = hashiterator_(parser->phash);
     for (curr = hashnext(iterator), i = 0; curr; curr = hashnext(iterator), i++) {
@@ -395,28 +493,32 @@ void compute_firstfollows (parse_s *parser)
         ftable[i].table = ftable;
         ftable[i].index = i;
         ftable[i].pda = curr->data;
+        ftable[i].firsts = tmp->firsts;
+        ftable[i].jlock = &jlock;
+        ftable[i].jcond = &jcond;
+        ftable[i].ready = &ready;
     }
     free(iterator);
     for (i = 0; i < nitems; i++) {
-        status = pthread_mutex_init(&ftable[i].mutex, NULL);
-        if (status) {
-            perror("Error: Failed to initialize mutex");
-            exit(status);
-        }
         status = pthread_create(&ftable[i].thread, NULL, (void *(*)())getfollows, &ftable[i]);
         if (status) {
             perror("Error: Could not start new thread");
             exit(status);
         }
     }
+    
+    pthread_mutex_lock(&jlock);
+    ready = true;
+    pthread_cond_broadcast(&jcond);
+    pthread_mutex_unlock(&jlock);
+    
     for (i = 0; i < nitems; i++)
         pthread_join(ftable[i].thread, NULL);
     for (i = 0; i < nitems; i++) {
-        status = pthread_mutex_destroy(&ftable[i].mutex);
-        if (status) {
-            perror("Error: Could not destroy mutex");
-            exit(status);
-        }
+        printf("Printing Follows for %s\n", ftable[i].pda->nterm->lexeme);
+        for (iter = ftable[i].list; iter; iter = iter->next)
+            printf("%s, ", ((pnode_s *)iter->ptr)->token->lexeme);
+        printf("\n\n");
     }
     free(ftable);
 }

@@ -78,9 +78,25 @@ llist_s *llconcat (llist_s *first, llist_s *second)
     
     if (!first)
         return second;
+    if (!second)
+        return first;
     for (head = first; first->next; first = first->next);
     first->next = second;
     return head;
+}
+
+llist_s *llcopy (llist_s *node)
+{
+    llist_s *copy;
+    
+    copy = malloc(sizeof(*copy));
+    if (!copy) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    copy->ptr = node->ptr;
+    copy->next = NULL;
+    return copy;
 }
 
 void free_llist (void *list)

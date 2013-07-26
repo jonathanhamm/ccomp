@@ -65,6 +65,8 @@ extern void llpush (llist_s **list, void *ptr);
 extern llist_s *llpop (llist_s **list);
 extern bool llcontains (llist_s *list, void *ptr);
 extern llist_s *llconcat (llist_s *first, llist_s *second);
+extern llist_s *llcopy (llist_s *node);
+
 
 extern hash_s *hash_(hash_f hashf, isequal_f isequalf);
 extern bool hashinsert (hash_s *hash, void *key, void *data);
