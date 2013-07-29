@@ -30,6 +30,8 @@
 #define LEXTYPE_START       18
 #define LEXTYPE_ANNOTATE    19
 
+#define LEXID_START         LEXTYPE_ANNOTATE
+
 #define LEXATTR_DEFAULT     0
 #define LEXATTR_WSPACEEOL   1
 #define LEXATTR_ERRTOOLONG  0
@@ -56,6 +58,7 @@ typedef struct nfa_s nfa_s;
 typedef struct nfa_node_s nfa_node_s;
 typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
+typedef struct lextok_s lextok_s;
 
 typedef uint32_t (*annotation_f) (token_s **, u_char *, uint32_t *);
 
@@ -133,10 +136,16 @@ struct lex_s
     hash_s *tok_hash;
 };
 
-extern token_s *lex (lex_s *lex, u_char *buf);
+struct lextok_s
+{
+    lex_s *lex;
+    token_s *tokens;
+};
+
+extern lextok_s lex (lex_s *lex, u_char *buf);
 extern lex_s *buildlex (const char *file);
 extern token_s *lexspec (const char *file, annotation_f af);
-extern idtable_s *idtable_s_ (void);
+extern idtable_s *idtable_s_ (int idstart);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
 extern void idtable_insert (idtable_s *table, u_char *str, int type, int att);

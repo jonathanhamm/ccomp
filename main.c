@@ -3,17 +3,17 @@
 
 int main(int argc, const char *argv[])
 {
-    token_s *tokens;
+    lextok_s lextok;
     
     if (argc == 1)
-        tokens = lex (buildlex ("regex_pascal"), readfile ("samples/lex_sample2"));
+        lextok = lex (buildlex ("regex_pascal"), readfile ("samples/lex_sample2"));
     else if (argc == 2)
-        tokens = lex (buildlex ("regex_pascal"), readfile (argv[1]));
+        lextok = lex (buildlex ("regex_pascal"), readfile (argv[1]));
     else if (argc == 3)
-        tokens = lex (buildlex (argv[2]), readfile (argv[1]));
+        lextok = lex (buildlex (argv[2]), readfile (argv[1]));
     else
         perror("Argument Error");
-    build_parse ("cfg_pascal");
+    build_parse ("cfg_pascal", lextok);
     return 0;
 }
 

@@ -353,6 +353,7 @@ void prx_keywords (lex_s *lex, token_s **curr)
         idtable_insert(lex->kwtable, (*curr)->lexeme, -1, -1);
         *curr = (*curr)->next;
     }
+    lex->idtable = idtable_s_(lex->kwtable->typecount);
 }
 
 void prx_tokens (lex_s *lex, token_s **curr)
@@ -714,17 +715,16 @@ lex_s *lex_s_ (void)
         perror("Memory Allocation Error");
         return NULL;
     }
-    lex->kwtable = idtable_s_();
-    lex->idtable = idtable_s_();
+    lex->kwtable = idtable_s_(LEXID_START);
     lex->tok_hash = hash_(tok_hashf, tok_isequalf);
     return lex;
 }
 
-idtable_s *idtable_s_ (void)
+idtable_s *idtable_s_ (int idstart)
 {
     idtable_s *table;
     
-    table = calloc(1, sizeof(*table));
+    table = malloc(sizeof(*table));
     if (!table) {
         perror("Memory Allocation Error");
         return NULL;
@@ -734,6 +734,7 @@ idtable_s *idtable_s_ (void)
         perror("Memory Allocation Error");
         return NULL;
     }
+    table->typecount = idstart;
     return table;
 }
 
@@ -921,7 +922,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, u_char *buf)
     return curr;
 }
 
-token_s *lex (lex_s *lex, u_char *buf)
+lextok_s lex (lex_s *lex, u_char *buf)
 {
     mach_s *mach, *bmach;
     match_s res, best;
@@ -1009,7 +1010,7 @@ token_s *lex (lex_s *lex, u_char *buf)
     }
     addtok(&tlist, "$", lineno, lex->typecount+1, LEXATTR_DEFAULT);
     hashname(lex, lex->typecount+1, "$");
-    return head;
+    return (lextok_s){.lex = lex, .tokens = head};
 }
 
 mach_s *getmach(lex_s *lex, u_char *id)

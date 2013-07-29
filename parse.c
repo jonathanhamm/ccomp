@@ -1,6 +1,7 @@
 #include "general.h"
 #include "parse.h"
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -11,6 +12,7 @@ struct follow_s
 {
     pda_s *pda;
     bool isfinished;
+    bool dependencies;
     pthread_t thread;
     parse_s *parser;
     uint16_t index;
@@ -25,12 +27,13 @@ struct follow_s
     follow_s *nextwait;
 };
 
+static void match_phase (lextok_s regex, token_s *cfg);
+static token_s *findtok(mach_s *mlist, u_char *lexeme);
 static uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno);
 static parse_s *parse_(void);
 static pda_s *pda_(token_s *token);
 static production_s *addproduction (pda_s *pda);
 static pnode_s *pnode_(token_s *token);
-
 
 static void pp_start (parse_s *parse, token_s **curr);
 static void pp_nonterminal (parse_s *parse, token_s **curr);
@@ -47,8 +50,8 @@ static void getfollows (follow_s *fparams);
 static inline pnode_s *makeEOF (void);
 static follow_s *get_neighbor_params (follow_s *table, pda_s *pda);
 static llist_s *lldeep_concat_foll (llist_s *first, llist_s *second);
-static bool llpnode_contains(llist_s *list, int tok_type);
-static bool detect_deadlock (follow_s *params);
+static bool llpnode_contains(llist_s *list, token_s *tok);
+static llist_s *detect_deadlock (follow_s *params);
 static void compute_firstfollows (parse_s *parser);
 
 uint16_t str_hashf (void *key);
@@ -67,23 +70,69 @@ void printpda(pda_s *start)
     }
 }
 
-parse_s *build_parse (const char *file)
+parse_s *build_parse (const char *file, lextok_s lextok)
 {
     u_char *buf;
     parse_s *parse;
-    token_s *list, *iter;
+    token_s *list, *iter, *head;
     llist_s *firsts, *fiter;
     
     list = lexspec (file, cfg_annotate);
-    for (iter = list; iter; iter = iter->next)
-        printf("%s\n", iter->lexeme);
+    head = list;
     parse = parse_();
-    pp_start(parse, &list);
-    compute_firstfollows (parse);
+    //pp_start(parse, &list);
+   // match_phase (lextok, head);
+    
+    for (iter = lextok.tokens; iter; iter = iter->next)
+        printf("%s %d\n", iter->lexeme, iter->type.val);
+    printf("\n\n----------------------\n\n");
+    for (iter = list; iter; iter = iter->next)
+        printf("%s %d\n", iter->lexeme, iter->type.val);
+    printf("\n");
+    
+    //compute_firstfollows (parse);
     //firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
     //for (fiter = firsts; fiter; fiter = fiter->next)
       //  printf("%s, ", ((pnode_s *)fiter->ptr)->token->lexeme);
     return parse;
+}
+
+void match_phase (lextok_s regex, token_s *cfg)
+{
+    token_s *token;
+    idtlookup_s result;
+    
+    while (cfg) {
+        token = findtok(regex.lex->machs, cfg->lexeme);
+        if (token) {
+            
+            cfg->type = token->type;
+        }
+        else {
+            result = idtable_lookup(regex.lex->kwtable, cfg->lexeme);
+            if (result.type > 0) {
+                cfg->type.val = result.type;
+                cfg->type.attribute = result.att;
+            }
+        }
+        cfg = cfg->next;
+    }
+}
+
+token_s *findtok(mach_s *mlist, u_char *lexeme)
+{
+    uint8_t i;
+    u_char buf[MAX_LEXLEN+1], *ptr;
+    
+    while (mlist) {
+        ptr = &mlist->nterm->lexeme[1];
+        for (i = 0; ptr[i] != '>'; i++)
+            buf[i] = mlist->nterm->lexeme[i];
+        if (!strcmp(buf, lexeme))
+            return mlist->nterm;
+        mlist = mlist->next;
+    }
+    return NULL;
 }
 
 uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno)
@@ -319,7 +368,7 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
             if (!iter)
                 return NULL;
             do {
-                if (iter->token->type.val == LEXTYPE_TERM)
+                if (iter->token->type.val != LEXTYPE_NONTERM)
                     llpush(&list, iter);
                 else {
                     tmp = get_pda(parser, iter->token->lexeme);
@@ -339,6 +388,7 @@ void getfollows (follow_s *fparams)
     pnode_s *iter;
     hrecord_s *curr;
     follow_s *neighbor;
+    llist_s *schedule = NULL, *tmp;
     hashiterator_s *iterator;
     
     pthread_mutex_lock(fparams->jlock);
@@ -351,10 +401,27 @@ void getfollows (follow_s *fparams)
     iterator = hashiterator_(fparams->parser->phash);
     if (fparams->pda == fparams->parser->start)
         llpush(&fparams->list, makeEOF());
-    if (!iterator) {
-        perror("Memory Allocation Error");
-        exit(EXIT_FAILURE);
+    for (curr = hashnext(iterator); curr; curr = hashnext(iterator)) {
+        pda = (pda_s *)curr->data;
+        for (i = 0; i < pda->nproductions; i++) {
+            for (iter = pda->productions[i].start; iter; iter = iter->next) {
+                if (get_pda(fparams->parser, iter->token->lexeme) == fparams->pda) {
+                    if (iter->next) {
+                        do {
+                            iter = iter->next;
+                            neighbor = get_neighbor_params(fparams->table, fparams->pda);
+                            fparams->list = lldeep_concat_foll(fparams->list, neighbor->firsts);
+                        }
+                        while (hasepsilson(fparams->parser, iter));
+                        if (!iter)
+                            break;
+                    }
+                }
+            }
+        }
     }
+    hiterator_reset(iterator);
+    
     for (curr = hashnext(iterator); curr; curr = hashnext(iterator)) {
         pda = (pda_s *)curr->data;
         for (i = 0; i < pda->nproductions; i++) {
@@ -373,6 +440,13 @@ void getfollows (follow_s *fparams)
                                     pthread_mutex_unlock(&neighbor->flock);
                                     printf("woke up\n");
                                 }
+                                else {
+                                    while (schedule) {
+                                        tmp = llpop(&schedule);
+                                        lldeep_concat_foll(fparams->list, ((follow_s *)tmp->ptr)->list);
+                                        free(tmp);
+                                    }
+                                }
                                 fparams->nextwait = NULL;
                             }
                             fparams->list = lldeep_concat_foll(fparams->list, neighbor->list);
@@ -380,8 +454,10 @@ void getfollows (follow_s *fparams)
                         }
                         else {
                             iter = iter->next;
-                            if (iter->token->type.val == LEXTYPE_TERM)
+                            if (iter->token->type.val != LEXTYPE_NONTERM) {
+                                printf("%s\n", iter->token->lexeme);
                                 llpush(&fparams->list, iter);
+                            }
                             else {
                                 nterm = get_pda (fparams->parser, iter->token->lexeme);
                                 neighbor = get_neighbor_params(fparams->table, nterm);
@@ -390,12 +466,19 @@ void getfollows (follow_s *fparams)
                                     if (!neighbor->isfinished) {
                                         printf("%s waiting on %s\n", fparams->pda->nterm->lexeme, neighbor->pda->nterm->lexeme);
                                         fparams->nextwait = neighbor;
-                                        if (!detect_deadlock(fparams)) {
+                                        if (!(schedule = detect_deadlock(fparams))) {
                                             pthread_mutex_lock(&neighbor->flock);
                                             while (!neighbor->isfinished && neighbor != fparams)
                                                 pthread_cond_wait(&neighbor->fcond, &neighbor->flock);
                                             pthread_mutex_unlock(&neighbor->flock);
                                             printf("woke up\n");
+                                        }
+                                        else {
+                                            while (schedule) {
+                                                tmp = llpop(&schedule);
+                                                lldeep_concat_foll(fparams->list, ((follow_s *)tmp->ptr)->list);
+                                                free(tmp);
+                                            }
                                         }
                                         fparams->nextwait = NULL;
                                     }
@@ -448,7 +531,7 @@ llist_s *lldeep_concat_foll (llist_s *first, llist_s *second)
    if (!second)
        return first;
     while (((pnode_s *)second->ptr)->token->type.val == LEXTYPE_EPSILON ||
-           llpnode_contains(first, ((pnode_s *)second->ptr)->token->type.val)) {
+           llpnode_contains(first, ((pnode_s *)second->ptr)->token)) {
         second = second->next;
         if (!second)
             return first;
@@ -456,7 +539,7 @@ llist_s *lldeep_concat_foll (llist_s *first, llist_s *second)
     second_ = iter = llcopy(second);
     for (second = second->next; second; second = second->next) {
         if (((pnode_s *)second->ptr)->token->type.val == LEXTYPE_EPSILON ||
-            llpnode_contains(first, ((pnode_s *)second->ptr)->token->type.val))
+            llpnode_contains(first, ((pnode_s *)second->ptr)->token))
             continue;
         iter->next = llcopy(second);
         iter = iter->next;
@@ -464,25 +547,34 @@ llist_s *lldeep_concat_foll (llist_s *first, llist_s *second)
     return llconcat (first, second_);
 }
 
-bool llpnode_contains(llist_s *list, int tok_type)
+bool llpnode_contains(llist_s *list, token_s *tok)
 {
+    printf("\ncomparing\n");
     while (list) {
-        if (((pnode_s *)list->ptr)->token->type.val == tok_type)
+        printf("comparing %s %d with %s %d\n", ((pnode_s *)list->ptr)->token->lexeme, ((pnode_s *)list->ptr)->token->type.val, tok->lexeme, tok->type.val);
+        if (((pnode_s *)list->ptr)->token->type.val == tok->type.val) {
+            printf("true\n");
             return true;
+        }
         list = list->next;
     }
+    printf("false\n");
     return false;
 }
 
-bool detect_deadlock (follow_s *params)
+llist_s *detect_deadlock (follow_s *params)
 {
+    llist_s *fstack = NULL;
     follow_s *iter;
     
     for (iter = params->nextwait; iter; iter = iter->nextwait) {
-        if (iter == params)
-            return true;
+        llpush(&fstack, iter);
+        if (iter == params) {
+            llpop(&fstack);
+            return fstack;
+        }
     }
-    return false;
+    return NULL;
 }
 
 void compute_firstfollows (parse_s *parser)

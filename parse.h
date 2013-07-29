@@ -38,7 +38,7 @@ struct pnode_s
     pnode_s *prev;
 };
 
-extern parse_s *build_parse (const char *file);
+extern parse_s *build_parse (const char *file, lextok_s lextok);
 extern pda_s *get_pda (parse_s *parser, u_char *name);
 extern bool hash_pda (parse_s *parser, u_char *name, pda_s *pda);
 
