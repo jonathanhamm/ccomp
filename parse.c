@@ -80,20 +80,19 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     list = lexspec (file, cfg_annotate);
     head = list;
     parse = parse_();
-    //pp_start(parse, &list);
-   // match_phase (lextok, head);
+    pp_start(parse, &list);
+    match_phase (lextok, head);
+    /*
+    for (iter = list; iter; iter = iter->next) {
+        if (iter->type.val != LEXTYPE_NONTERM)
+            printf("%s %d\n", iter->lexeme, iter->type.val);
+    }
+    printf("\n");*/
     
-    for (iter = lextok.tokens; iter; iter = iter->next)
-        printf("%s %d\n", iter->lexeme, iter->type.val);
-    printf("\n\n----------------------\n\n");
-    for (iter = list; iter; iter = iter->next)
-        printf("%s %d\n", iter->lexeme, iter->type.val);
-    printf("\n");
-    
-    //compute_firstfollows (parse);
-    //firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
-    //for (fiter = firsts; fiter; fiter = fiter->next)
-      //  printf("%s, ", ((pnode_s *)fiter->ptr)->token->lexeme);
+    compute_firstfollows (parse);
+    firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
+    for (fiter = firsts; fiter; fiter = fiter->next)
+        printf("%s, ", ((pnode_s *)fiter->ptr)->token->lexeme);
     return parse;
 }
 
@@ -124,6 +123,8 @@ token_s *findtok(mach_s *mlist, u_char *lexeme)
     uint8_t i;
     u_char buf[MAX_LEXLEN+1], *ptr;
     
+    if (lexeme[0] == '<')
+        return NULL;
     while (mlist) {
         ptr = &mlist->nterm->lexeme[1];
         for (i = 0; ptr[i] != '>'; i++)
@@ -455,7 +456,7 @@ void getfollows (follow_s *fparams)
                         else {
                             iter = iter->next;
                             if (iter->token->type.val != LEXTYPE_NONTERM) {
-                                printf("%s\n", iter->token->lexeme);
+                                printf("non nonterm: %s\n", iter->token->lexeme);
                                 llpush(&fparams->list, iter);
                             }
                             else {

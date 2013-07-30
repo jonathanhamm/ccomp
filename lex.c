@@ -345,6 +345,7 @@ void parseregex (lex_s *lex, token_s **list)
     prx_tokens(lex, list);
     if ((*list)->type.val != LEXTYPE_EOF)
         printf("Syntax Error at line %u: Expected $ but got %s\n", (*list)->lineno, (*list)->lexeme);
+    lex->idtable = idtable_s_(lex->typecount);
 }
 
 void prx_keywords (lex_s *lex, token_s **curr)
@@ -353,7 +354,6 @@ void prx_keywords (lex_s *lex, token_s **curr)
         idtable_insert(lex->kwtable, (*curr)->lexeme, -1, -1);
         *curr = (*curr)->next;
     }
-    lex->idtable = idtable_s_(lex->kwtable->typecount);
 }
 
 void prx_tokens (lex_s *lex, token_s **curr)

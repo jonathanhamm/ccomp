@@ -18,7 +18,7 @@ u_char *readfile (const char *file)
     }
     buf = malloc(INITFBUF_SIZE);
     if (!buf) {
-        perror("Heap Allocation Error");
+        perror("Memory Allocation Error");
         fclose(f);
         return NULL;
     }
