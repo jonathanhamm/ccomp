@@ -99,6 +99,20 @@ llist_s *llcopy (llist_s *node)
     return copy;
 }
 
+llist_s *llist_ (void *iptr)
+{
+    llist_s *list;
+    
+    list = malloc(sizeof(*list));
+    if (!list) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    list->ptr = iptr;
+    list->next = NULL;
+    return list;
+}
+
 void free_llist (void *list)
 {
     void *backup;

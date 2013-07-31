@@ -55,6 +55,7 @@ struct hashiterator_s
 
 extern u_char *readfile (const char *file);
 
+extern llist_s *llist_ (void *iptr);
 extern void free_llist (void *list);
 
 extern void println (uint16_t no, u_char *buf);

@@ -81,18 +81,18 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     head = list;
     parse = parse_();
     pp_start(parse, &list);
-    match_phase (lextok, head);
     /*
     for (iter = list; iter; iter = iter->next) {
         if (iter->type.val != LEXTYPE_NONTERM)
             printf("%s %d\n", iter->lexeme, iter->type.val);
     }
     printf("\n");*/
-    
     compute_firstfollows (parse);
     firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
     for (fiter = firsts; fiter; fiter = fiter->next)
         printf("%s, ", ((pnode_s *)fiter->ptr)->token->lexeme);
+    match_phase (lextok, head);
+
     return parse;
 }
 
@@ -104,7 +104,6 @@ void match_phase (lextok_s regex, token_s *cfg)
     while (cfg) {
         token = findtok(regex.lex->machs, cfg->lexeme);
         if (token) {
-            
             cfg->type = token->type;
         }
         else {
@@ -123,12 +122,11 @@ token_s *findtok(mach_s *mlist, u_char *lexeme)
     uint8_t i;
     u_char buf[MAX_LEXLEN+1], *ptr;
     
-    if (lexeme[0] == '<')
-        return NULL;
     while (mlist) {
         ptr = &mlist->nterm->lexeme[1];
         for (i = 0; ptr[i] != '>'; i++)
-            buf[i] = mlist->nterm->lexeme[i];
+            buf[i] = ptr[i];
+        buf[i] = '\0';
         if (!strcmp(buf, lexeme))
             return mlist->nterm;
         mlist = mlist->next;
@@ -344,7 +342,7 @@ bool hasepsilson (parse_s *parser, pnode_s *nonterm)
     pda_s *pda;
     uint16_t i;
     
-    if (!nonterm || nonterm->token->type.val != LEXTYPE_NONTERM)
+    if (!nonterm || nonterm->token->type.val == LEXTYPE_TERM)
         return false;
     pda = get_pda(parser, nonterm->token->lexeme);
     for (i = 0; i < pda->nproductions; i++) {
@@ -369,7 +367,7 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
             if (!iter)
                 return NULL;
             do {
-                if (iter->token->type.val != LEXTYPE_NONTERM)
+                if (iter->token->type.val == LEXTYPE_TERM)
                     llpush(&list, iter);
                 else {
                     tmp = get_pda(parser, iter->token->lexeme);
@@ -455,9 +453,12 @@ void getfollows (follow_s *fparams)
                         }
                         else {
                             iter = iter->next;
-                            if (iter->token->type.val != LEXTYPE_NONTERM) {
+                            if (iter->token->type.val == LEXTYPE_TERM) {
                                 printf("non nonterm: %s\n", iter->token->lexeme);
-                                llpush(&fparams->list, iter);
+                                //llpush(&fparams->list, iter);
+                                tmp = llist_(iter);
+                                lldeep_concat_foll(fparams->list, tmp);
+                                free(tmp);
                             }
                             else {
                                 nterm = get_pda (fparams->parser, iter->token->lexeme);
@@ -553,10 +554,12 @@ bool llpnode_contains(llist_s *list, token_s *tok)
     printf("\ncomparing\n");
     while (list) {
         printf("comparing %s %d with %s %d\n", ((pnode_s *)list->ptr)->token->lexeme, ((pnode_s *)list->ptr)->token->type.val, tok->lexeme, tok->type.val);
-        if (((pnode_s *)list->ptr)->token->type.val == tok->type.val) {
+        if (!strcmp(((pnode_s *)list->ptr)->token->lexeme, tok->lexeme))
+            return true;
+        /*if (((pnode_s *)list->ptr)->token->type.val == tok->type.val) {
             printf("true\n");
             return true;
-        }
+        }*/
         list = list->next;
     }
     printf("false\n");
