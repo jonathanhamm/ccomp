@@ -1,16 +1,20 @@
 #ifndef GENERAL_H_
 #define GENERAL_H_
 
+//#define NDEBUG
+
+#include <assert.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifndef u_char
 typedef unsigned char u_char;
 #endif
 
+typedef unsigned long ulong_bool;
+
 #define HTABLE_SIZE 119
 #define UEOF (u_char)EOF
-
-typedef enum bool {false = 0, true = 1} bool;
 
 typedef uint16_t (*hash_f)(void *key);
 typedef bool (*isequal_f)(void *key1, void *key2);
@@ -32,8 +36,7 @@ struct hrecord_s
     void *key;
     void *data;
     union {
-        bool isoccupied;
-        unsigned long longint;
+        ulong_bool isoccupied;
         hrecord_s *next;
     };
 };

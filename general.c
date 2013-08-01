@@ -169,7 +169,7 @@ bool hashinsert (hash_s *hash, void *key, void *data)
         }
         new->key = key;
         new->data = data;
-        if (record->longint == true) {
+        if (record->isoccupied == true) {
             new->next = NULL;
             record->next = new;
         }
@@ -195,7 +195,7 @@ void *hashlookup (hash_s *hash, void *key)
         return NULL;
     if (hash->isequal(record->key, key))
         return record->data;
-    else if (record->longint != true) {
+    else if (record->isoccupied != true) {
         while (record) {
             if (hash->isequal(record->key, key))
                 return record->data;
@@ -225,7 +225,7 @@ hrecord_s *hashnext (hashiterator_s *iterator)
     int i;
     hash_s *hash;
 
-    if (!iterator->curr || !iterator->curr->next || iterator->curr->longint == true) {
+    if (!iterator->curr || !iterator->curr->next || iterator->curr->isoccupied == true) {
         hash = iterator->hash;
         for (i = iterator->index + 1; i < HTABLE_SIZE; i++) {
             if (hash->table[i].isoccupied) {

@@ -1,0 +1,50 @@
+<start>=>
+    <actionlist>
+    
+<actionlist=>
+    {
+        <action>.regex := default_regex;
+        <action>.cfg := default_cfg;
+    }
+    - <type> <actionlist>
+    {
+        <actionlist1>.(<type>.grammartype).val := <type>.val;
+        <actionlist1>.(<actionslist>.grammartype).val := <actionlist>.val;
+    }
+    |
+    ε
+
+<type>=>
+    <char> file 
+    {
+        <type>.grammartype := <char>.grammartype;
+        <type>.val := file 
+    }
+    | 
+    - <word> = val
+    {
+        <type>.grammartype := <word>.grammartype;
+        <type>.val := val;
+    }
+    
+<char>=>
+    r 
+    {
+        <char>.grammartype := regex;
+    }
+    |
+    p
+    {
+        <char>.grammartype := cfg;
+    }
+
+<word>=>
+    regex
+    {
+        <word>.grammartype := regex;
+    }
+    |
+    cfg
+    {
+        <word>.grammartype := cfg;
+    }
