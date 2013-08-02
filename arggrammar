@@ -12,7 +12,7 @@
         <actionlist1>.(<actionslist>.grammartype).val := <actionlist>.val;
     }
     |
-        word
+        word <actionlist>
     {
         <action>.regex := default;
         <action>.cfg := default;
@@ -28,7 +28,7 @@
         <type>.val := file 
     }
     | 
-    - <word> = val
+    - <word> = file
     {
         <type>.grammartype := <word>.grammartype;
         <type>.val := val;
@@ -45,7 +45,7 @@
         <char>.grammartype := cfg;
     }
     |
-    f
+    s
 
 <word>=>
     regex

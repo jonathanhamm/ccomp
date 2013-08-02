@@ -18,6 +18,8 @@ u_char *readfile (const char *file)
     f = fopen (file, "r");
     if (!f) {
         perror("File IO Error");
+        printf("Could not read %s\n", file);
+        assert(f);
         return NULL;
     }
     buf = malloc(INITFBUF_SIZE);
