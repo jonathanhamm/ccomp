@@ -14,6 +14,14 @@
 #define DEFAULT_CFG     "cfg_pascal"
 #define DEFAULT_SOURCE  "samples/lex_sample2"
 
+#define COMP_HELP       "Usage: \n" \
+                        "pc [--help] [<sourcefile>] [-s <sourcefile> | --source=<sourcefile>] " \
+                        "[-r <regexfile> | --regex=<regexfile>] [-p <cfgfile> | --cfg=<cfgfile>]\n\n" \
+                        "%-20sPrints this Message\n" \
+                        "%-20sSpecify Regex File\n" \
+                        "%-20sSpecify File Conating Language's Backus-Naur Form\n" \
+                        "%-20sSpecify Source File"
+
 typedef struct argtok_s argtok_s;
 typedef struct files_s files_s;
 
@@ -43,6 +51,8 @@ static void argparse_actionlist (argtok_s **curr, files_s *parent);
 static void argparse_type (argtok_s **curr, files_s *parent);
 static const char **argparse_char (argtok_s **curr, files_s *parent);
 static const char **argparse_word (argtok_s **curr, files_s *parent);
+
+static void print_usage (const char *message, const char *curr);
 
 int main (int argc, const char *argv[])
 {
@@ -108,15 +118,12 @@ argtok_s *arg_tokenize (int argc, const char *argv[])
                     break;
                 case '\\':
                     ++argv[i];
+                    if (!argv[i])
+                        break;
                 default:
                     startptr = argv[i];
                     if (*++argv[i]) {
                         while ((c = *argv[i])) {
-                            if (c == '\\') {
-                                c = *++argv[i];
-                                if (!c)
-                                    break;
-                            }
                             if (c == '-' || c == '=') {
                                 allocated = malloc(argv[i] - startptr + 1);
                                 if (!allocated) {
@@ -127,6 +134,11 @@ argtok_s *arg_tokenize (int argc, const char *argv[])
                                 allocated[argv[i] - startptr] = '\0';
                                 startptr = allocated;
                                 break;
+                            }
+                            if (c == '\\') {
+                                ++argv[i];
+                                if (!argv[i])
+                                    break;
                             }
                             ++argv[i];
                         }
@@ -177,7 +189,7 @@ files_s argsparse_start (argtok_s **curr)
         return files;
     }
     else {
-        printf("Syntax Error: Extra Token %s\n", (*curr)->lexeme);
+        print_usage("Syntax Error: Extra Token %s", (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
 }
@@ -195,7 +207,7 @@ void argparse_actionlist (argtok_s **curr, files_s *parent)
             if (!parent->source)
                 parent->source = (*curr)->lexeme;
             else {
-                printf("Error: Source File Already Specified\n");
+                printf("Error: Source File Already Specified");
                 exit(EXIT_FAILURE);
             }
             *curr = (*curr)->next;
@@ -204,7 +216,7 @@ void argparse_actionlist (argtok_s **curr, files_s *parent)
         case ARG_EOF:
             break;
         default:
-            printf("Syntax Error: Expected '-' or word but got %s\n", (*curr)->lexeme);
+            print_usage("Syntax Error: Expected '-' or word but got %s", (*curr)->lexeme);
             exit(EXIT_FAILURE);
             break;
     }
@@ -225,18 +237,18 @@ void argparse_type (argtok_s **curr, files_s *parent)
             if ((*curr)->id == ARG_ASSIGN)
                 break;
             else {
-                printf("Syntax Error: Expected '=' but got %s\n", (*curr)->lexeme);
+                print_usage("Syntax Error: Expected '=' but got %s", (*curr)->lexeme);
                 exit(EXIT_FAILURE);
             }
             break;
         default:
-            printf("Syntax Error: Expected '-' or character but got %s\n", (*curr)->lexeme);
+            print_usage("Syntax Error: Expected '-' or character but got %s", (*curr)->lexeme);
             exit(EXIT_FAILURE);
             break;
     }
     *curr = (*curr)->next;
     if (*assign) {
-        printf("Error: Property Already Assigned\n");
+        print_usage("Error: Property Already Assigned", NULL);
         exit(EXIT_FAILURE);
     }
     if ((*curr)->id == ARG_WORD || (*curr)->id == ARG_CHAR) {
@@ -244,7 +256,7 @@ void argparse_type (argtok_s **curr, files_s *parent)
         *curr = (*curr)->next;
     }
     else {
-        printf("Error: Invalid File Name: %s\n", (*curr)->lexeme);
+        print_usage("Error: Invalid File Name: %s", (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
 }
@@ -263,7 +275,7 @@ const char **argparse_char (argtok_s **curr, files_s *parent)
             return &parent->source;
             break;
         default:
-            printf("Error: Undefined Program Option: %s\n", (*curr)->lexeme);
+            print_usage("Error: Undefined Program Option: %s", (*curr)->lexeme);
             exit(EXIT_FAILURE);
             break;
     }
@@ -279,7 +291,18 @@ const char **argparse_word (argtok_s **curr, files_s *parent)
         return &parent->cfg;
     if (!strcasecmp("source", (*curr)->lexeme))
         return &parent->source;
-    printf("Error: Undefined Program Option: %s\n", (*curr)->lexeme);
+    print_usage("Error: Undefined Program Option: %s", (*curr)->lexeme);
     exit(EXIT_FAILURE);
     return NULL;
+}
+
+void print_usage (const char *message, const char *curr)
+{
+    if(message) {
+        if (curr)
+            printf(message, curr);
+        else
+            puts(message);
+    }
+    printf("\n"COMP_HELP, "--help:", "-r | --regex:", "-p | --cfg:", "-s | --source:");
 }
