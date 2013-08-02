@@ -77,4 +77,6 @@ extern hashiterator_s *hashiterator_(hash_s *hash);
 extern hrecord_s *hashnext (hashiterator_s *iterator);
 extern inline void hiterator_reset (hashiterator_s *iterator);
 
+extern bool is_allocated (const void *ptr);
+
 #endif

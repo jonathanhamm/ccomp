@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#if defined(__APPLE__) && defined(__MACH__)
+    #include <malloc/malloc.h>
+#endif
+
 #define INITFBUF_SIZE 128
 
 u_char *readfile (const char *file)
@@ -246,4 +250,17 @@ inline void hiterator_reset (hashiterator_s *iterator)
 {
     iterator->index = -1;
     iterator->curr = NULL;
+}
+
+bool is_allocated (const void *ptr)
+{
+    if (!ptr)
+        return false;
+#if defined(__APPLE__) && defined(__MACH__)
+    if (malloc_zone_from_ptr(ptr))
+        return true;
+    return false;
+#else
+    return false;
+#endif
 }
