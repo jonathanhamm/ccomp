@@ -61,13 +61,14 @@ int main (int argc, const char *argv[])
     lextok_s lextok;
     
     list = arg_tokenize(argc, argv);
+
     for (iter = list; iter; iter = iter->next)
         printf("%s %d\n\n", iter->lexeme, iter->id);
     iter = list;
+
     files = argsparse_start(&iter);
     
     free_tokens (list);
-    
     lextok = lex(buildlex(files.regex), readfile(files.source));
     
     build_parse (files.cfg, lextok);
@@ -118,8 +119,10 @@ argtok_s *arg_tokenize (int argc, const char *argv[])
                     break;
                 case '\\':
                     ++argv[i];
-                    if (!argv[i])
-                        break;
+                    if (!argv[i]) {
+                        print_usage("Error: Dangling Backslash", NULL);
+                        exit(EXIT_FAILURE);
+                    }
                 default:
                     startptr = argv[i];
                     if (*++argv[i]) {
@@ -137,8 +140,10 @@ argtok_s *arg_tokenize (int argc, const char *argv[])
                             }
                             if (c == '\\') {
                                 ++argv[i];
-                                if (!argv[i])
-                                    break;
+                                if (!argv[i]) {
+                                    print_usage("Error: Dangling Backslash", NULL);
+                                    exit(EXIT_FAILURE);
+                                }
                             }
                             ++argv[i];
                         }
@@ -291,6 +296,11 @@ const char **argparse_word (argtok_s **curr, files_s *parent)
         return &parent->cfg;
     if (!strcasecmp("source", (*curr)->lexeme))
         return &parent->source;
+    if (!strcasecmp("help", (*curr)->lexeme)) {
+        print_usage(NULL, NULL);
+        exit(EXIT_SUCCESS);
+        return NULL;
+    }
     print_usage("Error: Undefined Program Option: %s", (*curr)->lexeme);
     exit(EXIT_FAILURE);
     return NULL;
