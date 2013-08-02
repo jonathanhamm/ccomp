@@ -11,17 +11,31 @@
 #define ARG_DASH    3
 #define ARG_ASSIGN  4
 
+#define DEFAULT_REGEX   "regex_pascal"
+#define DEFAULT_CFG     "cfg_pascal"
+#define DEFAULT_SOURCE  "samples/lex_samples2"
+
 typedef struct argtok_s argtok_s;
+typedef struct files_s files_;
 
 struct argtok_s
 {
     argtok_s *next;
     int id;
-    char lexeme[MAXARG_LEN+1];
+    const char *lexeme;
+};
+
+struct file_s
+{
+    const char *regex;
+    const char *cfg;
+    const char *source;
 };
 
 static void add_argtoken (argtok_s **tlist, const char *lexeme, int id);
 static argtok_s *arg_tokenize (int argc, const char *argv[]);
+
+//static void
 
 int main(int argc, const char *argv[])
 {
@@ -57,7 +71,7 @@ void add_argtoken (argtok_s **tlist, const char *lexeme, int id)
     }
     tok->id = id;
     tok->next = NULL;
-    strcpy(tok->lexeme, lexeme);
+    tok->lexeme = lexeme;
     if (*tlist)
         (*tlist)->next = tok;
     *tlist = tok;
@@ -65,16 +79,15 @@ void add_argtoken (argtok_s **tlist, const char *lexeme, int id)
 
 argtok_s *arg_tokenize (int argc, const char *argv[])
 {
-    int i, bpos;
+    int i;
     char c;
-    char buf[MAXARG_LEN+1];
+    const char *startptr;
     argtok_s *head = NULL, *tlist = NULL;
     
     if (argc == 1)
         return NULL;
     for (i = 1; i < argc; i++) {
         while ((c = *argv[i])) {
-            bpos = 0;
             switch (c) {
                 case '-':
                     add_argtoken (&tlist, "-", ARG_DASH);
@@ -93,8 +106,7 @@ argtok_s *arg_tokenize (int argc, const char *argv[])
                     if (!c)
                         break;
                 default:
-                    buf[bpos] = c;
-                    ++bpos;
+                    startptr = argv[i];
                     if (*++argv[i]) {
                         while ((c = *argv[i])) {
                             if (c == '\\') {
@@ -104,23 +116,14 @@ argtok_s *arg_tokenize (int argc, const char *argv[])
                             }
                             if (c == '-' || c == '=')
                                 break;
-                            if (bpos == MAXARG_LEN) {
-                                buf[bpos] = '\0';
-                                perror("Error: Too long parameter");
-                                exit(EXIT_FAILURE);
-                            }
-                            buf[bpos] = c;
-                            ++bpos;
                             ++argv[i];
                         }
-                        buf[bpos] = '\0';
-                        add_argtoken (&tlist, buf, ARG_WORD);
+                        add_argtoken (&tlist, startptr, ARG_WORD);
                         if (!head)
                             head = tlist;
                     }
                     else {
-                        buf[bpos] = '\0';
-                        add_argtoken (&tlist, buf, ARG_CHAR);
+                        add_argtoken (&tlist, startptr, ARG_CHAR);
                         if (!head)
                             head = tlist;
                     }
