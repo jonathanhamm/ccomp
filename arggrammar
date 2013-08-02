@@ -1,7 +1,7 @@
 <start>=>
     <actionlist>
     
-<actionlist=>
+<actionlist>=>
     {
         <action>.regex := default_regex;
         <action>.cfg := default_cfg;
@@ -10,6 +10,13 @@
     {
         <actionlist1>.(<type>.grammartype).val := <type>.val;
         <actionlist1>.(<actionslist>.grammartype).val := <actionlist>.val;
+    }
+    |
+        word
+    {
+        <action>.regex := default;
+        <action>.cfg := default;
+        <action>.file := word;
     }
     |
     ε
@@ -37,6 +44,8 @@
     {
         <char>.grammartype := cfg;
     }
+    |
+    f
 
 <word>=>
     regex
@@ -48,3 +57,7 @@
     {
         <word>.grammartype := cfg;
     }
+    |
+    source
+    |
+    an

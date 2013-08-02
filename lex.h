@@ -1,5 +1,6 @@
 /*
- 
+    lex.h
+    Author: Jonathan Hamm
  */
 
 #ifndef LEX_H_
