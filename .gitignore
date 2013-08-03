@@ -1,1 +1,4 @@
 *.out.*
+*.dSYM
+pc
+*.out

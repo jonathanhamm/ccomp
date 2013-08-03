@@ -1,8 +1,16 @@
+/*
+ general.c
+ Author: Jonathan Hamm
+ 
+ Description: 
+    Implementation of general functions and data structures used by the compiler.  
+ */
+
 #include "general.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(__APPLE__) && defined(__MACH__)
+#if ((defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__))
     #include <malloc/malloc.h>
 #endif
 
@@ -258,7 +266,7 @@ bool is_allocated (const void *ptr)
 {
     if (!ptr)
         return false;
-#if defined(__APPLE__) && defined(__MACH__)
+#if ((defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__)) 
     if (malloc_zone_from_ptr(ptr))
         return true;
     return false;

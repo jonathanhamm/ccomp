@@ -1,3 +1,11 @@
+/*
+ general.h
+ Author: Jonathan Hamm
+ 
+ Description:
+    Libary of general functions and data structures used by the compiler.
+ */
+
 #ifndef GENERAL_H_
 #define GENERAL_H_
 

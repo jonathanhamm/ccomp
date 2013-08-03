@@ -1,3 +1,13 @@
+/*
+ parse.h
+ Author: Jonathan Hamm
+ 
+ Description: 
+    Library for parser generator. This reads in a specified Backu-Naur
+    form and source file. The source file's syntax is checked in 
+    conformance to the specified LL(1) grammar. 
+ */
+
 #ifndef PARSE_H_
 #define PARSE_H_
 

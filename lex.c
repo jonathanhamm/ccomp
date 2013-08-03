@@ -1,7 +1,11 @@
 /*
- Author: Rasputin
- 
  lex.c
+ Author: Jonathan Hamm
+ 
+ Description:
+    Implementation for a lexical analyzer generator. This reads in a regular 
+    expression and source file specified by the user. It then tokenizes the source 
+    file in conformance to the specified regular expression.
  */
 
 #include "lex.h"

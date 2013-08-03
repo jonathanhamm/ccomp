@@ -1,3 +1,13 @@
+/*
+ parse.h
+ Author: Jonathan Hamm
+ 
+ Description:
+    Implementation of parser generator. This reads in a specified Backu-Naur
+    form and source file. The source file's syntax is checked in
+    conformance to the specified LL(1) grammar.
+ */
+
 #include "general.h"
 #include "parse.h"
 #include <stdio.h>
@@ -552,9 +562,11 @@ llist_s *detect_deadlock (follow_s *params)
     llist_s *fstack = NULL;
     follow_s *iter;
     
+    llpush(&fstack, params);
     for (iter = params->nextwait; iter; iter = iter->nextwait) {
-        llpush(&fstack, iter);
-        if (iter == params)
+        if (!llcontains(fstack, iter))
+            llpush(&fstack, iter);
+        else
             return fstack;
     }
     return NULL;

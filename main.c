@@ -1,3 +1,13 @@
+/*
+ main.c
+ Author: Jonathan Hamm
+ 
+ Description:
+    Contains main function. This simply parses the command line 
+    arguments supplied by the user, and invokes the compiler
+    accordingly. 
+ */
+
 #include "lex.h"
 #include "general.h"
 #include <stdio.h>
@@ -19,7 +29,7 @@
                         "[-r <regexfile> | --regex=<regexfile>] [-p <cfgfile> | --cfg=<cfgfile>]\n\n" \
                         "%-20sPrints this Message\n" \
                         "%-20sSpecify Regex File\n" \
-                        "%-20sSpecify File Conating Language's Backus-Naur Form\n" \
+                        "%-20sSpecify File Containing Language's Backus-Naur Form\n" \
                         "%-20sSpecify Source File"
 
 typedef struct argtok_s argtok_s;
