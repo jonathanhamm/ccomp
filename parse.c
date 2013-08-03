@@ -34,7 +34,8 @@ struct follow_s
     pthread_cond_t fcond;
     pthread_mutex_t *jlock;
     pthread_cond_t *jcond;
-    follow_s *nextwait;
+    uint16_t ninherit;
+    follow_s **inherit;
 };
 
 static void match_phase (lextok_s regex, token_s *cfg);
@@ -61,7 +62,8 @@ static inline pnode_s *makeEOF (void);
 static follow_s *get_neighbor_params (follow_s *table, pda_s *pda);
 static llist_s *lldeep_concat_foll (llist_s *first, llist_s *second);
 static bool llpnode_contains(llist_s *list, token_s *tok);
-static llist_s *detect_deadlock (follow_s *params);
+static void add_inherit (follow_s *nonterm, follow_s *dependent);
+static void inherit_follows (follow_s *params);
 static void compute_firstfollows (parse_s *parser);
 
 uint16_t str_hashf (void *key);
@@ -432,20 +434,7 @@ void getfollows (follow_s *fparams)
                             has_epsilon = false;
                             neighbor = get_neighbor_params(fparams->table, pda);
                             pthread_mutex_lock(&neighbor->flock);
-                            if (neighbor->isfinished)
-                                fparams->list = lldeep_concat_foll(fparams->list, neighbor->list);
-                            else {
-                                fparams->nextwait = neighbor;
-                                if (!detect_deadlock(fparams)) {
-                                    printf("going to sleep on %s\n", neighbor->pda->nterm->lexeme);
-                                    while (!neighbor->isfinished)
-                                        pthread_cond_wait(&neighbor->fcond, &neighbor->flock);
-                                    printf("woke up from %s\n", neighbor->pda->nterm->lexeme);
-                                    fparams->nextwait = NULL;
-                                }
-                                else
-                                    printf("cycle prevented\n");
-                            }
+                            add_inherit(fparams, neighbor);
                             pthread_mutex_unlock(&neighbor->flock);
                         }
                         else {
@@ -461,26 +450,11 @@ void getfollows (follow_s *fparams)
                                 fparams->list = lldeep_concat_foll(fparams->list, neighbor->firsts);
                                 if (has_epsilon) {
                                     pthread_mutex_lock(&neighbor->flock);
-                                    if (neighbor->isfinished)
-                                        fparams->list = lldeep_concat_foll(fparams->list, neighbor->list);
-                                    else {
-                                        fparams->nextwait = neighbor;
-                                        if (!detect_deadlock(fparams)) {
-                                            printf("going to sleep on %s\n", neighbor->pda->nterm->lexeme);
-                                            while (!neighbor->isfinished)
-                                                pthread_cond_wait(&neighbor->fcond, &neighbor->flock);
-                                            printf("woke up from %s\n", neighbor->pda->nterm->lexeme);
-                                            fparams->nextwait = NULL;
-                                        }
-                                        else
-                                            printf("cycle prevented\n");
-                                    }
+                                    add_inherit(fparams, neighbor);
                                     pthread_mutex_unlock(&neighbor->flock);
                                 }
                             }
-                        }
-                        //neighbor = get_neighbor_params(fparams->table, (pda_s *)curr->data);
-                        
+                        }                        
                     }
                     while (has_epsilon);
                 }
@@ -557,19 +531,29 @@ bool llpnode_contains(llist_s *list, token_s *tok)
     return false;
 }
 
-llist_s *detect_deadlock (follow_s *params)
+void add_inherit (follow_s *nonterm, follow_s *dependent)
 {
-    llist_s *fstack = NULL;
-    follow_s *iter;
+    uint16_t i;
     
-    llpush(&fstack, params);
-    for (iter = params->nextwait; iter; iter = iter->nextwait) {
-        if (!llcontains(fstack, iter))
-            llpush(&fstack, iter);
-        else
-            return fstack;
+    if (nonterm->ninherit)
+        nonterm->inherit = realloc(nonterm->inherit, (nonterm->ninherit + 1) * sizeof(*nonterm->inherit));
+    else
+        nonterm->inherit = malloc(sizeof(*nonterm->inherit));
+    if (!nonterm->inherit) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
     }
-    return NULL;
+    for (i = 0; i < nonterm->ninherit; i++) {
+        if (nonterm->inherit[i] == dependent)
+            return;
+    }
+    nonterm->inherit[nonterm->ninherit] = dependent;
+    nonterm->ninherit++;
+}
+
+void inherit_follows (follow_s *params)
+{
+    
 }
 
 void compute_firstfollows (parse_s *parser)
@@ -617,6 +601,7 @@ void compute_firstfollows (parse_s *parser)
         ftable[i].jlock = &jlock;
         ftable[i].jcond = &jcond;
         ftable[i].ready = &ready;
+        ftable[i].ninherit = 0;
         status = pthread_mutex_init(&ftable[i].flock, NULL);
         if (status) {
             perror("Error: Failed to initialize mutex lock");
