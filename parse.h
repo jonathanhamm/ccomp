@@ -3,7 +3,7 @@
  Author: Jonathan Hamm
  
  Description: 
-    Library for parser generator. This reads in a specified Backu-Naur
+    Library for parser generator. This reads in a specified Backus-Naur
     form and source file. The source file's syntax is checked in 
     conformance to the specified LL(1) grammar. 
  */

@@ -3,7 +3,7 @@
  Author: Jonathan Hamm
  
  Description:
-    Implementation of parser generator. This reads in a specified Backu-Naur
+    Implementation of parser generator. This reads in a specified Backus-Naur
     form and source file. The source file's syntax is checked in
     conformance to the specified LL(1) grammar.
  */
@@ -27,8 +27,8 @@ struct follow_s
     parse_s *parser;
     uint16_t index;
     follow_s *table;
-    llist_s *list;
     llist_s *firsts;
+    llist_s *follows;
     bool *ready;
     pthread_mutex_t flock;
     pthread_cond_t fcond;
@@ -63,7 +63,7 @@ static follow_s *get_neighbor_params (follow_s *table, pda_s *pda);
 static llist_s *lldeep_concat_foll (llist_s *first, llist_s *second);
 static bool llpnode_contains(llist_s *list, token_s *tok);
 static void add_inherit (follow_s *nonterm, follow_s *dependent);
-static void inherit_follows (follow_s *params);
+static llist_s *inherit_follows (follow_s *params, llist_s **stack);
 static void compute_firstfollows (parse_s *parser);
 
 uint16_t str_hashf (void *key);
@@ -418,8 +418,8 @@ void getfollows (follow_s *fparams)
 
     if (fparams->pda == fparams->parser->start) {
         tmpeof = makeEOF();
-        if (!llpnode_contains(fparams->list, tmpeof->token))
-            llpush(&fparams->list, tmpeof);
+        if (!llpnode_contains(fparams->follows, tmpeof->token))
+            llpush(&fparams->follows, tmpeof);
         else
             free(tmpeof);
     }
@@ -433,25 +433,24 @@ void getfollows (follow_s *fparams)
                         if (!iter->next) {
                             has_epsilon = false;
                             neighbor = get_neighbor_params(fparams->table, pda);
-                            pthread_mutex_lock(&neighbor->flock);
                             add_inherit(fparams, neighbor);
-                            pthread_mutex_unlock(&neighbor->flock);
                         }
                         else {
                             iter = iter->next;
+
                             has_epsilon = hasepsilon(fparams->parser, iter);
                             if (iter->token->type.val == LEXTYPE_TERM) {
-                                if (!llpnode_contains(fparams->list, iter->token))
-                                    llpush(&fparams->list, iter);
+                                if (!llpnode_contains(fparams->follows, iter->token)) {
+
+                                    llpush(&fparams->follows, iter);
+                                }
                             }
                             else {
                                 nterm = get_pda(fparams->parser, iter->token->lexeme);
                                 neighbor = get_neighbor_params(fparams->table, nterm);
-                                fparams->list = lldeep_concat_foll(fparams->list, neighbor->firsts);
+                                fparams->follows = lldeep_concat_foll(fparams->follows, neighbor->firsts);
                                 if (has_epsilon) {
-                                    pthread_mutex_lock(&neighbor->flock);
                                     add_inherit(fparams, neighbor);
-                                    pthread_mutex_unlock(&neighbor->flock);
                                 }
                             }
                         }                        
@@ -551,9 +550,20 @@ void add_inherit (follow_s *nonterm, follow_s *dependent)
     nonterm->ninherit++;
 }
 
-void inherit_follows (follow_s *params)
+llist_s *inherit_follows (follow_s *nterm, llist_s **stack)
 {
+    uint16_t i;
     
+    if (llcontains(*stack, nterm)) {
+        return NULL;
+    }
+    else
+        llpush(stack, nterm);
+    for (i = 0; i < nterm->ninherit; i++) {
+        nterm->follows = lldeep_concat_foll (nterm->follows, inherit_follows(nterm->inherit[i], stack));
+    }
+    llpop(stack);
+    return nterm->follows;
 }
 
 void compute_firstfollows (parse_s *parser)
@@ -567,6 +577,7 @@ void compute_firstfollows (parse_s *parser)
     follow_s *ftable;
     pthread_mutex_t jlock;
     pthread_cond_t jcond;
+    llist_s *stack = NULL;
     void *attr = NULL;
     
     nitems = parser->phash->nitems;
@@ -636,8 +647,12 @@ void compute_firstfollows (parse_s *parser)
         }
     }
     for (i = 0; i < nitems; i++) {
+        ftable[i].follows = inherit_follows(&ftable[i], &stack);
+    }
+    
+    for (i = 0; i < nitems; i++) {
         printf("Printing Follows for %s\n", ftable[i].pda->nterm->lexeme);
-        for (iter = ftable[i].list; iter; iter = iter->next)
+        for (iter = ftable[i].follows; iter; iter = iter->next)
             printf("%s, ", ((pnode_s *)iter->ptr)->token->lexeme);
         printf("\n\n");
     }
