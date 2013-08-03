@@ -14,24 +14,21 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <unistd.h>
+
+#define LLTOKEN(node) ((token_s *)node->ptr)
 
 typedef struct follow_s follow_s;
 
 struct follow_s
 {
     pda_s *pda;
-    bool isfinished;
-    bool dependencies;
-    pthread_t thread;
     parse_s *parser;
     uint16_t index;
+    pthread_t thread;
     follow_s *table;
     llist_s *firsts;
     llist_s *follows;
     bool *ready;
-    pthread_mutex_t flock;
-    pthread_cond_t fcond;
     pthread_mutex_t *jlock;
     pthread_cond_t *jcond;
     uint16_t ninherit;
@@ -65,6 +62,8 @@ static bool llpnode_contains(llist_s *list, token_s *tok);
 static void add_inherit (follow_s *nonterm, follow_s *dependent);
 static llist_s *inherit_follows (follow_s *params, llist_s **stack);
 static void compute_firstfollows (parse_s *parser);
+
+static void build_parse_table (parse_s *parse, token_s *tokens);
 
 uint16_t str_hashf (void *key);
 bool str_isequalf(void *key1, void *key2);
@@ -101,6 +100,7 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     printf("\n");*/
     compute_firstfollows (parse);
     firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
+    build_parse_table (parse, list);
     for (fiter = firsts; fiter; fiter = fiter->next)
         printf("%s, ", ((pnode_s *)fiter->ptr)->token->lexeme);
     match_phase (lextok, head);
@@ -394,8 +394,6 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
     return list;
 }
 
-int exitcount = 0;
-
 void getfollows (follow_s *fparams)
 {
     uint16_t i;
@@ -405,15 +403,11 @@ void getfollows (follow_s *fparams)
     pnode_s *iter;
     hrecord_s *curr;
     follow_s *neighbor;
-    llist_s *schedule = NULL, *tmp;
     hashiterator_s *iterator;
     
     pthread_mutex_lock(fparams->jlock);
-
     while (!*fparams->ready)
-        pthread_cond_wait(fparams->jcond, fparams->jlock);
-    printf("started\n");
-    
+        pthread_cond_wait(fparams->jcond, fparams->jlock);    
     pthread_mutex_unlock(fparams->jlock);
 
     if (fparams->pda == fparams->parser->start) {
@@ -437,13 +431,10 @@ void getfollows (follow_s *fparams)
                         }
                         else {
                             iter = iter->next;
-
                             has_epsilon = hasepsilon(fparams->parser, iter);
                             if (iter->token->type.val == LEXTYPE_TERM) {
-                                if (!llpnode_contains(fparams->follows, iter->token)) {
-
+                                if (!llpnode_contains(fparams->follows, iter->token))
                                     llpush(&fparams->follows, iter);
-                                }
                             }
                             else {
                                 nterm = get_pda(fparams->parser, iter->token->lexeme);
@@ -460,14 +451,7 @@ void getfollows (follow_s *fparams)
             }
         }
     }
-    
-    pthread_mutex_lock(&fparams->flock);
-    fparams->isfinished = true;
-    pthread_cond_broadcast(&fparams->fcond);
-    pthread_mutex_unlock(&fparams->flock);
     free(iterator);
-    exitcount++;
-    printf("exiting %d\n", exitcount);
     pthread_exit(0);
 }
 
@@ -521,10 +505,6 @@ bool llpnode_contains(llist_s *list, token_s *tok)
     while (list) {
         if (!strcmp(((pnode_s *)list->ptr)->token->lexeme, tok->lexeme))
             return true;
-        //if (((pnode_s *)list->ptr)->token->type.val == tok->type.val) {
-            //printf("true\n");
-          //  return true;
-        //}
         list = list->next;
     }
     return false;
@@ -613,16 +593,6 @@ void compute_firstfollows (parse_s *parser)
         ftable[i].jcond = &jcond;
         ftable[i].ready = &ready;
         ftable[i].ninherit = 0;
-        status = pthread_mutex_init(&ftable[i].flock, NULL);
-        if (status) {
-            perror("Error: Failed to initialize mutex lock");
-            exit(EXIT_FAILURE);
-        }
-        status = pthread_cond_init(&ftable[i].fcond, NULL);
-        if (status) {
-            perror("Error: Failed to initialize condition varaible");
-            exit(EXIT_FAILURE);
-        }
     }
     free(iterator);
     for (i = 0; i < nitems; i++) {
@@ -638,25 +608,40 @@ void compute_firstfollows (parse_s *parser)
     pthread_cond_broadcast(&jcond);
     pthread_mutex_unlock(&jlock);
     
-    for (i = 0; i < nitems; i++) {
-     
+    for (i = 0; i < nitems; i++)
         status = pthread_join(ftable[i].thread, &attr);
-        if (status) {
-            printf("join failure %d\n", status);
-            
-        }
-    }
-    for (i = 0; i < nitems; i++) {
-        ftable[i].follows = inherit_follows(&ftable[i], &stack);
-    }
-    
+    for (i = 0; i < nitems; i++)
+        ftable[i].pda->follows = inherit_follows(&ftable[i], &stack);
     for (i = 0; i < nitems; i++) {
         printf("Printing Follows for %s\n", ftable[i].pda->nterm->lexeme);
         for (iter = ftable[i].follows; iter; iter = iter->next)
             printf("%s, ", ((pnode_s *)iter->ptr)->token->lexeme);
         printf("\n\n");
     }
+    pthread_mutex_destroy(&jlock);
+    pthread_cond_destroy(&jcond);
     free(ftable);
+}
+
+void build_parse_table (parse_s *parse, token_s *tokens)
+{
+    uint16_t    n_terminals = 0,
+                n_nonterminals = 0;
+    llist_s *terminals = NULL,
+            *nonterminals = NULL;
+    parsetable_s *table;
+    
+    while (tokens) {
+        if (tokens->type.val == LEXTYPE_TERM) {
+            llpush(&terminals, tokens);
+            n_terminals++;
+        }
+        else if (tokens->type.val == LEXTYPE_NONTERM) {
+            llpush(&nonterminals, tokens);
+            n_nonterminals++;
+        }
+        tokens = tokens->next;
+    }
 }
 
 pda_s *get_pda (parse_s *parser, u_char *name)
