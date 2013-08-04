@@ -16,7 +16,7 @@
 #include <pthread.h>
 
 #define LLFF(node) ((ffnode_s *)node->ptr)
-#define LLTOKEN(node) LLFF(node)->token
+#define LLTOKEN(node) (LLFF(node)->token)
 
 typedef struct follow_s follow_s;
 typedef struct ffnode_s ffnode_s;
@@ -72,6 +72,7 @@ static void add_inherit (follow_s *nonterm, follow_s *dependent);
 static llist_s *inherit_follows (follow_s *params, llist_s **stack);
 static void compute_firstfollows (parse_s *parser);
 
+static bool lllex_contains (llist_s *list, u_char *lex);
 static void build_parse_table (parse_s *parse, token_s *tokens);
 
 uint16_t str_hashf (void *key);
@@ -109,7 +110,7 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     printf("\n");*/
     compute_firstfollows (parse);
     firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
-    build_parse_table (parse, list);
+    build_parse_table (parse, head);
     match_phase (lextok, head);
 
     return parse;
@@ -554,6 +555,7 @@ void add_inherit (follow_s *nonterm, follow_s *dependent)
 llist_s *inherit_follows (follow_s *nterm, llist_s **stack)
 {
     uint16_t i;
+    llist_s *tmp;
     
     if (llcontains(*stack, nterm)) {
         return NULL;
@@ -563,7 +565,8 @@ llist_s *inherit_follows (follow_s *nterm, llist_s **stack)
     for (i = 0; i < nterm->ninherit; i++) {
         nterm->follows = lldeep_concat_foll (nterm->follows, inherit_follows(nterm->inherit[i], stack));
     }
-    llpop(stack);
+    tmp = llpop(stack);
+    free(tmp);
     return nterm->follows;
 }
 
@@ -644,45 +647,103 @@ void compute_firstfollows (parse_s *parser)
     free(ftable);
 }
 
+bool lllex_contains (llist_s *list, u_char *lex)
+{
+    while (list) {
+        if (!strcmp(((token_s *)list->ptr)->lexeme, lex))
+            return true;
+        list = list->next;
+    }
+    return false;
+}
+
+
 void build_parse_table (parse_s *parse, token_s *tokens)
 {
-    uint16_t    i, 
+    uint16_t    i, j, k,
                 n_terminals = 0,
                 n_nonterminals = 0;
     llist_s *terminals = NULL,
-            *nonterminals = NULL;
-    parsetable_s *table;
-    
+            *nonterminals = NULL, *tmp;
+    parsetable_s *ptable;
+    llist_s *first_iter, *foll_iter;
+    pda_s *curr;
+    hrecord_s *hcurr;
+    hashiterator_s *hiterator;
+
     while (tokens) {
-        if (tokens->type.val == LEXTYPE_TERM) {
-            llpush(&terminals, tokens);
-            n_terminals++;
+        if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_EPSILON) {
+            if (!lllex_contains(terminals, tokens->lexeme)) {
+                llpush(&terminals, tokens);
+                n_terminals++;
+            }
         }
         else if (tokens->type.val == LEXTYPE_NONTERM) {
-            llpush(&nonterminals, tokens);
-            n_nonterminals++;
+            if (!lllex_contains(nonterminals, tokens->lexeme)) {
+                llpush(&nonterminals, tokens);
+                n_nonterminals++;
+            }
         }
         tokens = tokens->next;
     }
-    table = malloc(sizeof(*table));
-    if (!table) {
+    ptable = malloc(sizeof(*ptable));
+    if (!ptable) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
-    table->n_terminals = n_terminals;
-    table->n_nonterminals = n_nonterminals;
-    table->table = calloc(n_terminals * n_nonterminals, sizeof(*table->table));
-    table->terms = calloc(sizeof(*table->terms), n_terminals);
-    table->nterms = calloc(sizeof(*table->nterms), n_nonterminals);
-    if (!table->table || !table->terms || !table->nterms) {
+    ptable->n_terminals = n_terminals;
+    ptable->n_nonterminals = n_nonterminals;
+    ptable->table = malloc(n_nonterminals * sizeof(*ptable->table));
+    if (!ptable->table) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
-    for (i = 0; i < n_terminals; i++)
-        table->terms[i].tok = (token_s *)llpop(&terminals);
-    for (i = 0; i < n_nonterminals; i++)
-        table->nterms[i].tok = (token_s *)llpop(&nonterminals);
-    
+    for (i = 0; i < n_terminals; i++) {
+        ptable->table[i] = calloc(n_terminals, sizeof(**ptable->table));
+        if (!ptable->table[i]) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+    }
+    ptable->terms = calloc(sizeof(*ptable->terms), n_terminals);
+    ptable->nterms = calloc(sizeof(*ptable->nterms), n_nonterminals);
+    if (!ptable->terms || !ptable->nterms) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    for (i = 0; i < n_terminals; i++) {
+        tmp = llpop(&terminals);
+        ptable->terms[i] = (token_s *)tmp->ptr;
+        free(tmp);
+    }
+    for (i = 0; i < n_nonterminals; i++) {
+        tmp = llpop(&nonterminals);
+        ptable->nterms[i] = (token_s *)tmp->ptr;
+        free(tmp);
+    }
+    hiterator = hashiterator_(parse->phash);
+    for (hcurr = hashnext(hiterator); hcurr; hcurr = hashnext(hiterator)) {
+        curr = (pda_s *)hcurr->data;
+        for (i = 0; i < n_nonterminals; i++) {
+            if (!strcmp(curr->nterm->lexeme, ptable->nterms[i]->lexeme))
+                break;
+        }
+        for (first_iter = curr->firsts; first_iter; first_iter = first_iter->next) {
+            for (j = 0; j < n_terminals; j++) {
+                if (!strcmp(LLTOKEN(first_iter)->lexeme, ptable->terms[i]->lexeme)) {
+                    ptable->table[i][j] = LLFF(first_iter)->prod;
+                    if (LLTOKEN(first_iter)->type.val == LEXTYPE_EPSILON) {
+                        for (foll_iter = curr->follows; foll_iter; foll_iter = foll_iter->next) {
+                            for (k = 0; k < n_nonterminals; k++) {
+                                if (!strcmp(LLTOKEN(foll_iter)->lexeme, ptable->nterms[k]->lexeme))
+                                    ptable->table[i][k] = LLFF(foll_iter)->prod;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 pda_s *get_pda (parse_s *parser, u_char *name)

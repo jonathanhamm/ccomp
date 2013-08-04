@@ -20,7 +20,6 @@ typedef struct parse_s parse_s;
 typedef struct pda_s pda_s;
 typedef struct production_s production_s;
 typedef struct pnode_s pnode_s;
-typedef struct ptable_ref_s ptable_ref_s;
 typedef struct parsetable_s parsetable_s;
 
 struct parse_s
@@ -51,19 +50,13 @@ struct pnode_s
     pnode_s *prev;
 };
 
-struct ptable_ref_s
-{
-    token_s *tok;
-    uint16_t loc;
-};
-
 struct parsetable_s
 {
     uint16_t n_terminals;
     uint16_t n_nonterminals;
-    ptable_ref_s *terms;
-    ptable_ref_s *nterms;
-    uint16_t *table;
+    token_s **terms;
+    token_s **nterms;
+    uint16_t **table;
 };
 
 extern parse_s *build_parse (const char *file, lextok_s lextok);
