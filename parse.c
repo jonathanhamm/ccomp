@@ -15,9 +15,11 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#define LLTOKEN(node) ((token_s *)node->ptr)
+#define LLFF(node) ((ffnode_s *)node->ptr)
+#define LLTOKEN(node) LLFF(node)->token
 
 typedef struct follow_s follow_s;
+typedef struct ffnode_s ffnode_s;
 
 struct follow_s
 {
@@ -33,6 +35,12 @@ struct follow_s
     pthread_cond_t *jcond;
     uint16_t ninherit;
     follow_s **inherit;
+};
+
+struct ffnode_s
+{
+    uint16_t prod;
+    token_s *token;
 };
 
 static void match_phase (lextok_s regex, token_s *cfg);
@@ -51,11 +59,12 @@ static void pp_productions (parse_s *parse, token_s **curr, pda_s *pda);
 static pnode_s *pp_tokens (parse_s *parse, token_s **curr);
 static void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda);
 
+static ffnode_s *makeffnode (token_s *token, uint16_t prod);
 static bool isespsilon (production_s *production);
 static bool hasepsilon (parse_s *parser, pnode_s *nonterm);
 static llist_s *getfirsts (parse_s *parser, pda_s *pda);
 static void getfollows (follow_s *fparams);
-static inline pnode_s *makeEOF (void);
+static inline ffnode_s *makeEOF (void);
 static follow_s *get_neighbor_params (follow_s *table, pda_s *pda);
 static llist_s *lldeep_concat_foll (llist_s *first, llist_s *second);
 static bool llpnode_contains(llist_s *list, token_s *tok);
@@ -101,8 +110,6 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     compute_firstfollows (parse);
     firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
     build_parse_table (parse, list);
-    for (fiter = firsts; fiter; fiter = fiter->next)
-        printf("%s, ", ((pnode_s *)fiter->ptr)->token->lexeme);
     match_phase (lextok, head);
 
     return parse;
@@ -344,6 +351,21 @@ void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda)
     }
 }
 
+ffnode_s *makeffnode (token_s *token, uint16_t prod)
+{
+    ffnode_s *ffnode;
+    
+    ffnode = malloc(sizeof(*ffnode));
+    if (!ffnode) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    ffnode->token = token;
+    ffnode->prod = prod;
+    return ffnode;
+}
+
+
 bool isespsilon (production_s *production)
 {
     return production->start->token->type.val == LEXTYPE_EPSILON && !production->start->next;
@@ -373,14 +395,14 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
     
     for (i = 0; i < pda->nproductions; i++) {
         if (isespsilon(&pda->productions[i]))
-            llpush(&list, pda->productions[i].start);            
+            llpush(&list, makeffnode(pda->productions[i].start->token, i));
         else {
             iter = pda->productions[i].start;
             if (!iter)
                 return NULL;
             do {
                 if (iter->token->type.val == LEXTYPE_TERM)
-                    llpush(&list, iter);
+                    llpush(&list, makeffnode(iter->token, i));
                 else {
                     printf("nonterm: %s\n", iter->token->lexeme);
                     tmp = get_pda(parser, iter->token->lexeme);
@@ -398,7 +420,7 @@ void getfollows (follow_s *fparams)
 {
     uint16_t i;
     bool has_epsilon;
-    pnode_s *tmpeof;
+    ffnode_s *tmpeof;
     pda_s *pda, *nterm;
     pnode_s *iter;
     hrecord_s *curr;
@@ -434,15 +456,14 @@ void getfollows (follow_s *fparams)
                             has_epsilon = hasepsilon(fparams->parser, iter);
                             if (iter->token->type.val == LEXTYPE_TERM) {
                                 if (!llpnode_contains(fparams->follows, iter->token))
-                                    llpush(&fparams->follows, iter);
+                                    llpush(&fparams->follows, makeffnode(iter->token, 0));
                             }
                             else {
                                 nterm = get_pda(fparams->parser, iter->token->lexeme);
                                 neighbor = get_neighbor_params(fparams->table, nterm);
                                 fparams->follows = lldeep_concat_foll(fparams->follows, neighbor->firsts);
-                                if (has_epsilon) {
+                                if (has_epsilon)
                                     add_inherit(fparams, neighbor);
-                                }
                             }
                         }                        
                     }
@@ -455,7 +476,7 @@ void getfollows (follow_s *fparams)
     pthread_exit(0);
 }
 
-inline pnode_s *makeEOF (void)
+inline ffnode_s *makeEOF (void)
 {
     token_s *tok;
     
@@ -467,7 +488,7 @@ inline pnode_s *makeEOF (void)
     tok->lexeme[0] = '$';
     tok->type.val = LEXTYPE_EOF;
     tok->type.attribute = LEXATTR_FAKEEOF;
-    return pnode_(tok);
+    return makeffnode(tok, 1);
 }
 
 follow_s *get_neighbor_params (follow_s *table, pda_s *pda)
@@ -483,16 +504,16 @@ llist_s *lldeep_concat_foll (llist_s *first, llist_s *second)
     
    if (!second)
        return first;
-    while (((pnode_s *)second->ptr)->token->type.val == LEXTYPE_EPSILON ||
-           llpnode_contains(first, ((pnode_s *)second->ptr)->token)) {
+    while (LLTOKEN(second)->type.val == LEXTYPE_EPSILON ||
+           llpnode_contains(first, LLTOKEN(second))) {
         second = second->next;
         if (!second)
             return first;
     }
     second_ = iter = llcopy(second);
     for (second = second->next; second; second = second->next) {
-        if (((pnode_s *)second->ptr)->token->type.val == LEXTYPE_EPSILON ||
-            llpnode_contains(first, ((pnode_s *)second->ptr)->token))
+        if (LLTOKEN(second)->type.val == LEXTYPE_EPSILON ||
+            llpnode_contains(first, LLTOKEN(second)))
             continue;
         iter->next = llcopy(second);
         iter = iter->next;
@@ -503,7 +524,7 @@ llist_s *lldeep_concat_foll (llist_s *first, llist_s *second)
 bool llpnode_contains(llist_s *list, token_s *tok)
 {
     while (list) {
-        if (!strcmp(((pnode_s *)list->ptr)->token->lexeme, tok->lexeme))
+        if (!strcmp(LLTOKEN(list)->lexeme, tok->lexeme))
             return true;
         list = list->next;
     }
@@ -582,7 +603,7 @@ void compute_firstfollows (parse_s *parser)
         tmp->firsts = getfirsts(parser, tmp);
         printf("Printing Firsts for %s\n", (char *)curr->key);
         for (iter = tmp->firsts; iter; iter = iter->next)
-            printf("%s, ", ((pnode_s *)iter->ptr)->token->lexeme);
+            printf("%s, ", LLTOKEN(iter)->lexeme);
         printf("\n\n");
         ftable[i].parser = parser;
         ftable[i].table = ftable;
@@ -615,7 +636,7 @@ void compute_firstfollows (parse_s *parser)
     for (i = 0; i < nitems; i++) {
         printf("Printing Follows for %s\n", ftable[i].pda->nterm->lexeme);
         for (iter = ftable[i].follows; iter; iter = iter->next)
-            printf("%s, ", ((pnode_s *)iter->ptr)->token->lexeme);
+            printf("%s, ", LLTOKEN(iter)->lexeme);
         printf("\n\n");
     }
     pthread_mutex_destroy(&jlock);
@@ -625,7 +646,8 @@ void compute_firstfollows (parse_s *parser)
 
 void build_parse_table (parse_s *parse, token_s *tokens)
 {
-    uint16_t    n_terminals = 0,
+    uint16_t    i, 
+                n_terminals = 0,
                 n_nonterminals = 0;
     llist_s *terminals = NULL,
             *nonterminals = NULL;
@@ -642,6 +664,25 @@ void build_parse_table (parse_s *parse, token_s *tokens)
         }
         tokens = tokens->next;
     }
+    table = malloc(sizeof(*table));
+    if (!table) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    table->n_terminals = n_terminals;
+    table->n_nonterminals = n_nonterminals;
+    table->table = calloc(n_terminals * n_nonterminals, sizeof(*table->table));
+    table->terms = calloc(sizeof(*table->terms), n_terminals);
+    table->nterms = calloc(sizeof(*table->nterms), n_nonterminals);
+    if (!table->table || !table->terms || !table->nterms) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    for (i = 0; i < n_terminals; i++)
+        table->terms[i].tok = (token_s *)llpop(&terminals);
+    for (i = 0; i < n_nonterminals; i++)
+        table->nterms[i].tok = (token_s *)llpop(&nonterminals);
+    
 }
 
 pda_s *get_pda (parse_s *parser, u_char *name)
