@@ -657,7 +657,6 @@ bool lllex_contains (llist_s *list, u_char *lex)
     return false;
 }
 
-
 void build_parse_table (parse_s *parse, token_s *tokens)
 {
     uint16_t    i, j, k,
@@ -698,12 +697,14 @@ void build_parse_table (parse_s *parse, token_s *tokens)
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
-    for (i = 0; i < n_terminals; i++) {
-        ptable->table[i] = calloc(n_terminals, sizeof(**ptable->table));
+    for (i = 0; i < n_nonterminals; i++) {
+        ptable->table[i] = malloc(n_terminals * sizeof(**ptable->table));
         if (!ptable->table[i]) {
             perror("Memory Allocation Error");
             exit(EXIT_FAILURE);
         }
+        for (j = 0; j < n_terminals; j++)
+            ptable->table[i][j] = -1;
     }
     ptable->terms = calloc(sizeof(*ptable->terms), n_terminals);
     ptable->nterms = calloc(sizeof(*ptable->nterms), n_nonterminals);
@@ -728,15 +729,24 @@ void build_parse_table (parse_s *parse, token_s *tokens)
             if (!strcmp(curr->nterm->lexeme, ptable->nterms[i]->lexeme))
                 break;
         }
+        printf("\n\n");
+
         for (first_iter = curr->firsts; first_iter; first_iter = first_iter->next) {
             for (j = 0; j < n_terminals; j++) {
-                if (!strcmp(LLTOKEN(first_iter)->lexeme, ptable->terms[i]->lexeme)) {
+                if (!strcmp(LLTOKEN(first_iter)->lexeme, ptable->terms[j]->lexeme)) {
+                    if (ptable->table[i][j] != -1)
+                        for(;;)printf("%s\n", ptable->terms[j]->lexeme);
                     ptable->table[i][j] = LLFF(first_iter)->prod;
+                    
                     if (LLTOKEN(first_iter)->type.val == LEXTYPE_EPSILON) {
                         for (foll_iter = curr->follows; foll_iter; foll_iter = foll_iter->next) {
                             for (k = 0; k < n_nonterminals; k++) {
-                                if (!strcmp(LLTOKEN(foll_iter)->lexeme, ptable->nterms[k]->lexeme))
+                                if (!strcmp(LLTOKEN(foll_iter)->lexeme, ptable->terms[k]->lexeme)) {
+                                    if (ptable->table[i][k] != -1)
+                                        ;//   for(;;)printf("ambiguity detected\n");
                                     ptable->table[i][k] = LLFF(foll_iter)->prod;
+
+                                }
                             }
                         }
                     }

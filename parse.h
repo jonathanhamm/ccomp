@@ -56,7 +56,7 @@ struct parsetable_s
     uint16_t n_nonterminals;
     token_s **terms;
     token_s **nterms;
-    uint16_t **table;
+    int32_t **table;
 };
 
 extern parse_s *build_parse (const char *file, lextok_s lextok);
