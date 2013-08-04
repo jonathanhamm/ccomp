@@ -74,6 +74,7 @@ static void compute_firstfollows (parse_s *parser);
 
 static bool lllex_contains (llist_s *list, u_char *lex);
 static void build_parse_table (parse_s *parse, token_s *tokens);
+static void print_parse_table (parsetable_s *ptable, FILE *stream);
 
 uint16_t str_hashf (void *key);
 bool str_isequalf(void *key1, void *key2);
@@ -111,6 +112,7 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     compute_firstfollows (parse);
     firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
     build_parse_table (parse, head);
+    print_parse_table (parse->parse_table, stdout);
     match_phase (lextok, head);
 
     return parse;
@@ -729,13 +731,11 @@ void build_parse_table (parse_s *parse, token_s *tokens)
             if (!strcmp(curr->nterm->lexeme, ptable->nterms[i]->lexeme))
                 break;
         }
-        printf("\n\n");
-
-        for (first_iter = curr->firsts; first_iter; first_iter = first_iter->next) {
+         for (first_iter = curr->firsts; first_iter; first_iter = first_iter->next) {
             for (j = 0; j < n_terminals; j++) {
                 if (!strcmp(LLTOKEN(first_iter)->lexeme, ptable->terms[j]->lexeme)) {
                     if (ptable->table[i][j] != -1)
-                        for(;;)printf("%s\n", ptable->terms[j]->lexeme);
+                        ;//for(;;)printf("%s\n", ptable->terms[j]->lexeme);
                     ptable->table[i][j] = LLFF(first_iter)->prod;
                     
                     if (LLTOKEN(first_iter)->type.val == LEXTYPE_EPSILON) {
@@ -754,7 +754,27 @@ void build_parse_table (parse_s *parse, token_s *tokens)
             }
         }
     }
+    parse->parse_table = ptable;
 }
+
+void print_parse_table (parsetable_s *ptable, FILE *stream)
+{
+    uint16_t i, j;
+    
+    fprintf(stream, "%31s", " ");
+    for (i = 0; i < ptable->n_terminals; i++) {
+        fprintf(stream, "%-31s", ptable->terms[i]->lexeme);
+        fprintf(stream, " | ");
+    }
+    for (i = 0; i < ptable->n_nonterminals; i++) {
+        fprintf(stream, "%-31s | ", ptable->nterms[i]->lexeme);
+        for (j = 0; j < ptable->n_terminals; j++)
+            fprintf(stream, "%-31d | ", ptable->table[i][j]);
+        fprintf(stream, "\n");
+    }
+    fprintf(stream, "\n");
+}
+
 
 pda_s *get_pda (parse_s *parser, u_char *name)
 {
