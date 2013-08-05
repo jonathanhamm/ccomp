@@ -18,7 +18,6 @@
 typedef unsigned long ulong_bool;
 
 #define HTABLE_SIZE 119
-#define UEOF (char)EOF
 
 typedef uint16_t (*hash_f)(void *key);
 typedef bool (*isequal_f)(void *key1, void *key2);

@@ -36,7 +36,7 @@ char *readfile (const char *file)
         fclose(f);
         return NULL;
     }
-    for (nbytes = 0; (buf[nbytes] = fgetc(f)) != UEOF; nbytes++) {
+    for (nbytes = 0; (buf[nbytes] = fgetc(f)) != EOF; nbytes++) {
         if (nbytes+1 == bsize) {
             bsize *= 2;
             buf = realloc(buf, bsize);
@@ -142,7 +142,7 @@ void println (uint16_t no, char *buf)
 {
     printf("%6d: ", no);
     do {
-        if (*buf == UEOF)
+        if (*buf == EOF)
             return;
         putchar(*buf);
     }

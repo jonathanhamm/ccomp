@@ -105,7 +105,7 @@ token_s *lexspec (const char *file, annotation_f af)
     buf = readfile(file);
     if (!buf)
         return NULL;
-    for (i = 0, j = 0, lineno = 1, bpos = 0; buf[i] != UEOF; i++) {
+    for (i = 0, j = 0, lineno = 1, bpos = 0; buf[i] != EOF; i++) {
         switch (buf[i]) {
             case '|':
                 addtok (&list, "|", lineno, LEXTYPE_UNION, LEXATTR_DEFAULT);
@@ -193,7 +193,7 @@ fallthrough_:
             default:
                 if (buf[i] <= ' ')
                     break;
-                for (bpos = 0, j = LEXATTR_CHARDIG; buf[i] > ' ' && buf[i] != UEOF; bpos++, i++)
+                for (bpos = 0, j = LEXATTR_CHARDIG; buf[i] > ' ' && buf[i] != EOF; bpos++, i++)
                 {
                     if (bpos == MAX_LEXLEN) {
                         lbuf[bpos] = '\0';
@@ -358,7 +358,7 @@ void prx_keywords (lex_s *lex, token_s **curr)
         idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = false, .itype = -1, .att = -1});
         *curr = (*curr)->next;
         if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-            
+            for(;;)printf("derp");
         }
     }
 }
@@ -858,11 +858,11 @@ int tokmatch(char *buf, token_s *tok)
 {
     uint16_t i, len;
     
-    if (*buf == UEOF)
+    if (*buf == EOF)
         return EOF;
     len = strlen(tok->lexeme);
     for (i = 0; i < len; i++) {
-        if (buf[i] == UEOF)
+        if (buf[i] == EOF)
             return EOF;
         if (buf[i] != tok->lexeme[i])
             return 0;
@@ -873,7 +873,7 @@ int tokmatch(char *buf, token_s *tok)
 match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
 {
     int tmatch, tmpmatch;
-    uint16_t i, type;
+    uint16_t i;
     mach_s *tmp;
     match_s curr, result;
 
@@ -938,7 +938,7 @@ lextok_s lex (lex_s *lex, char *buf)
     
     c[1] = '\0';
     println(lineno, buf);
-    while (*buf != UEOF) {
+    while (*buf != EOF) {
         best.attribute = 0;
         best.n = 0;
         best.success = false;
@@ -949,10 +949,10 @@ lextok_s lex (lex_s *lex, char *buf)
             }
             buf++;
         }
-        if (*buf == UEOF)
+        if (*buf == EOF)
             break;
         for (mach = lex->machs; mach; mach = mach->next) {
-            if (*buf == UEOF)
+            if (*buf == EOF)
                 break;
             res = nfa_match(lex, mach->nfa, mach->nfa->start, buf);
             if (res.success && !mach->composite && res.n > best.n) {

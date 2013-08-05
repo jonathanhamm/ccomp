@@ -782,7 +782,7 @@ void print_parse_table (parsetable_s *ptable, FILE *stream)
 
 pda_s *get_pda (parse_s *parser, char *name)
 {
-    return hashlookup (parser->phash, name);
+    return hashlookup(parser->phash, name);
 }
 
 bool hash_pda (parse_s *parser, char *name, pda_s *pda)
