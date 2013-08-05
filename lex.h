@@ -14,7 +14,7 @@
 #include "general.h"
 
 #define MAX_LEXLEN 31
-#define NULLSET 232
+#define NULLSET (char)232
 #define NULLSETSTR_(null) #null
 #define NULLSETSTR  NULLSETSTR_(NULLSET)
 
@@ -54,9 +54,8 @@
 #define CLOSTYPE_POS        2
 #define CLOSTYPE_ORNULL     3
 
-
-typedef struct idtlookup_s idtlookup_s;
 typedef struct lex_s lex_s;
+typedef struct tdat_s tdat_s;
 typedef struct idtable_s idtable_s;
 typedef struct idtnode_s idtnode_s;
 typedef struct token_s token_s;
@@ -66,13 +65,7 @@ typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
 typedef struct lextok_s lextok_s;
 
-typedef uint32_t (*annotation_f) (token_s **, u_char *, uint32_t *);
-
-struct idtlookup_s
-{
-    int type;
-    int att;
-};
+typedef uint32_t (*annotation_f) (token_s **, char *, uint32_t *);
 
 struct token_s
 {
@@ -81,16 +74,25 @@ struct token_s
         uint16_t attribute;
     } type;
     uint32_t lineno;
-    u_char lexeme[MAX_LEXLEN + 1];
+    char lexeme[MAX_LEXLEN + 1];
     token_s *prev;
     token_s *next;
 };
 
+struct tdat_s
+{
+    bool is_string;
+    union {
+        char *stype;
+        int itype;
+    };
+    int att;
+};
+
 struct idtnode_s
 {
-    u_char c;
-    uint16_t type;
-    uint16_t att;
+    char c;
+    tdat_s tdat;
     uint8_t nchildren;
     idtnode_s **children;
 };
@@ -148,16 +150,16 @@ struct lextok_s
     token_s *tokens;
 };
 
-extern lextok_s lex (lex_s *lex, u_char *buf);
+extern lextok_s lex (lex_s *lex, char *buf);
 extern lex_s *buildlex (const char *file);
 extern token_s *lexspec (const char *file, annotation_f af);
 extern idtable_s *idtable_s_ (int idstart);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
-extern void idtable_insert (idtable_s *table, u_char *str, int type, int att);
-extern idtlookup_s idtable_lookup (idtable_s *table, u_char *str);
-extern int addtok (token_s **tlist, u_char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute);
-extern inline bool hashname(lex_s *lex, unsigned long token_val, u_char *name);
-extern inline u_char *getname(lex_s *lex, unsigned long token_val);
+extern void idtable_insert (idtable_s *table, char *str, tdat_s tdat);
+extern tdat_s idtable_lookup (idtable_s *table, char *str);
+extern int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute);
+extern inline bool hashname(lex_s *lex, unsigned long token_val, char *name);
+extern inline char *getname(lex_s *lex, unsigned long token_val);
 
 #endif

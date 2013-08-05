@@ -9,6 +9,7 @@
  */
 
 #include "lex.h"
+#include "parse.h"
 #include "general.h"
 #include <stdio.h>
 #include <stdlib.h>

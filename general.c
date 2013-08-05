@@ -16,11 +16,11 @@
 
 #define INITFBUF_SIZE 128
 
-u_char *readfile (const char *file)
+char *readfile (const char *file)
 {
     FILE *f;
     size_t bsize, nbytes;
-    u_char *buf;
+    char *buf;
     
     bsize = INITFBUF_SIZE;
     f = fopen (file, "r");
@@ -138,7 +138,7 @@ void free_llist (void *list)
     }
 }
 
-void println (uint16_t no, u_char *buf)
+void println (uint16_t no, char *buf)
 {
     printf("%6d: ", no);
     do {

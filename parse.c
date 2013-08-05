@@ -44,8 +44,8 @@ struct ffnode_s
 };
 
 static void match_phase (lextok_s regex, token_s *cfg);
-static token_s *findtok(mach_s *mlist, u_char *lexeme);
-static uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno);
+static token_s *findtok(mach_s *mlist, char *lexeme);
+static uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno);
 static parse_s *parse_(void);
 static pda_s *pda_(token_s *token);
 static production_s *addproduction (pda_s *pda);
@@ -72,7 +72,7 @@ static void add_inherit (follow_s *nonterm, follow_s *dependent);
 static llist_s *inherit_follows (follow_s *params, llist_s **stack);
 static void compute_firstfollows (parse_s *parser);
 
-static bool lllex_contains (llist_s *list, u_char *lex);
+static bool lllex_contains (llist_s *list, char *lex);
 static void build_parse_table (parse_s *parse, token_s *tokens);
 static void print_parse_table (parsetable_s *ptable, FILE *stream);
 
@@ -94,7 +94,7 @@ void printpda(pda_s *start)
 
 parse_s *build_parse (const char *file, lextok_s lextok)
 {
-    u_char *buf;
+    char *buf;
     parse_s *parse;
     token_s *list, *iter, *head;
     llist_s *firsts, *fiter;
@@ -121,7 +121,7 @@ parse_s *build_parse (const char *file, lextok_s lextok)
 void match_phase (lextok_s regex, token_s *cfg)
 {
     token_s *token;
-    idtlookup_s result;
+    tdat_s result;
     
     while (cfg) {
         token = findtok(regex.lex->machs, cfg->lexeme);
@@ -130,8 +130,8 @@ void match_phase (lextok_s regex, token_s *cfg)
         }
         else {
             result = idtable_lookup(regex.lex->kwtable, cfg->lexeme);
-            if (result.type > 0) {
-                cfg->type.val = result.type;
+            if (result.itype > 0) {
+                cfg->type.val = result.itype;
                 cfg->type.attribute = result.att;
             }
         }
@@ -139,10 +139,10 @@ void match_phase (lextok_s regex, token_s *cfg)
     }
 }
 
-token_s *findtok(mach_s *mlist, u_char *lexeme)
+token_s *findtok(mach_s *mlist, char *lexeme)
 {
     uint8_t i;
-    u_char buf[MAX_LEXLEN+1], *ptr;
+    char buf[MAX_LEXLEN+1], *ptr;
     
     while (mlist) {
         ptr = &mlist->nterm->lexeme[1];
@@ -156,7 +156,7 @@ token_s *findtok(mach_s *mlist, u_char *lexeme)
     return NULL;
 }
 
-uint32_t cfg_annotate (token_s **tlist, u_char *buf, uint32_t *lineno)
+uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno)
 {
     uint32_t i;
     
@@ -649,7 +649,7 @@ void compute_firstfollows (parse_s *parser)
     free(ftable);
 }
 
-bool lllex_contains (llist_s *list, u_char *lex)
+bool lllex_contains (llist_s *list, char *lex)
 {
     while (list) {
         if (!strcmp(((token_s *)list->ptr)->lexeme, lex))
@@ -768,20 +768,24 @@ void print_parse_table (parsetable_s *ptable, FILE *stream)
     }
     for (i = 0; i < ptable->n_nonterminals; i++) {
         fprintf(stream, "%-31s | ", ptable->nterms[i]->lexeme);
-        for (j = 0; j < ptable->n_terminals; j++)
-            fprintf(stream, "%-31d | ", ptable->table[i][j]);
+        for (j = 0; j < ptable->n_terminals; j++) {
+            if (ptable->table[i][j] == -1)
+                fprintf(stream, "%-31s | ", "NULL");
+            else
+                fprintf(stream, "%-31d | ", ptable->table[i][j]);
+        }
         fprintf(stream, "\n");
     }
     fprintf(stream, "\n");
 }
 
 
-pda_s *get_pda (parse_s *parser, u_char *name)
+pda_s *get_pda (parse_s *parser, char *name)
 {
     return hashlookup (parser->phash, name);
 }
 
-bool hash_pda (parse_s *parser, u_char *name, pda_s *pda)
+bool hash_pda (parse_s *parser, char *name, pda_s *pda)
 {
     if (!parser->start)
         parser->start = pda;

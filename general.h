@@ -15,14 +15,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#ifndef u_char
-typedef unsigned char u_char;
-#endif
-
 typedef unsigned long ulong_bool;
 
 #define HTABLE_SIZE 119
-#define UEOF (u_char)EOF
+#define UEOF (char)EOF
 
 typedef uint16_t (*hash_f)(void *key);
 typedef bool (*isequal_f)(void *key1, void *key2);
@@ -64,12 +60,12 @@ struct hashiterator_s
     hrecord_s *curr;
 };
 
-extern u_char *readfile (const char *file);
+extern char *readfile (const char *file);
 
 extern llist_s *llist_ (void *iptr);
 extern void free_llist (void *list);
 
-extern void println (uint16_t no, u_char *buf);
+extern void println (uint16_t no, char *buf);
 
 extern void llpush (llist_s **list, void *ptr);
 extern llist_s *llpop (llist_s **list);
