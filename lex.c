@@ -747,8 +747,10 @@ idtable_s *idtable_s_ (int idstart)
 
 void idtable_insert (idtable_s *table, char *str, tdat_s tdat)
 {
-    table->typecount++;
     trie_insert(table, table->root, str, tdat);
+    if (!strcmp(";", str)) {
+      //  for(;;)printf("%d\n", idtable_lookup(table, ";").itype);
+    }
 }
 
 tdat_s idtable_lookup (idtable_s *table, char *str)
@@ -762,15 +764,17 @@ int trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
 {
     int search;
     idtnode_s *nnode;
-    
+
     if (!trie->nchildren)
         search = 0; 
     else {
         search = bsearch_tr(trie, *str);
         if (search & 0x8000)
             search &= ~0x8000;
-        else
+        else if (*str)
             return trie_insert(table, trie->children[search], str+1, tdat);
+        else
+            return 0;
     }
     nnode = calloc (1, sizeof(*nnode));
     if (!nnode) {
@@ -779,13 +783,13 @@ int trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
     }
     nnode->c = *str;
     if (!*str) {
-        if (p && tdat.itype == 0)
-            assert(false);
        if (*(str - 1) == '(')
            p = nnode;
         nnode->tdat = tdat;
-        if (tdat.itype < 0)
+        if (tdat.itype < 0) {
+            table->typecount++;
             nnode->tdat.itype = table->typecount;
+        }
         parray_insert (trie, search, nnode);
         return 1;
     }
@@ -818,9 +822,8 @@ tdat_s trie_lookup (idtnode_s *trie, char *str)
     if (search & 0x8000) {
         return (tdat_s){.is_string = false, .itype = -(search & ~0x8000), .att = 0};
     }
-    if (!*str) {
-        return trie->tdat;
-    }
+    if (!*str)
+        return trie->children[search]->tdat;
     return trie_lookup(trie->children[search], str+1);
 }
 
@@ -940,11 +943,12 @@ lextok_s lex (lex_s *lex, char *buf)
     mach_s *mach, *bmach;
     match_s res, best;
     uint16_t lineno = 1;
-    char c[2];
+    char c[2], *backup;
     tdat_s lookup;
     token_s *head = NULL, *tlist = NULL;
     
     c[1] = '\0';
+    backup = buf;
     println(lineno, buf);
     while (*buf != EOF) {
         best.attribute = 0;
@@ -1028,6 +1032,7 @@ lextok_s lex (lex_s *lex, char *buf)
     }
     addtok(&tlist, "$", lineno, lex->typecount+1, LEXATTR_DEFAULT);
     hashname(lex, lex->typecount+1, "$");
+    free(backup);
     return (lextok_s){.lex = lex, .tokens = head};
 }
 
