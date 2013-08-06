@@ -129,6 +129,11 @@ token_s *lexspec (const char *file, annotation_f af)
                 lineno++;
                 addtok (&list, "EOL", lineno, LEXTYPE_EOL, LEXATTR_DEFAULT);
                 break;
+            case (char)0xCE:
+                i++;
+                if (buf[i] == (char)0xB5)
+                    addtok(&list, "EPSILON", lineno, LEXTYPE_EPSILON, LEXATTR_DEFAULT);
+                break;
             case '{':
                 tmp = af(&list, &buf[i], &lineno);
                 if (tmp)
@@ -220,13 +225,8 @@ fallthrough_:
                         default:
                             break;
                     }
-                    if (buf[i] == '\\') {
+                    if (buf[i] == '\\')
                         i++;
-                        if (buf[i] == 'E') {
-                            addtok(&list, "EPSILON", lineno, LEXTYPE_EPSILON, LEXATTR_DEFAULT);
-                            goto doublebreak_;
-                        }
-                    }
                     lbuf[bpos] = buf[i];
                     if (!((buf[i] >= 'A' && buf[i] <= 'Z') || (buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= '0' && buf[i] <= '9')))
                         j = LEXATTR_NCHARDIG;
@@ -269,6 +269,7 @@ doublebreak_:
             list->prev = NULL;
         free(backup);
     }
+    free(buf);
     return list;
 }
 
@@ -455,7 +456,6 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
         }
     }
 }
-
 
 void prx_texp (lex_s *lex, token_s **curr)
 {
@@ -756,6 +756,8 @@ tdat_s idtable_lookup (idtable_s *table, char *str)
     return trie_lookup(table->root, str);
 }
 
+void *p;
+
 int trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
 {
     int search;
@@ -777,6 +779,10 @@ int trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
     }
     nnode->c = *str;
     if (!*str) {
+        if (p && tdat.itype == 0)
+            assert(false);
+       if (*(str - 1) == '(')
+           p = nnode;
         nnode->tdat = tdat;
         if (tdat.itype < 0)
             nnode->tdat.itype = table->typecount;
@@ -809,10 +815,12 @@ tdat_s trie_lookup (idtnode_s *trie, char *str)
     uint16_t search;
     
     search = bsearch_tr(trie, *str);
-    if (search & 0x8000)
+    if (search & 0x8000) {
         return (tdat_s){.is_string = false, .itype = -(search & ~0x8000), .att = 0};
-    if (!*str)
+    }
+    if (!*str) {
         return trie->tdat;
+    }
     return trie_lookup(trie->children[search], str+1);
 }
 
@@ -947,6 +955,8 @@ lextok_s lex (lex_s *lex, char *buf)
                 println(lineno, buf+1);
                 lineno++;
             }
+            else if (*buf == EOF)
+                break;
             buf++;
         }
         if (*buf == EOF)
@@ -1001,10 +1011,13 @@ lextok_s lex (lex_s *lex, char *buf)
                     head = tlist;
             }
             else {
-                if (best.n)
+                if (best.n) {
                     printf("%6s\tLexical Error: at line: %d: Unknown Character: %s\n", " ", lineno, buf);
-                else
+                }
+                else {
                     printf("%6s\tLexical Error: at line: %d: Unknown Character: %s\n", " ", lineno, c);
+
+                }
             }
         }
         buf[best.n] = c[0];

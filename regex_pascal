@@ -45,10 +45,10 @@ numlreal
     <digit> <digit> *
 
 <optional_fraction>{composite}=>
-    . <digits> | \E
+    . <digits> | ε
         
 <optional_exponent>{composite}=>
-    E ( \+ | - | \E ) <digits> | \E 
+    E ( \+ | - | ε ) <digits> | ε 
 
 <num>=>
     <digits> <optional_fraction>{1} <optional_exponent>{2}

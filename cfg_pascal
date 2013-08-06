@@ -15,13 +15,13 @@
 	<subprogram_declarations>
 	{}
 	|
-	\E
+	ε
 	
 <dec>=>
 	<subprogram_declarations>
 	{}
 	|
-	\E
+	ε
 
 <identifier_list>=>
 	id <identifier_list'>
@@ -45,14 +45,14 @@
 		addtype (id.entry, <identifier_list>.type);
 	}
 	|
-	\E
+	ε
 
 <declarations>=>
 	var id : <type> ; <declarations'>
 <declarations'>=>
 	var id : <type> ; <declarations'>
 	|
-	\E
+	ε
 
 <type>=>
 	<standard_type>
@@ -69,7 +69,7 @@
 <subprogram_declarations'>=>
 	<subprogram_declaration> ; <subprogram_declarations'>
 	|
-	\E
+	ε
 
 <subprogram_declaration>=>
 	<subprogram_head>
@@ -80,14 +80,14 @@
 	|
 	<subprogram_declarations>
 	|
-	\E
+	ε
 
 <subprogram_head>=>
 	procedure id <subprogram_head'>;
 <subprogram_head'>=>
 	<arguments>
 	|
-	\E
+	ε
 
 <arguments>=>
 	\( <parameter_list> \)
@@ -96,7 +96,7 @@
 <parameter_list'>=>
 	; id : <type> <parameter_list'>
 	|
-	\E
+	ε
 	
 <compound_statement>=>
 	begin
@@ -105,7 +105,7 @@
 <compound_statement'>=>
 	<optional_statements>
 	|
-	\E
+	ε
 	
 <optional_statements>=>
 	<statement_list>
@@ -115,7 +115,7 @@
 <statement_list'>=>
 	; <statement> <statement_list'>
 	|
-	\E
+	ε
 
 <statement>=>
 	<variable> assignop <expression>
@@ -130,35 +130,35 @@
 <statement'>=>
 	else <statement>
 	|
-	\E
+	ε
 	
 <variable>=>
 	id <variable'>
 <variable'>=>
 	[ <expression> ]
 	|
-	\E
+	ε
 
 <procedure_statement>=>
 	call id <procedure_statement'>
 <procedure_statement'>=>
 	\( <expression_list> \)
 	|
-	\E
+	ε
 	
 <expression_list>=>
 	<expression> <expression_list'>
 <expression_list'>=>
 	, <expression> <expression_list'>
 	|
-	\E
+	ε
 	
 <expression>=>
 	<simple_expression> <expression'>
 <expression'>=>
 	relop <simple_expression>
 	|
-	\E
+	ε
 	
 <simple_expression>=>
 	<sign> <term> <simple_expression'>
@@ -167,7 +167,7 @@
 <simple_expression'>=>
 	addop <term> <simple_expression'>
 	|
-	\E
+	ε
 
 <term>=>
 	<factor> <term'>
@@ -178,7 +178,7 @@
 <term'>=>
 	mulop <factor> <term'>
 	|
-	\E
+	ε
 
 <factor>=>
 	id <factor'>
@@ -191,7 +191,7 @@
 <factor'>=>
 	[ <expression> ]
 	|
-	\E
+	ε
 
 <sign>=>
 	\+ | \-
