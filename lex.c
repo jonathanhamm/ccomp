@@ -275,38 +275,38 @@ doublebreak_:
 
 uint32_t regex_annotate (token_s **tlist, char *buf, uint32_t *lineno)
 {
-    uint32_t bpos = 0;
+    uint32_t i = 0, bpos = 0;
     char tmpbuf[MAX_LEXLEN+1];
 
     buf++;
-    while (buf[bpos] != '}') {
-        while (buf[bpos] <= ' ') {
-            if (buf[bpos] == '\n')
+    while (buf[i] != '}') {
+        while (buf[i] <= ' ') {
+            if (buf[i] == '\n')
                 ++*lineno;
-            bpos++;
+            i++;
         }
-        if ((buf[bpos] >= 'a' && buf[bpos] <= 'z') || (buf[bpos] >= 'A' && buf[bpos] <= 'Z')) {
-            tmpbuf[bpos] = buf[bpos];
-            for (bpos++; ((buf[bpos] >= 'a' && buf[bpos] <= 'z') || (buf[bpos] >= 'A' && buf[bpos] <= 'Z')); bpos++) {
+        if ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')) {
+            tmpbuf[bpos] = buf[i];
+            for (bpos++, i++; ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')); bpos++, i++) {
                 if (bpos == MAX_LEXLEN)
                     return false;
-                tmpbuf[bpos] = buf[bpos];
+                tmpbuf[bpos] = buf[i];
             }
             tmpbuf[bpos] = '\0';
             addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_WORD);
         }
-        else if (buf[bpos] >= '0' && buf[bpos] <= '9') {
-            tmpbuf[bpos] = buf[bpos];
-            for (bpos++; buf[bpos] >= '0' && buf[bpos] <= '9'; bpos++) {
+        else if (buf[i] >= '0' && buf[i] <= '9') {
+            tmpbuf[bpos] = buf[i];
+            for (bpos++, i++; buf[i] >= '0' && buf[i] <= '9'; bpos++, i++) {
                 if (bpos == MAX_LEXLEN)
                     return false;
-                tmpbuf[bpos] = buf[bpos];
+                tmpbuf[bpos] = buf[i];
             }
             tmpbuf[bpos] = '\0';
             addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_NUM);
         }
     }
-    return bpos+1;
+    return i+1;
 }
 
 int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute)
@@ -462,7 +462,6 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
 void prx_texp (lex_s *lex, token_s **curr)
 {
     nfa_s *uparent = NULL, *concat = NULL;
-    token_s *nterm;
     
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
@@ -473,17 +472,6 @@ void prx_texp (lex_s *lex, token_s **curr)
         }
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
-            nterm = malloc(sizeof(*nterm));
-            if (!nterm) {
-                perror("Memory Allocation Error");
-                return;
-            }
-            nterm->lineno = 0;
-            nterm->type.val = LEXTYPE_START;
-            nterm->type.attribute = LEXATTR_DEFAULT;
-            nterm->next = NULL;
-            nterm->prev = NULL;
-            strcpy(nterm->lexeme, (*curr)->prev->prev->lexeme);
             lex->machs->nfa = prx_expression(lex , curr, &uparent, &concat);
             if (uparent)
                 lex->machs->nfa = uparent;
