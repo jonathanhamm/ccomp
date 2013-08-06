@@ -356,11 +356,13 @@ void parseregex (lex_s *lex, token_s **list)
 void prx_keywords (lex_s *lex, token_s **curr)
 {
     while ((*curr)->type.val == LEXTYPE_TERM) {
-        idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = false, .itype = -1, .att = -1});
-        *curr = (*curr)->next;
-        if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-            for(;;)printf("derp");
+        if ((*curr)->next->type.val != LEXTYPE_ANNOTATE)
+            idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = false, .itype = -1, .att = -1});
+        else {
+            idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->next->lexeme, .att = 0});
+            *curr = (*curr)->next;
         }
+        *curr = (*curr)->next;
     }
 }
 
@@ -748,9 +750,6 @@ idtable_s *idtable_s_ (int idstart)
 void idtable_insert (idtable_s *table, char *str, tdat_s tdat)
 {
     trie_insert(table, table->root, str, tdat);
-    if (!strcmp(";", str)) {
-      //  for(;;)printf("%d\n", idtable_lookup(table, ";").itype);
-    }
 }
 
 tdat_s idtable_lookup (idtable_s *table, char *str)
