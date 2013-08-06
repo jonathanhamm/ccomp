@@ -757,8 +757,6 @@ tdat_s idtable_lookup (idtable_s *table, char *str)
     return trie_lookup(table->root, str);
 }
 
-void *p;
-
 int trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
 {
     int search;
@@ -782,8 +780,6 @@ int trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
     }
     nnode->c = *str;
     if (!*str) {
-       if (*(str - 1) == '(')
-           p = nnode;
         nnode->tdat = tdat;
         if (tdat.itype < 0) {
             table->typecount++;
