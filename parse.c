@@ -740,10 +740,10 @@ void build_parse_table (parse_s *parse, token_s *tokens)
                     
                     if (LLTOKEN(first_iter)->type.val == LEXTYPE_EPSILON) {
                         for (foll_iter = curr->follows; foll_iter; foll_iter = foll_iter->next) {
-                            for (k = 0; k < n_nonterminals; k++) {
-                                if (!strcmp(LLTOKEN(foll_iter)->lexeme, ptable->nterms[k]->lexeme)) {
+                            for (k = 0; k < n_terminals; k++) {
+                                if (!strcmp(LLTOKEN(foll_iter)->lexeme, ptable->terms[k]->lexeme)) {
                                     if (ptable->table[i][k] != -1)
-                                        ;//   for(;;)printf("ambiguity detected\n");
+                                        ;//for(;;)printf("ambiguity detected\n");
                                     ptable->table[i][k] = LLFF(foll_iter)->prod;
 
                                 }
