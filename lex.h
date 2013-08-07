@@ -56,6 +56,7 @@
 
 typedef struct lex_s lex_s;
 typedef struct tdat_s tdat_s;
+typedef struct tlookup_s tlookup_s;
 typedef struct idtable_s idtable_s;
 typedef struct idtnode_s idtnode_s;
 typedef struct token_s token_s;
@@ -87,6 +88,12 @@ struct tdat_s
         int itype;
     };
     int att;
+};
+
+struct tlookup_s
+{
+    bool is_found;
+    tdat_s tdat;
 };
 
 struct idtnode_s
@@ -142,6 +149,7 @@ struct lex_s
     idtable_s *kwtable;
     idtable_s *idtable;
     hash_s *tok_hash;
+    llist_s *patch;
 };
 
 struct lextok_s
@@ -156,8 +164,8 @@ extern token_s *lexspec (const char *file, annotation_f af);
 extern idtable_s *idtable_s_ (int idstart);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
-extern void idtable_insert (idtable_s *table, char *str, tdat_s tdat);
-extern tdat_s idtable_lookup (idtable_s *table, char *str);
+extern void *idtable_insert (idtable_s *table, char *str, tdat_s tdat);
+extern tlookup_s idtable_lookup (idtable_s *table, char *str);
 extern int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute);
 extern inline bool hashname(lex_s *lex, unsigned long token_val, char *name);
 extern inline char *getname(lex_s *lex, unsigned long token_val);

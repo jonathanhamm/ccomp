@@ -114,26 +114,44 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     build_parse_table (parse, head);
     print_parse_table (parse->parse_table, stdout);
     match_phase (lextok, head);
-
+    for (iter = head; iter; iter = iter->next)
+        printf("%s %d\n", iter->lexeme, iter->type.val);
     return parse;
 }
 
 void match_phase (lextok_s regex, token_s *cfg)
 {
     token_s *token;
-    tdat_s result;
+    tlookup_s result;
+    mach_s *iter;
     
+    printf("PDA token types:\n");
+    for (iter = regex.lex->machs; iter; iter = iter->next)
+        printf("%s %d\n", iter->nterm->lexeme, iter->nterm->type.val);
+    printf("\n\n");
     while (cfg) {
         token = findtok(regex.lex->machs, cfg->lexeme);
-        if (token) {
+        if (token)
             cfg->type = token->type;
-        }
         else {
+            printf("looking up %s\n", cfg->lexeme);
             result = idtable_lookup(regex.lex->kwtable, cfg->lexeme);
-            if (result.itype > 0) {
-                cfg->type.val = result.itype;
-                cfg->type.attribute = result.att;
+            if (result.is_found && result.tdat.is_string) {
+                printf("found\n");
+                token = findtok(regex.lex->machs, result.tdat.stype);
+                printf("Trying to match: %s with %s\n", cfg->lexeme, result.tdat.stype);
+                if (token)
+                    cfg->type.val = token->type.val;
+                else {
+                    perror("Regex Error");
+                    exit(EXIT_FAILURE);
+                }
             }
+            else if (result.is_found) {
+                cfg->type.val = result.tdat.itype;
+                printf("found\n");
+            }
+            cfg->type.attribute = result.tdat.att;
         }
         cfg = cfg->next;
     }
@@ -671,7 +689,7 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     pda_s *curr;
     hrecord_s *hcurr;
     hashiterator_s *hiterator;
-
+    
     while (tokens) {
         if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_EPSILON) {
             if (!lllex_contains(terminals, tokens->lexeme)) {

@@ -3,7 +3,7 @@
  Author: Jonathan Hamm
  
  Description:
-    Implementation for a lexical analyzer generator. This reads in a regular 
+    Implementation for a lexical analyzer generator. This reads in a regular
     expression and source file specified by the user. It then tokenizes the source 
     file in conformance to the specified regular expression.
  */
@@ -17,6 +17,10 @@
 #define OP_NOP              0
 #define OP_CONCAT           1
 #define OP_UNION            2
+
+#define OP_GETID            3
+#define OP_GETIDATT         4
+#define OP_NUM              5
 
 typedef struct exp__s exp__s;
 typedef struct nodelist_s nodelist_s;
@@ -55,11 +59,12 @@ struct match_s
 static void printlist (token_s *list);
 static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
 static uint16_t bsearch_tr (idtnode_s *tnode, char key);
-static int trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat);
-static tdat_s trie_lookup (idtnode_s *trie, char *str);
+static idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat);
+static tlookup_s trie_lookup (idtnode_s *trie, char *str);
 static uint32_t regex_annotate (token_s **tlist, char *buf, uint32_t *lineno);
 
 static lex_s *lex_s_ (void);
+static idtnode_s *patch_search (llist_s *patch, char *lexeme);
 static void parseregex (lex_s *lex, token_s **curr);
 static void prx_keywords (lex_s *lex, token_s **curr);
 static void prx_tokens (lex_s *lex, token_s **curr);
@@ -70,7 +75,7 @@ static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s *
 static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static int prx_closure (lex_s *lex, token_s **curr);
 static void prx_annotation (nfa_edge_s *edge, token_s **curr);
-static int prx_tokenid (mach_s *mach, token_s **curr);
+static int prx_tokenid (lex_s *lex, token_s **curr);
 
 
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
@@ -285,12 +290,17 @@ uint32_t regex_annotate (token_s **tlist, char *buf, uint32_t *lineno)
                 ++*lineno;
             i++;
         }
-        if ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')) {
+        if ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z') || buf[i] == '<') {
             tmpbuf[bpos] = buf[i];
-            for (bpos++, i++; ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')); bpos++, i++) {
+            for (bpos++, i++; ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z') || buf[i] == '>'); bpos++, i++) {
                 if (bpos == MAX_LEXLEN)
                     return false;
                 tmpbuf[bpos] = buf[i];
+                if (buf[i] == '>') {
+                    bpos++;
+                    i++;
+                    break;
+                }
             }
             tmpbuf[bpos] = '\0';
             addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_WORD);
@@ -355,14 +365,33 @@ void parseregex (lex_s *lex, token_s **list)
 
 void prx_keywords (lex_s *lex, token_s **curr)
 {
+    idtnode_s *node;
+    
     while ((*curr)->type.val == LEXTYPE_TERM) {
-        if ((*curr)->next->type.val != LEXTYPE_ANNOTATE)
-            idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = false, .itype = -1, .att = -1});
-        else {
-            idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->next->lexeme, .att = 0});
-            *curr = (*curr)->next;
-        }
+        node = NULL;
         *curr = (*curr)->next;
+        switch (prx_tokenid(lex, curr)) {
+            case OP_GETID:
+                node = idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = -1});
+                *curr = (*curr)->next;
+                if (node) {
+                    assert(is_allocated(node));
+                    llpush(&lex->patch, node);
+                }
+                break;
+            case OP_GETIDATT:
+                node = idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = atoi((*curr)->next->lexeme)});
+                *curr = (*curr)->next->next;
+                if (node) {
+                    assert(is_allocated(node));
+
+                    llpush(&lex->patch, node);
+                }
+                break;
+            case OP_NOP:
+            default:
+                break;
+        }
     }
 }
 
@@ -461,15 +490,20 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
 
 void prx_texp (lex_s *lex, token_s **curr)
 {
+    idtnode_s *tnode = NULL;
     nfa_s *uparent = NULL, *concat = NULL;
     
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
         *curr = (*curr)->next;
-        if (!prx_tokenid (lex->machs, curr)) {
+
+        if (!prx_tokenid (lex, curr)) {
             lex->typecount++;
             lex->machs->tokid = lex->typecount;
+            lex->machs->nterm->type.val = lex->typecount;
         }
+        tnode = patch_search (lex->patch, lex->machs->nterm->lexeme);
+
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
             lex->machs->nfa = prx_expression(lex , curr, &uparent, &concat);
@@ -683,24 +717,35 @@ void prx_annotation (nfa_edge_s *edge, token_s **curr)
     }
 }
 
-int prx_tokenid (mach_s *mach, token_s **curr)
+int prx_tokenid (lex_s *lex, token_s **curr)
 {
+    mach_s *mach = lex->machs;
+    
     if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
         if ((*curr)->type.attribute == LEXATTR_WORD) {
-            if (!strcmp((*curr)->lexeme, "autoinc"))
+            if (!strcmp((*curr)->lexeme, "autoinc")) {
                 mach->attr_auto = true;
-            else if (!strcmp((*curr)->lexeme, "composite"))
+                *curr = (*curr)->next;
+                return OP_NOP;
+            }
+            else if (!strcmp((*curr)->lexeme, "composite")) {
                 mach->composite = true;
-            *curr = (*curr)->next;
-            return 0;
+                *curr = (*curr)->next;
+                return OP_NOP;
+            }
+            else {
+                if ((*curr)->next->type.val == LEXTYPE_ANNOTATE)
+                    return OP_GETIDATT;
+                return OP_GETID;
+            }
         }
         else {
             mach->tokid = atoi((*curr)->lexeme);
             *curr = (*curr)->next;
-            return 1;
+            return OP_NUM;
         }
     }
-    return 0;
+    return OP_NOP;
 }
 
 lex_s *lex_s_ (void)
@@ -715,6 +760,21 @@ lex_s *lex_s_ (void)
     lex->kwtable = idtable_s_(LEXID_START);
     lex->tok_hash = hash_(tok_hashf, tok_isequalf);
     return lex;
+}
+
+idtnode_s *patch_search (llist_s *patch, char *lexeme)
+{
+    printf("%p\n", patch);
+    while (patch) {
+        printf("derp %d %s\n", ((idtnode_s *)patch->ptr)->tdat.is_string, lexeme);
+        if (((idtnode_s *)patch->ptr)->tdat.is_string) {
+            printf("comparing %s %s\n", ((idtnode_s *)patch->ptr)->tdat.stype, lexeme);
+            if (!strcmp(((idtnode_s *)patch->ptr)->tdat.stype, lexeme))
+                return patch->ptr;
+        }
+        patch = patch->next;
+    }
+    return NULL;
 }
 
 idtable_s *idtable_s_ (int idstart)
@@ -735,17 +795,17 @@ idtable_s *idtable_s_ (int idstart)
     return table;
 }
 
-void idtable_insert (idtable_s *table, char *str, tdat_s tdat)
+void *idtable_insert (idtable_s *table, char *str, tdat_s tdat)
 {
-    trie_insert(table, table->root, str, tdat);
+    return trie_insert(table, table->root, str, tdat);
 }
 
-tdat_s idtable_lookup (idtable_s *table, char *str)
+tlookup_s idtable_lookup (idtable_s *table, char *str)
 {
     return trie_lookup(table->root, str);
 }
 
-int trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
+idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
 {
     int search;
     idtnode_s *nnode;
@@ -759,22 +819,22 @@ int trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
         else if (*str)
             return trie_insert(table, trie->children[search], str+1, tdat);
         else
-            return 0;
+            return NULL;
     }
     nnode = calloc (1, sizeof(*nnode));
     if (!nnode) {
         perror("Memory Allocation Error");
-        return -1;
+        exit(EXIT_FAILURE);
     }
     nnode->c = *str;
     if (!*str) {
         nnode->tdat = tdat;
-        if (tdat.itype < 0) {
+        if (!tdat.is_string && tdat.itype < 0) {
             table->typecount++;
             nnode->tdat.itype = table->typecount;
         }
         parray_insert (trie, search, nnode);
-        return 1;
+        return nnode;
     }
     parray_insert (trie, search, nnode);
     return trie_insert(table, trie->children[search], str+1, tdat);
@@ -797,16 +857,16 @@ void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child)
     tnode->nchildren++;
 }
 
-tdat_s trie_lookup (idtnode_s *trie, char *str)
+tlookup_s trie_lookup (idtnode_s *trie, char *str)
 {
     uint16_t search;
     
     search = bsearch_tr(trie, *str);
     if (search & 0x8000) {
-        return (tdat_s){.is_string = false, .itype = -(search & ~0x8000), .att = 0};
+        return (tlookup_s){.is_found = false, .tdat = trie->tdat};
     }
     if (!*str)
-        return trie->children[search]->tdat;
+        return (tlookup_s){.is_found = true, .tdat = trie->children[search]->tdat};
     return trie_lookup(trie->children[search], str+1);
 }
 
@@ -927,7 +987,7 @@ lextok_s lex (lex_s *lex, char *buf)
     match_s res, best;
     uint16_t lineno = 1;
     char c[2], *backup;
-    tdat_s lookup;
+    tlookup_s lookup;
     token_s *head = NULL, *tlist = NULL;
     
     c[1] = '\0';
@@ -962,15 +1022,15 @@ lextok_s lex (lex_s *lex, char *buf)
         if (best.success) {
             if (best.n <= MAX_LEXLEN) {
                 lookup = idtable_lookup(lex->kwtable, buf);
-                if (lookup.itype > 0) {
-                    addtok(&tlist, buf, lineno, lookup.itype, res.attribute);
-                    hashname(lex, lookup.itype, buf);
+                if (lookup.is_found) {
+                    addtok(&tlist, buf, lineno, lookup.tdat.itype, res.attribute);
+                    hashname(lex, lookup.tdat.itype, buf);
                 }
                 else {
                     lookup = idtable_lookup(lex->idtable, buf);
-                    if (lookup.itype > 0) {
-                        addtok(&tlist, buf, lineno, lookup.itype, lookup.att);
-                        hashname(lex, lookup.itype, buf);
+                    if (lookup.is_found) {
+                        addtok(&tlist, buf, lineno, lookup.tdat.itype, lookup.tdat.att);
+                        hashname(lex, lookup.tdat.itype, buf);
                     }
                     else if (bmach->attr_auto) {
                         bmach->attrcount++;
@@ -991,9 +1051,9 @@ lextok_s lex (lex_s *lex, char *buf)
         }
         else {
             lookup = idtable_lookup(lex->kwtable, c);
-            if (lookup.itype > 0) {
-                addtok(&tlist, c, lineno, lookup.itype, LEXATTR_DEFAULT);
-                hashname(lex, lookup.itype, NULL);
+            if (lookup.is_found) {
+                addtok(&tlist, c, lineno, lookup.tdat.itype, LEXATTR_DEFAULT);
+                hashname(lex, lookup.tdat.itype, NULL);
                 if (!head)
                     head = tlist;
             }
