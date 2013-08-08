@@ -373,6 +373,7 @@ void prx_keywords (lex_s *lex, token_s **curr)
         switch (prx_tokenid(lex, curr)) {
             case OP_GETID:
                 node = idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = -1});
+                assert(idtable_lookup(lex->kwtable, (*curr)->lexeme).is_found);
                 *curr = (*curr)->next;
                 if (node) {
                     assert(is_allocated(node));
@@ -381,6 +382,7 @@ void prx_keywords (lex_s *lex, token_s **curr)
                 break;
             case OP_GETIDATT:
                 node = idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = atoi((*curr)->next->lexeme)});
+                assert(idtable_lookup(lex->kwtable, (*curr)->lexeme).is_found);
                 *curr = (*curr)->next->next;
                 if (node) {
                     assert(is_allocated(node));
@@ -802,6 +804,7 @@ void *idtable_insert (idtable_s *table, char *str, tdat_s tdat)
 
 tlookup_s idtable_lookup (idtable_s *table, char *str)
 {
+    printf("looking up %s\n", str);
     return trie_lookup(table->root, str);
 }
 
@@ -862,9 +865,8 @@ tlookup_s trie_lookup (idtnode_s *trie, char *str)
     uint16_t search;
     
     search = bsearch_tr(trie, *str);
-    if (search & 0x8000) {
+    if (search & 0x8000)
         return (tlookup_s){.is_found = false, .tdat = trie->tdat};
-    }
     if (!*str)
         return (tlookup_s){.is_found = true, .tdat = trie->children[search]->tdat};
     return trie_lookup(trie->children[search], str+1);

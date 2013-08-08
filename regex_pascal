@@ -15,10 +15,6 @@ not
 call
 of
 real
-div {<mulop> 3}
-mod {<mulop> 4}
-and {<mulop> 5}
-or {<addop> 2}
 :
 ;
 \(

@@ -30,6 +30,7 @@ struct follow_s
     follow_s *table;
     llist_s *firsts;
     llist_s *follows;
+    uint16_t *count;
     bool *ready;
     pthread_mutex_t *jlock;
     pthread_cond_t *jcond;
@@ -131,25 +132,28 @@ void match_phase (lextok_s regex, token_s *cfg)
     printf("\n\n");
     while (cfg) {
         token = findtok(regex.lex->machs, cfg->lexeme);
-        if (token)
+        if (token) {
             cfg->type = token->type;
+        }
         else {
-            printf("looking up %s\n", cfg->lexeme);
             result = idtable_lookup(regex.lex->kwtable, cfg->lexeme);
-            if (result.is_found && result.tdat.is_string) {
+            if (result.is_found) {
                 printf("found\n");
-                token = findtok(regex.lex->machs, result.tdat.stype);
-                printf("Trying to match: %s with %s\n", cfg->lexeme, result.tdat.stype);
-                if (token)
-                    cfg->type.val = token->type.val;
-                else {
-                    perror("Regex Error");
-                    exit(EXIT_FAILURE);
+
+                if (result.tdat.is_string) {
+                    token = findtok(regex.lex->machs, result.tdat.stype);
+                    printf("Trying to match: %s with %s\n", cfg->lexeme, result.tdat.stype);
+                    if (token)
+                        cfg->type.val = token->type.val;
+                    else {
+                        perror("Regex Error");
+                        exit(EXIT_FAILURE);
+                    }
                 }
-            }
-            else if (result.is_found) {
-                cfg->type.val = result.tdat.itype;
-                printf("found\n");
+                else {
+                    cfg->type.val = result.tdat.itype;
+                    printf("found\n");
+                }
             }
             cfg->type.attribute = result.tdat.att;
         }
@@ -448,11 +452,6 @@ void getfollows (follow_s *fparams)
     follow_s *neighbor;
     hashiterator_s *iterator;
     
-    pthread_mutex_lock(fparams->jlock);
-    while (!*fparams->ready)
-        pthread_cond_wait(fparams->jcond, fparams->jlock);    
-    pthread_mutex_unlock(fparams->jlock);
-
     if (fparams->pda == fparams->parser->start) {
         tmpeof = makeEOF();
         if (!llpnode_contains(fparams->follows, tmpeof->token))
@@ -493,6 +492,12 @@ void getfollows (follow_s *fparams)
             }
         }
     }
+    
+    pthread_mutex_lock(fparams->jlock);
+    --*fparams->count;
+    pthread_cond_signal(fparams->jcond);
+    pthread_mutex_unlock(fparams->jlock);
+    
     free(iterator);
     pthread_exit(0);
 }
@@ -603,6 +608,7 @@ void compute_firstfollows (parse_s *parser)
     pthread_cond_t jcond;
     llist_s *stack = NULL;
     void *attr = NULL;
+    uint16_t threadcount = 0;
     
     nitems = parser->phash->nitems;
     ftable = calloc(nitems, sizeof(*ftable));
@@ -636,9 +642,11 @@ void compute_firstfollows (parse_s *parser)
         ftable[i].jlock = &jlock;
         ftable[i].jcond = &jcond;
         ftable[i].ready = &ready;
+        ftable[i].count = &threadcount;
         ftable[i].ninherit = 0;
     }
     free(iterator);
+    threadcount = nitems;
     for (i = 0; i < nitems; i++) {
         status = pthread_create(&ftable[i].thread, NULL, (void *(*)())getfollows, &ftable[i]);
         if (status) {
@@ -646,14 +654,14 @@ void compute_firstfollows (parse_s *parser)
             exit(status);
         }
     }
-    
+            
     pthread_mutex_lock(&jlock);
-    ready = true;
-    pthread_cond_broadcast(&jcond);
+    while(threadcount) {
+        printf("Thread Count %d\n", threadcount);
+        pthread_cond_wait(&jcond, &jlock);
+    }
     pthread_mutex_unlock(&jlock);
-    
-    for (i = 0; i < nitems; i++)
-        status = pthread_join(ftable[i].thread, &attr);
+
     for (i = 0; i < nitems; i++)
         ftable[i].pda->follows = inherit_follows(&ftable[i], &stack);
     for (i = 0; i < nitems; i++) {
