@@ -381,7 +381,7 @@ void prx_keywords (lex_s *lex, token_s **curr)
                 }
                 break;
             case OP_GETIDATT:
-                node = idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = atoi((*curr)->next->lexeme)});
+                node = idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = safe_atoui((*curr)->next->lexeme)});
                 assert(idtable_lookup(lex->kwtable, (*curr)->lexeme).is_found);
                 *curr = (*curr)->next->next;
                 if (node) {
@@ -714,7 +714,7 @@ int prx_closure (lex_s *lex, token_s **curr)
 void prx_annotation (nfa_edge_s *edge, token_s **curr)
 {
     if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-        edge->annotation = atoi((*curr)->lexeme);
+        edge->annotation = safe_atoui((*curr)->lexeme);
         *curr = (*curr)->next;
     }
 }
@@ -742,7 +742,7 @@ int prx_tokenid (lex_s *lex, token_s **curr)
             }
         }
         else {
-            mach->tokid = atoi((*curr)->lexeme);
+            mach->tokid = safe_atoui((*curr)->lexeme);
             *curr = (*curr)->next;
             return OP_NUM;
         }
@@ -804,7 +804,7 @@ void *idtable_insert (idtable_s *table, char *str, tdat_s tdat)
 
 tlookup_s idtable_lookup (idtable_s *table, char *str)
 {
-    printf("looking up %s\n", str);
+    printf("\n");
     return trie_lookup(table->root, str);
 }
 
@@ -839,7 +839,7 @@ idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tda
         parray_insert (trie, search, nnode);
         return nnode;
     }
-    parray_insert (trie, search, nnode);
+    parray_insert(trie, search, nnode);
     return trie_insert(table, trie->children[search], str+1, tdat);
 }
 
@@ -864,6 +864,7 @@ tlookup_s trie_lookup (idtnode_s *trie, char *str)
 {
     uint16_t search;
     
+    printf("%c\n", *str);
     search = bsearch_tr(trie, *str);
     if (search & 0x8000)
         return (tlookup_s){.is_found = false, .tdat = trie->tdat};

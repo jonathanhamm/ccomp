@@ -16,6 +16,18 @@
 
 #define INITFBUF_SIZE 128
 
+unsigned int safe_atoui (char *str)
+{
+    unsigned long i;
+    
+    i = strtoul(str, NULL, 10);
+    if (i > UINT_MAX) {
+        perror("Specified Attributed out of Range");
+        exit(EXIT_FAILURE);
+    }
+    return (int)i;
+}
+
 char *readfile (const char *file)
 {
     FILE *f;

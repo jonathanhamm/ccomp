@@ -152,6 +152,7 @@ void match_phase (lextok_s regex, token_s *cfg)
                 }
                 else {
                     cfg->type.val = result.tdat.itype;
+                    
                     printf("found\n");
                 }
             }
@@ -656,10 +657,8 @@ void compute_firstfollows (parse_s *parser)
     }
             
     pthread_mutex_lock(&jlock);
-    while(threadcount) {
-        printf("Thread Count %d\n", threadcount);
+    while(threadcount)
         pthread_cond_wait(&jcond, &jlock);
-    }
     pthread_mutex_unlock(&jlock);
 
     for (i = 0; i < nitems; i++)

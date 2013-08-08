@@ -13,6 +13,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdbool.h>
 
 typedef unsigned long ulong_bool;
@@ -58,6 +59,8 @@ struct hashiterator_s
     int index;
     hrecord_s *curr;
 };
+
+extern unsigned int safe_atoui (char *str);
 
 extern char *readfile (const char *file);
 
