@@ -356,6 +356,7 @@ void parseregex (lex_s *lex, token_s **list)
     prx_keywords(lex, list);
     if ((*list)->type.val != LEXTYPE_EOL)
         printf("Syntax Error at line %u: Expected EOL but got %s\n", (*list)->lineno, (*list)->lexeme);
+
     *list = (*list)->next;
     prx_tokens(lex, list);
     if ((*list)->type.val != LEXTYPE_EOF)
@@ -365,36 +366,33 @@ void parseregex (lex_s *lex, token_s **list)
 
 void prx_keywords (lex_s *lex, token_s **curr)
 {
+    char *lexeme;
     idtnode_s *node;
     
     while ((*curr)->type.val == LEXTYPE_TERM) {
         node = NULL;
+        lexeme = (*curr)->lexeme;
         *curr = (*curr)->next;
         switch (prx_tokenid(lex, curr)) {
             case OP_GETID:
-                node = idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = -1});
-                assert(idtable_lookup(lex->kwtable, (*curr)->lexeme).is_found);
+                node = idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = -1});
                 *curr = (*curr)->next;
-                if (node) {
-                    assert(is_allocated(node));
+                if (node)
                     llpush(&lex->patch, node);
-                }
                 break;
             case OP_GETIDATT:
-                node = idtable_insert(lex->kwtable, (*curr)->lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = safe_atoui((*curr)->next->lexeme)});
-                assert(idtable_lookup(lex->kwtable, (*curr)->lexeme).is_found);
+                node = idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = safe_atoui((*curr)->next->lexeme)});
                 *curr = (*curr)->next->next;
-                if (node) {
-                    assert(is_allocated(node));
-
+                if (node)
                     llpush(&lex->patch, node);
-                }
                 break;
             case OP_NOP:
+                idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = false, .itype = -1, .att = -1});
             default:
                 break;
         }
     }
+
 }
 
 void prx_tokens (lex_s *lex, token_s **curr)
@@ -498,7 +496,6 @@ void prx_texp (lex_s *lex, token_s **curr)
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
         *curr = (*curr)->next;
-
         if (!prx_tokenid (lex, curr)) {
             lex->typecount++;
             lex->machs->tokid = lex->typecount;
@@ -804,7 +801,6 @@ void *idtable_insert (idtable_s *table, char *str, tdat_s tdat)
 
 tlookup_s idtable_lookup (idtable_s *table, char *str)
 {
-    printf("\n");
     return trie_lookup(table->root, str);
 }
 
@@ -824,7 +820,7 @@ idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tda
         else
             return NULL;
     }
-    nnode = calloc (1, sizeof(*nnode));
+    nnode = calloc(1, sizeof(*nnode));
     if (!nnode) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
@@ -864,7 +860,6 @@ tlookup_s trie_lookup (idtnode_s *trie, char *str)
 {
     uint16_t search;
     
-    printf("%c\n", *str);
     search = bsearch_tr(trie, *str);
     if (search & 0x8000)
         return (tlookup_s){.is_found = false, .tdat = trie->tdat};

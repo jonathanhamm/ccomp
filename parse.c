@@ -100,6 +100,8 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     token_s *list, *iter, *head;
     llist_s *firsts, *fiter;
     
+    assert(idtable_lookup(lextok.lex->kwtable, ")").is_found);
+
     list = lexspec (file, cfg_annotate);
     head = list;
     parse = parse_();
@@ -110,6 +112,7 @@ parse_s *build_parse (const char *file, lextok_s lextok)
             printf("%s %d\n", iter->lexeme, iter->type.val);
     }
     printf("\n");*/
+
     compute_firstfollows (parse);
     firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
     build_parse_table (parse, head);
@@ -126,6 +129,7 @@ void match_phase (lextok_s regex, token_s *cfg)
     tlookup_s result;
     mach_s *iter;
     
+    
     printf("PDA token types:\n");
     for (iter = regex.lex->machs; iter; iter = iter->next)
         printf("%s %d\n", iter->nterm->lexeme, iter->nterm->type.val);
@@ -136,6 +140,8 @@ void match_phase (lextok_s regex, token_s *cfg)
             cfg->type = token->type;
         }
         else {
+            printf("looking up: %s\n", cfg->lexeme);
+            assert(idtable_lookup(regex.lex->kwtable, ")").is_found);
             result = idtable_lookup(regex.lex->kwtable, cfg->lexeme);
             if (result.is_found) {
                 printf("found\n");
@@ -696,7 +702,7 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     pda_s *curr;
     hrecord_s *hcurr;
     hashiterator_s *hiterator;
-    
+
     while (tokens) {
         if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_EPSILON) {
             if (!lllex_contains(terminals, tokens->lexeme)) {
@@ -762,7 +768,6 @@ void build_parse_table (parse_s *parse, token_s *tokens)
                     if (ptable->table[i][j] != -1)
                         ;//for(;;)printf("%s\n", ptable->terms[j]->lexeme);
                     ptable->table[i][j] = LLFF(first_iter)->prod;
-                    
                     if (LLTOKEN(first_iter)->type.val == LEXTYPE_EPSILON) {
                         for (foll_iter = curr->follows; foll_iter; foll_iter = foll_iter->next) {
                             for (k = 0; k < n_terminals; k++) {

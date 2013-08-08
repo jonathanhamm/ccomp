@@ -79,7 +79,7 @@ int main (int argc, const char *argv[])
 
     files = argsparse_start(&iter);
     
-    free_tokens (list);
+    free_tokens(list);
     lextok = lex(buildlex(files.regex), readfile(files.source));
     
     build_parse (files.cfg, lextok);

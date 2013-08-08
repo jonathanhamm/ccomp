@@ -39,8 +39,7 @@ char *readfile (const char *file)
     if (!f) {
         perror("File IO Error");
         printf("Could not read %s\n", file);
-        assert(f);
-        return NULL;
+        exit(EXIT_FAILURE);
     }
     buf = malloc(INITFBUF_SIZE);
     if (!buf) {

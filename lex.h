@@ -98,6 +98,7 @@ struct tlookup_s
 
 struct idtnode_s
 {
+    bool isterm;
     char c;
     tdat_s tdat;
     uint8_t nchildren;

@@ -57,7 +57,7 @@
 <type>=>
 	<standard_type>
 	|
-	array [ num .. num ] of <standard_type>
+	array [ num . . num ] of <standard_type>
 
 <standard_type>=>
 	integer
