@@ -106,6 +106,7 @@ token_s *lexspec (const char *file, annotation_f af)
     uint8_t bpos;
     char lbuf[2*MAX_LEXLEN + 1];
     token_s *list = NULL, *backup;
+    token_s *p, *pp, *ppp;
     
     buf = readfile(file);
     if (!buf)
@@ -152,17 +153,21 @@ token_s *lexspec (const char *file, annotation_f af)
                 if (buf[i+1] == '>') {
                     addtok (&list, "=>", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT);
                     if (list->prev) {
-                        if (list->prev->type.val == LEXTYPE_ANNOTATE) {
-                            if (list->prev->prev) {
-                                if (list->prev->prev->type.val ==  LEXTYPE_NONTERM && list->prev->prev->prev) {
-                                    if (list->prev->prev->prev->type.val == LEXTYPE_EOL)
-                                        list->prev->prev->prev->type.attribute = LEXATTR_EOLNEWPROD;
+                        p = list->prev;
+                        if (p->type.val == LEXTYPE_ANNOTATE) {
+                            if (p->prev) {
+                                pp = p->prev;
+                                if (pp->type.val ==  LEXTYPE_NONTERM && pp->prev) {
+                                    ppp = pp->prev;
+                                    if (ppp->type.val == LEXTYPE_EOL)
+                                        ppp->type.attribute = LEXATTR_EOLNEWPROD;
                                 }
                             }
                         }
-                        else if (list->prev->type.val ==  LEXTYPE_NONTERM && list->prev->prev) {
-                            if (list->prev->prev->type.val == LEXTYPE_EOL)
-                                list->prev->prev->type.attribute = LEXATTR_EOLNEWPROD;
+                        else if (p->type.val ==  LEXTYPE_NONTERM && p->prev) {
+                            pp = p->prev;
+                            if (pp->type.val == LEXTYPE_EOL)
+                                pp->type.attribute = LEXATTR_EOLNEWPROD;
                         }
                     }
                     i++;
@@ -392,7 +397,6 @@ void prx_keywords (lex_s *lex, token_s **curr)
                 break;
         }
     }
-
 }
 
 void prx_tokens (lex_s *lex, token_s **curr)

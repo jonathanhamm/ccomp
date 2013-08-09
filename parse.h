@@ -62,5 +62,6 @@ struct parsetable_s
 extern parse_s *build_parse (const char *file, lextok_s lextok);
 extern pda_s *get_pda (parse_s *parser, char *name);
 extern bool hash_pda (parse_s *parser, char *name, pda_s *pda);
+extern void parse (parse_s *parse, lextok_s lex);
 
 #endif

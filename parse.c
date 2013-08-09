@@ -77,9 +77,12 @@ static bool lllex_contains (llist_s *list, char *lex);
 static void build_parse_table (parse_s *parse, token_s *tokens);
 static void print_parse_table (parsetable_s *ptable, FILE *stream);
 
+static bool match (parse_s *parse, token_s **curr);
+static bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index);
+int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
+
 uint16_t str_hashf (void *key);
 bool str_isequalf(void *key1, void *key2);
-
 
 void printpda(pda_s *start)
 {
@@ -614,7 +617,6 @@ void compute_firstfollows (parse_s *parser)
     pthread_mutex_t jlock;
     pthread_cond_t jcond;
     llist_s *stack = NULL;
-    void *attr = NULL;
     uint16_t threadcount = 0;
     
     nitems = parser->phash->nitems;
@@ -809,6 +811,44 @@ void print_parse_table (parsetable_s *ptable, FILE *stream)
     fprintf(stream, "\n");
 }
 
+void parse (parse_s *parse, lextok_s lex)
+{
+    int index;
+    
+    index = get_production(parse->parse_table, parse->start, &lex.tokens);
+    if (index < 0) {
+        printf("Syntax Error\n");
+        exit(EXIT_FAILURE);
+    }
+    nonterm(parse, &lex.tokens, parse->start, index);
+}
+
+bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
+{
+    
+}
+
+int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
+{
+    uint16_t i, j;
+    
+    for (i = 0; i < ptable->n_nonterminals; i++) {
+        if (!strcmp(pda->nterm->lexeme, ptable->nterms[i]->lexeme)) {
+            for (j = 0; j < ptable->n_terminals; j++) {
+                printf("Searching %s\n", ptable->terms[j]->lexeme);
+                if (!strcmp((*curr)->lexeme, ptable->terms[j]->lexeme)) {
+                    if (ptable->table[i][j] == -1) {
+                        printf("found\n");
+                        continue;
+                    }
+                    return ptable->table[i][j];
+                }
+            }
+            return -1;
+        }
+    }
+    return -1;
+}
 
 pda_s *get_pda (parse_s *parser, char *name)
 {

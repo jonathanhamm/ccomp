@@ -70,6 +70,7 @@ int main (int argc, const char *argv[])
     files_s files;
     argtok_s *list, *iter;
     lextok_s lextok;
+    parse_s *p;
     
     list = arg_tokenize(argc, argv);
 
@@ -82,7 +83,8 @@ int main (int argc, const char *argv[])
     free_tokens(list);
     lextok = lex(buildlex(files.regex), readfile(files.source));
     
-    build_parse (files.cfg, lextok);
+    p = build_parse (files.cfg, lextok);
+    parse (p, lextok);
     return 0;
 }
 
