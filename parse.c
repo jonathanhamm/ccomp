@@ -530,7 +530,7 @@ inline ffnode_s *makeEOF (void)
 follow_s *get_neighbor_params (follow_s *table, pda_s *pda)
 {
     while (table->pda != pda)
-        ++table;
+        table++;
     return table;
 }
 
@@ -838,9 +838,9 @@ int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
                 printf("Searching %s\n", ptable->terms[j]->lexeme);
                 if (!strcmp((*curr)->lexeme, ptable->terms[j]->lexeme)) {
                     if (ptable->table[i][j] == -1) {
-                        printf("found\n");
                         continue;
                     }
+                    printf("found\n");
                     return ptable->table[i][j];
                 }
             }

@@ -122,17 +122,16 @@ argtok_s *arg_tokenize (int argc, const char *argv[])
                     add_argtoken (&tlist, "-", ARG_DASH);
                     if (!head)
                         head = tlist;
-                    ++argv[i];
+                    argv[i]++;
                     break;
                 case '=':
                     add_argtoken (&tlist, "=", ARG_ASSIGN);
                     if (!head)
                         head = tlist;
-                    ++argv[i];
+                    argv[i]++;
                     break;
                 case '\\':
-                    ++argv[i];
-                    if (!argv[i]) {
+                    if (!++argv[i]) {
                         print_usage("Error: Dangling Backslash", NULL);
                         exit(EXIT_FAILURE);
                     }
@@ -152,13 +151,13 @@ argtok_s *arg_tokenize (int argc, const char *argv[])
                                 break;
                             }
                             if (c == '\\') {
-                                ++argv[i];
+                                argv[i]++;
                                 if (!argv[i]) {
                                     print_usage("Error: Dangling Backslash", NULL);
                                     exit(EXIT_FAILURE);
                                 }
                             }
-                            ++argv[i];
+                            argv[i]++;
                         }
                         add_argtoken (&tlist, startptr, ARG_WORD);
                         if (!head)

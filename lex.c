@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <pthread.h>
 
 #define OP_NOP              0
@@ -152,20 +153,16 @@ token_s *lexspec (const char *file, annotation_f af)
             case '=':
                 if (buf[i+1] == '>') {
                     addtok (&list, "=>", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT);
-                    if (list->prev) {
-                        p = list->prev;
+                    if ((p = list->prev)) {
                         if (p->type.val == LEXTYPE_ANNOTATE) {
-                            if (p->prev) {
-                                pp = p->prev;
-                                if (pp->type.val ==  LEXTYPE_NONTERM && pp->prev) {
-                                    ppp = pp->prev;
+                            if ((pp = p->prev)) {
+                                if (pp->type.val == LEXTYPE_NONTERM && (ppp = pp->prev)) {
                                     if (ppp->type.val == LEXTYPE_EOL)
                                         ppp->type.attribute = LEXATTR_EOLNEWPROD;
                                 }
                             }
                         }
-                        else if (p->type.val ==  LEXTYPE_NONTERM && p->prev) {
-                            pp = p->prev;
+                        else if (p->type.val ==  LEXTYPE_NONTERM && (pp = p->prev)) {
                             if (pp->type.val == LEXTYPE_EOL)
                                 pp->type.attribute = LEXATTR_EOLNEWPROD;
                         }
@@ -174,11 +171,11 @@ token_s *lexspec (const char *file, annotation_f af)
                 }
                 else
                     goto fallthrough_;
+                    /* FALLTHROUGH */
                 break;
             case '<':
                 lbuf[0] = '<';
-                for (bpos = 1, i++, j = i; ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z')
-                                || (buf[i] >= '0' && buf[i] <= '9') || buf[i] == '_' || buf[i] == '\''); bpos++, i++)
+                for (bpos = 1, i++, j = i; isalpha(buf[i]) || isdigit(buf[i]) || buf[i] == '_' || buf[i] == '\''; bpos++, i++)
                 {
                     if (bpos == MAX_LEXLEN) {
                         addtok (&list, lbuf, lineno, LEXTYPE_ERROR, LEXATTR_ERRTOOLONG);
@@ -232,13 +229,14 @@ fallthrough_:
                         case NULLSET:
                             addtok (&list, NULLSETSTR, lineno, LEXTYPE_NULLSET, LEXATTR_DEFAULT);
                             goto doublebreak_;
+                            /* DOUBLEBREAK */
                         default:
                             break;
                     }
                     if (buf[i] == '\\')
                         i++;
                     lbuf[bpos] = buf[i];
-                    if (!((buf[i] >= 'A' && buf[i] <= 'Z') || (buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= '0' && buf[i] <= '9')))
+                    if (!(isalpha(buf[i]) || isdigit(buf[i])))
                         j = LEXATTR_NCHARDIG;
                 }
                 if (!bpos) {
@@ -248,7 +246,7 @@ fallthrough_:
                 }
                 else {
                     lbuf[bpos] = '\0';
-                    if (buf[0] >= '0' && buf[0] <= '9')
+                    if (isdigit(buf[i]))
                         addtok (&list, lbuf, lineno, LEXTYPE_TERM, j);
                     else 
                         addtok (&list, lbuf, lineno, LEXTYPE_TERM, LEXATTR_BEGINDIG);
@@ -295,9 +293,9 @@ uint32_t regex_annotate (token_s **tlist, char *buf, uint32_t *lineno)
                 ++*lineno;
             i++;
         }
-        if ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z') || buf[i] == '<') {
+        if (isalpha(buf[i]) || buf[i] == '<') {
             tmpbuf[bpos] = buf[i];
-            for (bpos++, i++; ((buf[i] >= 'a' && buf[i] <= 'z') || (buf[i] >= 'A' && buf[i] <= 'Z') || buf[i] == '>'); bpos++, i++) {
+            for (bpos++, i++; isalpha(buf[i]) || buf[i] == '>'; bpos++, i++) {
                 if (bpos == MAX_LEXLEN)
                     return false;
                 tmpbuf[bpos] = buf[i];
@@ -310,9 +308,9 @@ uint32_t regex_annotate (token_s **tlist, char *buf, uint32_t *lineno)
             tmpbuf[bpos] = '\0';
             addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_WORD);
         }
-        else if (buf[i] >= '0' && buf[i] <= '9') {
+        else if (isdigit(buf[i])) {
             tmpbuf[bpos] = buf[i];
-            for (bpos++, i++; buf[i] >= '0' && buf[i] <= '9'; bpos++, i++) {
+            for (bpos++, i++; isdigit(buf[i]); bpos++, i++) {
                 if (bpos == MAX_LEXLEN)
                     return false;
                 tmpbuf[bpos] = buf[i];
