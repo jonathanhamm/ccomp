@@ -54,6 +54,10 @@
 #define CLOSTYPE_POS        2
 #define CLOSTYPE_ORNULL     3
 
+#define IDT_MANUAL          0
+#define IDT_AUTOINC_TYPE    1
+#define IDT_AUTOINC_ATT     2
+
 typedef struct lex_s lex_s;
 typedef struct tdat_s tdat_s;
 typedef struct tlookup_s tlookup_s;
@@ -107,7 +111,6 @@ struct idtnode_s
 
 struct idtable_s
 {
-    uint16_t typecount;
     idtnode_s *root;
 };
 
@@ -133,10 +136,8 @@ struct nfa_edge_s
 
 struct mach_s
 {
-    bool    attr_auto;
+    bool    attr_id;
     bool    composite;
-    uint16_t attrcount;
-    uint16_t tokid;
     token_s *nterm;
     nfa_s  *nfa;
     mach_s *next;
@@ -144,7 +145,7 @@ struct mach_s
 
 struct lex_s
 {
-    uint16_t typecount;
+    int typestart;
     uint16_t nmachs;
     mach_s *machs;
     idtable_s *kwtable;
@@ -162,7 +163,7 @@ struct lextok_s
 extern lextok_s lex (lex_s *lex, char *buf);
 extern lex_s *buildlex (const char *file);
 extern token_s *lexspec (const char *file, annotation_f af);
-extern idtable_s *idtable_s_ (int idstart);
+extern idtable_s *idtable_s_ (void);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
 extern void *idtable_insert (idtable_s *table, char *str, tdat_s tdat);

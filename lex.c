@@ -66,11 +66,11 @@ static uint32_t regex_annotate (token_s **tlist, char *buf, uint32_t *lineno);
 
 static lex_s *lex_s_ (void);
 static idtnode_s *patch_search (llist_s *patch, char *lexeme);
-static void parseregex (lex_s *lex, token_s **curr);
-static void prx_keywords (lex_s *lex, token_s **curr);
-static void prx_tokens (lex_s *lex, token_s **curr);
-static void prx_tokens_ (lex_s *lex, token_s **curr);
-static void prx_texp (lex_s *lex, token_s **curr);
+static int parseregex (lex_s *lex, token_s **curr);
+static void prx_keywords (lex_s *lex, token_s **curr, int *count);
+static void prx_tokens (lex_s *lex, token_s **curr, int *count);
+static void prx_tokens_ (lex_s *lex, token_s **curr, int *count);
+static void prx_texp (lex_s *lex, token_s **curr, int *count);
 static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
@@ -96,7 +96,7 @@ lex_s *buildlex (const char *file)
     list = lexspec (file, regex_annotate);
     for (iter = list; iter; iter = iter->next)
         printf("%s %d\n", iter->lexeme, iter->lineno);
-    parseregex(lex, &list);
+    lex->typestart = parseregex(lex, &list);
     return lex;
 }
 
@@ -326,7 +326,6 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
 {
     token_s *ntok;
     
-    printf("adding: %s\n", lexeme);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");
@@ -354,20 +353,23 @@ void printlist (token_s *list)
     }
 }
 
-void parseregex (lex_s *lex, token_s **list)
+int parseregex (lex_s *lex, token_s **list)
 {
-    prx_keywords(lex, list);
+    int types = 0;
+    
+    prx_keywords(lex, list, &types);
     if ((*list)->type.val != LEXTYPE_EOL)
         printf("Syntax Error at line %u: Expected EOL but got %s\n", (*list)->lineno, (*list)->lexeme);
 
     *list = (*list)->next;
-    prx_tokens(lex, list);
+    prx_tokens(lex, list, &types);
     if ((*list)->type.val != LEXTYPE_EOF)
         printf("Syntax Error at line %u: Expected $ but got %s\n", (*list)->lineno, (*list)->lexeme);
-    lex->idtable = idtable_s_(lex->typecount);
+    lex->idtable = idtable_s_();
+    return types;
 }
 
-void prx_keywords (lex_s *lex, token_s **curr)
+void prx_keywords (lex_s *lex, token_s **curr, int *counter)
 {
     char *lexeme;
     idtnode_s *node;
@@ -376,6 +378,7 @@ void prx_keywords (lex_s *lex, token_s **curr)
         node = NULL;
         lexeme = (*curr)->lexeme;
         *curr = (*curr)->next;
+        ++*counter;
         switch (prx_tokenid(lex, curr)) {
             case OP_GETID:
                 node = idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = -1});
@@ -390,26 +393,26 @@ void prx_keywords (lex_s *lex, token_s **curr)
                     llpush(&lex->patch, node);
                 break;
             case OP_NOP:
-                idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = false, .itype = -1, .att = -1});
+                idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = false, .itype = *counter, .att = 0});
             default:
                 break;
         }
     }
+    ++*counter;
 }
 
-void prx_tokens (lex_s *lex, token_s **curr)
+void prx_tokens (lex_s *lex, token_s **curr, int *count)
 {
-    lex->typecount = lex->kwtable->typecount;
-    prx_texp (lex, curr);
-    prx_tokens_(lex, curr);
+    prx_texp (lex, curr, count);
+    prx_tokens_(lex, curr, count);
 }
 
-void prx_tokens_ (lex_s *lex, token_s **curr)
+void prx_tokens_ (lex_s *lex, token_s **curr, int *count)
 {
     if ((*curr)->type.val == LEXTYPE_EOL) {
         *curr = (*curr)->next;
-        prx_texp (lex, curr);
-        prx_tokens_ (lex, curr);
+        prx_texp (lex, curr, count);
+        prx_tokens_ (lex, curr, count);
     }
 }
 /*********************************** EXPIRIMENTAL NEW ROUTINES *************************************/
@@ -490,7 +493,7 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
     }
 }
 
-void prx_texp (lex_s *lex, token_s **curr)
+void prx_texp (lex_s *lex, token_s **curr, int *count)
 {
     idtnode_s *tnode = NULL;
     nfa_s *uparent = NULL, *concat = NULL;
@@ -499,9 +502,8 @@ void prx_texp (lex_s *lex, token_s **curr)
         addmachine (lex, *curr);
         *curr = (*curr)->next;
         if (!prx_tokenid (lex, curr)) {
-            lex->typecount++;
-            lex->machs->tokid = lex->typecount;
-            lex->machs->nterm->type.val = lex->typecount;
+            ++*count;
+            lex->machs->nterm->type.val = *count;
         }
         tnode = patch_search (lex->patch, lex->machs->nterm->lexeme);
 
@@ -720,12 +722,18 @@ void prx_annotation (nfa_edge_s *edge, token_s **curr)
 
 int prx_tokenid (lex_s *lex, token_s **curr)
 {
-    mach_s *mach = lex->machs;
+    mach_s *mach = lex->machs, *iter;
     
     if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
         if ((*curr)->type.attribute == LEXATTR_WORD) {
-            if (!strcmp((*curr)->lexeme, "autoinc")) {
-                mach->attr_auto = true;
+            if (!strcmp((*curr)->lexeme, "idtype")) {
+                for (iter = mach; iter; iter = iter->next) {
+                    if (iter->attr_id) {
+                        perror("Error: Only one idtype allowed.");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                mach->attr_id = true;
                 *curr = (*curr)->next;
                 return OP_NOP;
             }
@@ -741,7 +749,7 @@ int prx_tokenid (lex_s *lex, token_s **curr)
             }
         }
         else {
-            mach->tokid = safe_atoui((*curr)->lexeme);
+            mach->nterm->type.val = safe_atoui((*curr)->lexeme);
             *curr = (*curr)->next;
             return OP_NUM;
         }
@@ -758,18 +766,15 @@ lex_s *lex_s_ (void)
         perror("Memory Allocation Error");
         return NULL;
     }
-    lex->kwtable = idtable_s_(LEXID_START);
+    lex->kwtable = idtable_s_();
     lex->tok_hash = hash_(tok_hashf, tok_isequalf);
     return lex;
 }
 
 idtnode_s *patch_search (llist_s *patch, char *lexeme)
 {
-    printf("%p\n", patch);
     while (patch) {
-        printf("derp %d %s\n", ((idtnode_s *)patch->ptr)->tdat.is_string, lexeme);
         if (((idtnode_s *)patch->ptr)->tdat.is_string) {
-            printf("comparing %s %s\n", ((idtnode_s *)patch->ptr)->tdat.stype, lexeme);
             if (!strcmp(((idtnode_s *)patch->ptr)->tdat.stype, lexeme))
                 return patch->ptr;
         }
@@ -778,7 +783,7 @@ idtnode_s *patch_search (llist_s *patch, char *lexeme)
     return NULL;
 }
 
-idtable_s *idtable_s_ (int idstart)
+idtable_s *idtable_s_ (void)
 {
     idtable_s *table;
     
@@ -792,7 +797,6 @@ idtable_s *idtable_s_ (int idstart)
         perror("Memory Allocation Error");
         return NULL;
     }
-    table->typecount = idstart;
     return table;
 }
 
@@ -829,11 +833,27 @@ idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tda
     }
     nnode->c = *str;
     if (!*str) {
+       /* if (!tdat.is_string && tdat.itype < 0) {
+            table->counter++;
+            switch (table->mode) {
+                case IDT_AUTOINC_TYPE:
+                    tdat.itype = table->counter;
+                    break;
+                case IDT_AUTOINC_ATT:
+                    tdat.att = table->counter;
+                    break;
+                case IDT_AUTOINC_TYPE | IDT_AUTOINC_ATT:
+                    tdat.itype = table->counter;
+                    tdat.att = table->counter;
+                    break;
+                case IDT_MANUAL:
+                default:
+                    break;
+            }
+            nnode->tdat = tdat;
+            nnode->tdat.att = table->counter;
+        }*/
         nnode->tdat = tdat;
-        if (!tdat.is_string && tdat.itype < 0) {
-            table->typecount++;
-            nnode->tdat.itype = table->typecount;
-        }
         parray_insert (trie, search, nnode);
         return nnode;
     }
@@ -981,6 +1001,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
 
 lextok_s lex (lex_s *lex, char *buf)
 {
+    int idatt = 0;
     mach_s *mach, *bmach;
     match_s res, best;
     uint16_t lineno = 1;
@@ -1030,15 +1051,15 @@ lextok_s lex (lex_s *lex, char *buf)
                         addtok(&tlist, buf, lineno, lookup.tdat.itype, lookup.tdat.att);
                         hashname(lex, lookup.tdat.itype, buf);
                     }
-                    else if (bmach->attr_auto) {
-                        bmach->attrcount++;
-                        addtok(&tlist, buf, lineno, bmach->tokid, bmach->attrcount);
-                        idtable_insert(lex->idtable, buf, (tdat_s){.is_string = false, .itype = bmach->tokid, .att = bmach->attrcount});
-                        hashname(lex, bmach->tokid, bmach->nterm->lexeme);
+                    else if (bmach->attr_id) {
+                        idatt++;
+                        addtok(&tlist, buf, lineno, bmach->nterm->type.val, idatt);
+                        idtable_insert(lex->idtable, buf, (tdat_s){.is_string = false, .itype = bmach->nterm->type.val, .att = idatt});
+                        hashname(lex, lex->typestart, bmach->nterm->lexeme);
                     }
                     else {
-                        addtok(&tlist, buf, lineno, bmach->tokid, best.attribute);
-                        hashname(lex, bmach->tokid, bmach->nterm->lexeme);
+                        addtok(&tlist, buf, lineno, bmach->nterm->type.val, best.attribute);
+                        hashname(lex, lex->typestart, bmach->nterm->lexeme);
                     }
                 }
                 if (!head)
@@ -1071,8 +1092,8 @@ lextok_s lex (lex_s *lex, char *buf)
         else
             buf++;
     }
-    addtok(&tlist, "$", lineno, lex->typecount+1, LEXATTR_DEFAULT);
-    hashname(lex, lex->typecount+1, "$");
+    addtok(&tlist, "$", lineno, lex->typestart+1, LEXATTR_DEFAULT);
+    hashname(lex, lex->typestart+1, "$");
     free(backup);
     return (lextok_s){.lex = lex, .tokens = head};
 }

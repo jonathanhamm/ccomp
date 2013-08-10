@@ -20,6 +20,7 @@
 
 typedef struct follow_s follow_s;
 typedef struct ffnode_s ffnode_s;
+typedef struct tfind_s tfind_s;
 
 struct follow_s
 {
@@ -44,8 +45,14 @@ struct ffnode_s
     token_s *token;
 };
 
+struct tfind_s
+{
+    bool found;
+    token_s *token;
+};
+
 static void match_phase (lextok_s regex, token_s *cfg);
-static token_s *findtok(mach_s *mlist, char *lexeme);
+static tfind_s findtok(mach_s *mlist, char *lexeme);
 static uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno);
 static parse_s *parse_(void);
 static pda_s *pda_(token_s *token);
@@ -77,9 +84,9 @@ static bool lllex_contains (llist_s *list, char *lex);
 static void build_parse_table (parse_s *parse, token_s *tokens);
 static void print_parse_table (parsetable_s *ptable, FILE *stream);
 
-static bool match (parse_s *parse, token_s **curr);
+static int match (token_s **curr, token_s *tok);
 static bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index);
-int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
+static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
 
 uint16_t str_hashf (void *key);
 bool str_isequalf(void *key1, void *key2);
@@ -119,41 +126,35 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     compute_firstfollows (parse);
     firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
     build_parse_table (parse, head);
-    print_parse_table (parse->parse_table, stdout);
+//    print_parse_table (parse->parse_table, stdin);
     match_phase (lextok, head);
-    for (iter = head; iter; iter = iter->next)
-        printf("%s %d\n", iter->lexeme, iter->type.val);
     return parse;
 }
 
 void match_phase (lextok_s regex, token_s *cfg)
 {
-    token_s *token;
     tlookup_s result;
-    mach_s *iter;
+    mach_s *idmach = NULL;
+    tfind_s tfind;
     
     assert(idtable_lookup(regex.lex->kwtable, "integer").is_found);
     
-    printf("PDA token types:\n");
-    for (iter = regex.lex->machs; iter; iter = iter->next)
-        printf("%s %d\n", iter->nterm->lexeme, iter->nterm->type.val);
-    printf("\n\n");
+    for (idmach = regex.lex->machs; idmach; idmach = idmach->next) {
+        if (idmach->attr_id)
+            break;
+    }
     while (cfg) {
-        token = findtok(regex.lex->machs, cfg->lexeme);
-        if (token) {
-            cfg->type = token->type;
+        tfind = findtok(regex.lex->machs, cfg->lexeme);
+        if (tfind.found) {
+            cfg->type = tfind.token->type;
         }
         else {
-            printf("looking up: %s\n", cfg->lexeme);
             result = idtable_lookup(regex.lex->kwtable, cfg->lexeme);
             if (result.is_found) {
-                printf("found\n");
-
                 if (result.tdat.is_string) {
-                    token = findtok(regex.lex->machs, result.tdat.stype);
-                    printf("Trying to match: %s with %s\n", cfg->lexeme, result.tdat.stype);
-                    if (token)
-                        cfg->type.val = token->type.val;
+                    tfind = findtok(regex.lex->machs, result.tdat.stype);
+                    if (tfind.found)
+                        cfg->type = tfind.token->type;
                     else {
                         perror("Regex Error");
                         exit(EXIT_FAILURE);
@@ -161,19 +162,26 @@ void match_phase (lextok_s regex, token_s *cfg)
                 }
                 else {
                     cfg->type.val = result.tdat.itype;
-                    
-                    printf("found\n");
+                    cfg->type.attribute = result.tdat.att;
                 }
             }
-            cfg->type.attribute = result.tdat.att;
+            else {
+                if (idmach)
+                    cfg->type = idmach->nterm->type;
+                else {
+                    perror("Invalid token type: Not found in regex.");
+                    exit(EXIT_FAILURE);
+                }
+            }
         }
         cfg = cfg->next;
     }
 }
 
-token_s *findtok(mach_s *mlist, char *lexeme)
+tfind_s findtok(mach_s *mlist, char *lexeme)
 {
     uint8_t i;
+    mach_s *idtype = NULL;
     char buf[MAX_LEXLEN+1], *ptr;
     
     while (mlist) {
@@ -182,10 +190,14 @@ token_s *findtok(mach_s *mlist, char *lexeme)
             buf[i] = ptr[i];
         buf[i] = '\0';
         if (!strcmp(buf, lexeme))
-            return mlist->nterm;
+            return (tfind_s){.found = true, .token = mlist->nterm};
+        if (mlist->attr_id)
+            idtype = mlist;
         mlist = mlist->next;
     }
-    return NULL;
+    if (idtype)
+        return (tfind_s){.found = false, .token = idtype->nterm};
+    return (tfind_s){.found = false, .token = NULL};
 }
 
 uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno)
@@ -269,7 +281,7 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
         *curr = (*curr)->next;
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         pda = pda_(*curr);
-        if (!hash_pda (parse, (*curr)->lexeme, pda))
+        if (!hash_pda(parse, (*curr)->lexeme, pda))
             printf("Error: Redefinition of production: %s\n", (*curr)->lexeme);
         *curr = (*curr)->next;
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
@@ -400,7 +412,6 @@ ffnode_s *makeffnode (token_s *token, uint16_t prod)
     return ffnode;
 }
 
-
 bool isespsilon (production_s *production)
 {
     return production->start->token->type.val == LEXTYPE_EPSILON && !production->start->next;
@@ -439,7 +450,6 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
                 if (iter->token->type.val == LEXTYPE_TERM)
                     llpush(&list, makeffnode(iter->token, i));
                 else {
-                    printf("nonterm: %s\n", iter->token->lexeme);
                     tmp = get_pda(parser, iter->token->lexeme);
                     assert(tmp);
                     list = llconcat(list, getfirsts(parser, tmp));
@@ -639,10 +649,6 @@ void compute_firstfollows (parse_s *parser)
     for (curr = hashnext(iterator), i = 0; curr; curr = hashnext(iterator), i++) {
         tmp = (pda_s *)curr->data;
         tmp->firsts = getfirsts(parser, tmp);
-        printf("Printing Firsts for %s\n", (char *)curr->key);
-        for (iter = tmp->firsts; iter; iter = iter->next)
-            printf("%s, ", LLTOKEN(iter)->lexeme);
-        printf("\n\n");
         ftable[i].parser = parser;
         ftable[i].table = ftable;
         ftable[i].index = i;
@@ -671,12 +677,6 @@ void compute_firstfollows (parse_s *parser)
 
     for (i = 0; i < nitems; i++)
         ftable[i].pda->follows = inherit_follows(&ftable[i], &stack);
-    for (i = 0; i < nitems; i++) {
-        printf("Printing Follows for %s\n", ftable[i].pda->nterm->lexeme);
-        for (iter = ftable[i].follows; iter; iter = iter->next)
-            printf("%s, ", LLTOKEN(iter)->lexeme);
-        printf("\n\n");
-    }
     pthread_mutex_destroy(&jlock);
     pthread_cond_destroy(&jcond);
     free(ftable);
@@ -815,17 +815,58 @@ void parse (parse_s *parse, lextok_s lex)
 {
     int index;
     
+    token_s *iter;
+    
+    for (iter = lex.tokens; iter; iter = iter->next)
+        printf("%s %d %d\n", iter->lexeme, iter->type.val, iter->type.attribute);
+    
     index = get_production(parse->parse_table, parse->start, &lex.tokens);
     if (index < 0) {
-        printf("Syntax Error\n");
+        printf("Syntax Error at %s\n", lex.tokens->lexeme);
         exit(EXIT_FAILURE);
     }
     nonterm(parse, &lex.tokens, parse->start, index);
 }
 
+int match(token_s **curr, token_s *tok)
+{
+    printf("Trying to match: %s %d %s %d\n", (*curr)->lexeme, (*curr)->type.val, tok->lexeme, tok->type.val);
+    if ((*curr)->type.val == tok->type.val) {
+        if ((*curr)->type.val != LEXTYPE_EOF) {
+            *curr = (*curr)->next;
+            return 1;
+        }
+        return 2;
+    }
+    printf("Syntax Error at %s when expected %s line: %d\n", (*curr)->lexeme, tok->lexeme, (*curr)->lineno);
+    return 0;
+}
+
+
 bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
 {
+    int result;
+    pda_s *nterm;
+    pnode_s *pnode;
     
+    for (pnode = pda->productions[index].start; pnode; pnode = pnode->next) {
+        if ((nterm = get_pda(parse, pnode->token->lexeme))) {
+            result = get_production(parse->parse_table, nterm, curr);
+            if (result < 0) {
+                printf("Syntax Error at %s line: %d\n", (*curr)->lexeme, (*curr)->lineno);
+                exit(EXIT_FAILURE);
+            }
+            printf("%s\n", nterm->productions[result].start->token->lexeme);
+            nonterm(parse, curr, nterm, result);
+        }
+        else {
+            result = match(curr, pnode->token);
+            if (!result) {
+                printf("Syntax Error at %s line: %d\n", (*curr)->lexeme, (*curr)->lineno);
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
 }
 
 int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
@@ -835,9 +876,8 @@ int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
     for (i = 0; i < ptable->n_nonterminals; i++) {
         if (!strcmp(pda->nterm->lexeme, ptable->nterms[i]->lexeme)) {
             for (j = 0; j < ptable->n_terminals; j++) {
-                printf("Searching %s\n", ptable->terms[j]->lexeme);
-                if (!strcmp((*curr)->lexeme, ptable->terms[j]->lexeme)) {
-                    printf("derp: %d %d\n", (*curr)->type.val, ptable->terms[j]->type.val);
+                printf("comparing: %s %d to %s %d\n", (*curr)->lexeme, (*curr)->type.val, ptable->terms[j]->lexeme, ptable->terms[j]->type.val);
+                if ((*curr)->type.val == ptable->terms[j]->type.val) {
                     if (ptable->table[i][j] == -1) {
                         continue;
                     }

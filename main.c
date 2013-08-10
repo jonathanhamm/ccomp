@@ -23,7 +23,7 @@
 
 #define DEFAULT_REGEX   "regex_pascal"
 #define DEFAULT_CFG     "cfg_pascal"
-#define DEFAULT_SOURCE  "samples/lex_sample2"
+#define DEFAULT_SOURCE  "samples/workingtest"
 
 #define COMP_HELP       "Usage: \n" \
                         "pc [--help] [<sourcefile>] [-s <sourcefile> | --source=<sourcefile>] " \
