@@ -106,8 +106,8 @@ token_s *lexspec (const char *file, annotation_f af)
     char *buf;
     uint8_t bpos;
     char lbuf[2*MAX_LEXLEN + 1];
-    token_s *list = NULL, *backup;
-    token_s *p, *pp, *ppp;
+    token_s *list = NULL, *backup,
+            *p, *pp, *ppp;
     
     buf = readfile(file);
     if (!buf)
@@ -884,8 +884,6 @@ uint16_t bsearch_tr (idtnode_s *tnode, char key)
         else
             return mid;
     }
-    if (mid == tnode->nchildren)
-        mid--;
     if (high < low)
         return mid | 0x8000;
     return mid;

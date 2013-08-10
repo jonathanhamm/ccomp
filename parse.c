@@ -132,6 +132,7 @@ void match_phase (lextok_s regex, token_s *cfg)
     tlookup_s result;
     mach_s *iter;
     
+    assert(idtable_lookup(regex.lex->kwtable, "integer").is_found);
     
     printf("PDA token types:\n");
     for (iter = regex.lex->machs; iter; iter = iter->next)
@@ -144,7 +145,6 @@ void match_phase (lextok_s regex, token_s *cfg)
         }
         else {
             printf("looking up: %s\n", cfg->lexeme);
-            assert(idtable_lookup(regex.lex->kwtable, ")").is_found);
             result = idtable_lookup(regex.lex->kwtable, cfg->lexeme);
             if (result.is_found) {
                 printf("found\n");
@@ -837,10 +837,10 @@ int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
             for (j = 0; j < ptable->n_terminals; j++) {
                 printf("Searching %s\n", ptable->terms[j]->lexeme);
                 if (!strcmp((*curr)->lexeme, ptable->terms[j]->lexeme)) {
+                    printf("derp: %d %d\n", (*curr)->type.val, ptable->terms[j]->type.val);
                     if (ptable->table[i][j] == -1) {
                         continue;
                     }
-                    printf("found\n");
                     return ptable->table[i][j];
                 }
             }
