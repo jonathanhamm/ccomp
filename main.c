@@ -15,11 +15,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define ARG_CHAR    1
-#define ARG_WORD    2
-#define ARG_DASH    3
-#define ARG_ASSIGN  4
-#define ARG_EOF     5
+enum term_args_ {
+    ARG_CHAR,
+    ARG_WORD,
+    ARG_DASH,
+    ARG_ASSIGN,
+    ARG_EOF
+};
 
 #define DEFAULT_REGEX   "regex_pascal"
 #define DEFAULT_CFG     "cfg_pascal"
@@ -81,7 +83,7 @@ int main (int argc, const char *argv[])
     files = argsparse_start(&iter);
     
     free_tokens(list);
-    lextok = lex(buildlex(files.regex), readfile(files.source));
+    lextok = lexf(buildlex(files.regex), readfile(files.source));
     
     p = build_parse (files.cfg, lextok);
     parse (p, lextok);

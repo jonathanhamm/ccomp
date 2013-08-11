@@ -70,6 +70,7 @@ static void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda);
 static ffnode_s *makeffnode (token_s *token, uint16_t prod);
 static bool isespsilon (production_s *production);
 static bool hasepsilon (parse_s *parser, pnode_s *nonterm);
+static llist_s *clone_firsts (llist_s *firsts, int production);
 static llist_s *getfirsts (parse_s *parser, pda_s *pda);
 static void getfollows (follow_s *fparams);
 static inline ffnode_s *makeEOF (void);
@@ -109,7 +110,9 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     parse_s *parse;
     token_s *list, *iter, *head;
     llist_s *firsts, *fiter;
+    FILE *fptable;
     
+    fptable = fopen("parsetable", "w");
     assert(idtable_lookup(lextok.lex->kwtable, ")").is_found);
 
     list = lexspec (file, cfg_annotate);
@@ -126,56 +129,49 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     compute_firstfollows (parse);
     firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
     build_parse_table (parse, head);
-//    print_parse_table (parse->parse_table, stdin);
+    print_parse_table (parse->parse_table, fptable);
+    fclose(fptable);
     match_phase (lextok, head);
     return parse;
 }
 
 void match_phase (lextok_s regex, token_s *cfg)
 {
+    type_s type;
     tlookup_s result;
     mach_s *idmach = NULL;
     tfind_s tfind;
     
     assert(idtable_lookup(regex.lex->kwtable, "integer").is_found);
-    
+    printf("\n\n");
+
     for (idmach = regex.lex->machs; idmach; idmach = idmach->next) {
         if (idmach->attr_id)
             break;
     }
-    while (cfg) {
+    for (; cfg; cfg = cfg->next) {
+        if (!strcmp(cfg->lexeme, "-"))
+            printf("found - : %d\n", cfg->type.val);
+        if (cfg->type.val == LEXTYPE_EPSILON) {
+            continue;
+        }
         tfind = findtok(regex.lex->machs, cfg->lexeme);
         if (tfind.found) {
+            printf("found from mach\n");
             cfg->type = tfind.token->type;
         }
         else {
-            result = idtable_lookup(regex.lex->kwtable, cfg->lexeme);
-            if (result.is_found) {
-                if (result.tdat.is_string) {
-                    tfind = findtok(regex.lex->machs, result.tdat.stype);
-                    if (tfind.found)
-                        cfg->type = tfind.token->type;
-                    else {
-                        perror("Regex Error");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                else {
-                    cfg->type.val = result.tdat.itype;
-                    cfg->type.attribute = result.tdat.att;
-                }
-            }
-            else {
-                if (idmach)
-                    cfg->type = idmach->nterm->type;
-                else {
-                    perror("Invalid token type: Not found in regex.");
-                    exit(EXIT_FAILURE);
-                }
-            }
+            
+            type = gettype(regex.lex, cfg->lexeme);
+            if (type.val != LEXTYPE_ERROR)
+                cfg->type = type;
         }
-        cfg = cfg->next;
+        printf("cfg type val: %u\n", cfg->type.val);
+        assert(cfg->type.val < 100);
+        if (!strcmp(cfg->lexeme, "-"))
+            printf("found - : %d\n", cfg->type.val);
     }
+    printf("\n\n");
 }
 
 tfind_s findtok(mach_s *mlist, char *lexeme)
@@ -432,6 +428,28 @@ bool hasepsilon (parse_s *parser, pnode_s *nonterm)
     return false;
 }
 
+llist_s *clone_firsts (llist_s *firsts, int production)
+{
+    llist_s *new = NULL, *start = NULL;
+    
+    if (firsts) {
+        new = llcopy(firsts);
+        start = new;
+        LLFF(new)->prod = production;
+        firsts = firsts->next;
+        while (firsts) {
+            new->next = llcopy(firsts);
+            firsts = firsts->next;
+            new = new->next;
+            LLFF(new)->prod = production;
+        }
+    }
+    
+    assert(start);
+    return start;
+}
+
+
 llist_s *getfirsts (parse_s *parser, pda_s *pda)
 {
     uint16_t i;
@@ -452,7 +470,7 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
                 else {
                     tmp = get_pda(parser, iter->token->lexeme);
                     assert(tmp);
-                    list = llconcat(list, getfirsts(parser, tmp));
+                    list = llconcat(list, clone_firsts(getfirsts(parser, tmp), i));
                 }
             }
             while (hasepsilon(parser, iter) && (iter = iter->next));
@@ -679,7 +697,21 @@ void compute_firstfollows (parse_s *parser)
         ftable[i].pda->follows = inherit_follows(&ftable[i], &stack);
     pthread_mutex_destroy(&jlock);
     pthread_cond_destroy(&jcond);
+  
+    printf("\n\n");
+    for (i = 0; i < nitems; i++) {
+        printf("\n\nPrinting Firsts for %s\n", ftable[i].pda->nterm->lexeme);
+        for (iter = ftable[i].pda->firsts; iter; iter = iter->next)
+            printf("%s   ", LLTOKEN(iter)->lexeme);
+        printf("\nPrinting Follows for %s\n", ftable[i].pda->nterm->lexeme);
+        for (iter = ftable[i].pda->follows; iter; iter = iter->next)
+            printf("%s   ", LLTOKEN(iter)->lexeme);
+    }
+
+    
     free(ftable);
+    
+    
 }
 
 bool lllex_contains (llist_s *list, char *lex)
@@ -776,7 +808,7 @@ void build_parse_table (parse_s *parse, token_s *tokens)
                                 if (!strcmp(LLTOKEN(foll_iter)->lexeme, ptable->terms[k]->lexeme)) {
                                     if (ptable->table[i][k] != -1)
                                         ;//for(;;)printf("ambiguity detected\n");
-                                    ptable->table[i][k] = LLFF(foll_iter)->prod;
+                                    ptable->table[i][k] = LLFF(first_iter)->prod;
 
                                 }
                             }
@@ -849,7 +881,10 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
     pda_s *nterm;
     pnode_s *pnode;
     
-    for (pnode = pda->productions[index].start; pnode; pnode = pnode->next) {
+    pnode = pda->productions[index].start;
+    if (pnode->token->type.val == LEXTYPE_EPSILON)
+        return true;
+    for (; pnode; pnode = pnode->next) {
         if ((nterm = get_pda(parse, pnode->token->lexeme))) {
             result = get_production(parse->parse_table, nterm, curr);
             if (result < 0) {
@@ -876,11 +911,10 @@ int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
     for (i = 0; i < ptable->n_nonterminals; i++) {
         if (!strcmp(pda->nterm->lexeme, ptable->nterms[i]->lexeme)) {
             for (j = 0; j < ptable->n_terminals; j++) {
-                printf("comparing: %s %d to %s %d\n", (*curr)->lexeme, (*curr)->type.val, ptable->terms[j]->lexeme, ptable->terms[j]->type.val);
+                //printf("comparing: %s %d to %s %d\n", (*curr)->lexeme, (*curr)->type.val, ptable->terms[j]->lexeme, ptable->terms[j]->type.val);
                 if ((*curr)->type.val == ptable->terms[j]->type.val) {
-                    if (ptable->table[i][j] == -1) {
+                    if (ptable->table[i][j] == -1)
                         continue;
-                    }
                     return ptable->table[i][j];
                 }
             }

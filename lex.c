@@ -15,13 +15,20 @@
 #include <ctype.h>
 #include <pthread.h>
 
-#define OP_NOP              0
-#define OP_CONCAT           1
-#define OP_UNION            2
+enum basic_ops_ {
+    OP_NOP = 0,
+    OP_CONCAT,
+    OP_UNION,
+    OP_GETID,
+    OP_GETIDATT,
+    OP_NUM
+};
 
-#define OP_GETID            3
-#define OP_GETIDATT         4
-#define OP_NUM              5
+#define LERR_PREFIX         "      \tLexical Error: at line: %d: "
+#define LERR_UNKNOWNSYM     LERR_PREFIX "Unknown Character: %s\n"
+#define LERR_TOOLONG        LERR_PREFIX "Token too long: %s\n"
+
+#define INT_CHAR_WIDTH      10
 
 typedef struct exp__s exp__s;
 typedef struct nodelist_s nodelist_s;
@@ -78,9 +85,8 @@ static int prx_closure (lex_s *lex, token_s **curr);
 static void prx_annotation (nfa_edge_s *edge, token_s **curr);
 static int prx_tokenid (lex_s *lex, token_s **curr);
 
-
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
-
+static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
 
@@ -91,7 +97,7 @@ lex_s *buildlex (const char *file)
 {
     token_s *list, *iter;
     lex_s *lex;
-    
+
     lex = lex_s_();
     list = lexspec (file, regex_annotate);
     for (iter = list; iter; iter = iter->next)
@@ -108,7 +114,7 @@ token_s *lexspec (const char *file, annotation_f af)
     char lbuf[2*MAX_LEXLEN + 1];
     token_s *list = NULL, *backup,
             *p, *pp, *ppp;
-    
+        
     buf = readfile(file);
     if (!buf)
         return NULL;
@@ -355,7 +361,7 @@ void printlist (token_s *list)
 
 int parseregex (lex_s *lex, token_s **list)
 {
-    int types = 0;
+    int types = LEXID_START;
     
     prx_keywords(lex, list, &types);
     if ((*list)->type.val != LEXTYPE_EOL)
@@ -999,13 +1005,13 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
     return curr;
 }
 
-lextok_s lex (lex_s *lex, char *buf)
+lextok_s lexf (lex_s *lex, char *buf)
 {
     int idatt = 0;
     mach_s *mach, *bmach;
     match_s res, best;
     uint16_t lineno = 1;
-    char c[2], *backup;
+    char c[2], *backup, *error;
     tlookup_s lookup;
     token_s *head = NULL, *tlist = NULL;
     
@@ -1065,8 +1071,11 @@ lextok_s lex (lex_s *lex, char *buf)
                 if (!head)
                     head = tlist;
             }
-            else
-                printf("%6s\tLexical Error: at line: %d: Token too long: %s\n", " ", lineno, buf);
+            else {
+                error = make_lexerr(LERR_TOOLONG, lineno, buf);
+                addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
+                tlist->error = error;
+            }
         }
         else {
             lookup = idtable_lookup(lex->kwtable, c);
@@ -1078,11 +1087,14 @@ lextok_s lex (lex_s *lex, char *buf)
             }
             else {
                 if (best.n) {
-                    printf("%6s\tLexical Error: at line: %d: Unknown Character: %s\n", " ", lineno, buf);
+                    error = make_lexerr (LERR_UNKNOWNSYM, lineno, buf);
+                    addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
+                    tlist->error = error;
                 }
                 else {
-                    printf("%6s\tLexical Error: at line: %d: Unknown Character: %s\n", " ", lineno, c);
-
+                    error = make_lexerr (LERR_UNKNOWNSYM, lineno, c);
+                    addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
+                    tlist->error = error;
                 }
             }
         }
@@ -1092,10 +1104,22 @@ lextok_s lex (lex_s *lex, char *buf)
         else
             buf++;
     }
-    addtok(&tlist, "$", lineno, lex->typestart+1, LEXATTR_DEFAULT);
-    hashname(lex, lex->typestart+1, "$");
-    free(backup);
+    addtok(&tlist, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT);
+    hashname(lex, LEXTYPE_EOF, "$");
     return (lextok_s){.lex = lex, .tokens = head};
+}
+
+char *make_lexerr (const char *errmsg, int lineno, char *lexeme)
+{
+    char *error;
+    
+    error = calloc(1, strlen(errmsg) + MAX_LEXLEN + INT_CHAR_WIDTH);
+    if (!error) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    sprintf(error, errmsg, lineno, lexeme);
+    return error;
 }
 
 mach_s *getmach(lex_s *lex, char *id)
@@ -1108,6 +1132,35 @@ mach_s *getmach(lex_s *lex, char *id)
         exit(EXIT_FAILURE);
     }
     return iter;
+}
+
+type_s gettype (lex_s *lex, char *buf)
+{
+    type_s type;
+    size_t len;
+    lextok_s ltok;
+    token_s *iter, *backup;
+    
+    len = strlen(buf);
+    buf[len] = EOF;
+    ltok = lexf(lex, buf);
+    buf[len] = '\0';
+    type.val = LEXTYPE_ERROR;
+    type.attribute = LEXATTR_DEFAULT;
+    for (iter = ltok.tokens; iter; iter = iter->next) {
+        if (iter->type.val == LEXTYPE_ERROR || iter->type.val == LEXTYPE_EOF)
+            continue;
+        type = iter->type;
+    }
+    iter = ltok.tokens;
+    while(iter) {
+        backup = iter;
+        iter = iter->next;
+        if (backup->error)
+            free(backup->error);
+        free(backup);
+    }
+    return type;
 }
 
 inline bool hashname(lex_s *lex, unsigned long token_val, char *name)
