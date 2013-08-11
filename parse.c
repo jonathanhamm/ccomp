@@ -823,22 +823,24 @@ void build_parse_table (parse_s *parse, token_s *tokens)
 
 void print_parse_table (parsetable_s *ptable, FILE *stream)
 {
-    uint16_t i, j;
-    
-    fprintf(stream, "%31s", " ");
-    for (i = 0; i < ptable->n_terminals; i++) {
-        fprintf(stream, "%-31s", ptable->terms[i]->lexeme);
-        fprintf(stream, " | ");
+    uint16_t i, j, accum;
+
+    fprintf(stream, "%-31s", " ");
+    for (i = 0, accum = 0; i < ptable->n_terminals; i++) {
+        fprintf(stream, " | %-31s", ptable->terms[i]->lexeme);
+        accum += 35;
     }
+    fprintf(stream, "\n");
+    for (i = 0; i < accum; i++)
+        fprintf(stream, "-");
     for (i = 0; i < ptable->n_nonterminals; i++) {
-        fprintf(stream, "%-31s | ", ptable->nterms[i]->lexeme);
+        fprintf(stream, "\n%-31s | ", ptable->nterms[i]->lexeme);
         for (j = 0; j < ptable->n_terminals; j++) {
             if (ptable->table[i][j] == -1)
                 fprintf(stream, "%-31s | ", "NULL");
             else
                 fprintf(stream, "%-31d | ", ptable->table[i][j]);
         }
-        fprintf(stream, "\n");
     }
     fprintf(stream, "\n");
 }
