@@ -67,7 +67,7 @@ extern char *readfile (const char *file);
 extern llist_s *llist_ (void *iptr);
 extern void free_llist (void *list);
 
-extern void println (uint16_t no, char *buf);
+extern void println (unsigned no, char *buf);
 
 extern void llpush (llist_s **list, void *ptr);
 extern llist_s *llpop (llist_s **list);

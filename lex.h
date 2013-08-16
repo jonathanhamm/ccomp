@@ -13,6 +13,14 @@
 
 #include "general.h"
 
+enum lex_attr_ {
+    LEXATTR_NUM = 0,
+    LEXATTR_WORD,
+    LEXATTR_EQU,
+    LEXATTR_COMMA,
+    LEXATTR_FAKEEOF
+};
+
 enum lex_types_ {
     LEXTYPE_ERROR = 0,
     LEXTYPE_TERM,
@@ -47,9 +55,6 @@ enum lex_types_ {
 #define LEXATTR_CHARDIG     0
 #define LEXATTR_NCHARDIG    1
 #define LEXATTR_BEGINDIG    2
-#define LEXATTR_NUM         0
-#define LEXATTR_WORD        1
-#define LEXATTR_FAKEEOF     1
 
 #define CLOSTYPE_NONE       0
 #define CLOSTYPE_KLEENE     1
@@ -62,6 +67,7 @@ enum lex_types_ {
 
 typedef struct lex_s lex_s;
 typedef struct tdat_s tdat_s;
+typedef struct annotation_s annotation_s;
 typedef struct tlookup_s tlookup_s;
 typedef struct idtable_s idtable_s;
 typedef struct idtnode_s idtnode_s;
@@ -73,19 +79,19 @@ typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
 typedef struct lextok_s lextok_s;
 
-typedef uint32_t (*annotation_f) (token_s **, char *, uint32_t *);
+typedef unsigned (*annotation_f) (token_s **, char *, unsigned *);
 
 struct type_s
 {
-    uint16_t val;
-    uint16_t attribute; 
+    unsigned short val;
+    unsigned short attribute;
 };
 
 struct token_s
 {
     type_s type;
     char *error;
-    uint32_t lineno;
+    unsigned lineno;
     char lexeme[MAX_LEXLEN + 1];
     token_s *prev;
     token_s *next;
@@ -99,6 +105,14 @@ struct tdat_s
         int itype;
     };
     int att;
+};
+
+struct annotation_s
+{
+    int attribute;
+    int length;
+    int attcount : 1;
+    int typecount : 1;
 };
 
 struct tlookup_s
@@ -135,7 +149,7 @@ struct nfa_node_s
 
 struct nfa_edge_s
 {
-    int annotation;
+    annotation_s annotation;
     token_s *token;
     nfa_node_s *state;
 };

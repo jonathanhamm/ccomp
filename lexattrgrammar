@@ -1,0 +1,61 @@
+<start>=>
+    <expressionlist>
+
+<expressionlist>
+    <expression> <expression'>
+
+<expression>=>
+    num
+    |
+    word <equals>
+
+<expression'>=>
+    , <expressionlist>
+    |
+    ε
+
+<general>=>
+    num | word
+
+<equals>=>
+    = <general>
+    |
+    ε
+    
+    
+    
+<start>:
+    firsts:
+        num word
+    follows:
+        $
+
+<expressionlist>:
+    firsts:
+        num word
+    follows:
+        $ 
+
+<expression>:
+    firsts:
+        num word
+    follows:
+        , $
+
+<expression'>
+    firsts:
+        , ε
+    follows
+        $
+        
+<general>:
+    firsts:
+        num word
+    follows:
+        , $
+        
+<equals>:
+    firsts:
+        = ε
+    follows:
+        , $

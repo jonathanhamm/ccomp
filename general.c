@@ -149,7 +149,7 @@ void free_llist (void *list)
     }
 }
 
-void println (uint16_t no, char *buf)
+void println (unsigned no, char *buf)
 {
     printf("%6d: ", no);
     do {

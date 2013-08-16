@@ -707,11 +707,7 @@ void compute_firstfollows (parse_s *parser)
         for (iter = ftable[i].pda->follows; iter; iter = iter->next)
             printf("%s   ", LLTOKEN(iter)->lexeme);
     }
-
-    
     free(ftable);
-    
-    
 }
 
 bool lllex_contains (llist_s *list, char *lex)
@@ -875,7 +871,6 @@ int match(token_s **curr, token_s *tok)
     printf("Syntax Error at %s when expected %s line: %d\n", (*curr)->lexeme, tok->lexeme, (*curr)->lineno);
     return 0;
 }
-
 
 bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
 {
