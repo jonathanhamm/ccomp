@@ -1,6 +1,6 @@
 parsetable
 firfoll
 massif.*
-pc.*
-out
+*out
 pcomp.*
+pc*
