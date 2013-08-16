@@ -1,4 +1,6 @@
-*.out.*
-*.dSYM
-pc
-*.out
+parsetable
+firfoll
+massif.*
+pc.*
+out
+pcomp.*
