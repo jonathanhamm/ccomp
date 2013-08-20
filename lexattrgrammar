@@ -1,61 +1,9 @@
-<start>=>
-    <expressionlist>
-
-<expressionlist>
-    <expression> <expression'>
-
+<annotation>=> 
+    num | word <expression>
+    
 <expression>=>
-    num
-    |
-    word <equals>
+    = num <expression'> | ε
 
 <expression'>=>
-    , <expressionlist>
-    |
-    ε
-
-<general>=>
-    num | word
-
-<equals>=>
-    = <general>
-    |
-    ε
+    , <annotation> | ε
     
-    
-    
-<start>:
-    firsts:
-        num word
-    follows:
-        $
-
-<expressionlist>:
-    firsts:
-        num word
-    follows:
-        $ 
-
-<expression>:
-    firsts:
-        num word
-    follows:
-        , $
-
-<expression'>
-    firsts:
-        , ε
-    follows
-        $
-        
-<general>:
-    firsts:
-        num word
-    follows:
-        , $
-        
-<equals>:
-    firsts:
-        = ε
-    follows:
-        , $

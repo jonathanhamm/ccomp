@@ -111,8 +111,7 @@ struct annotation_s
 {
     int attribute;
     int length;
-    int attcount : 1;
-    int typecount : 1;
+    bool attcount;
 };
 
 struct tlookup_s
@@ -159,6 +158,8 @@ struct mach_s
 {
     bool    attr_id;
     bool    composite;
+    bool    typecount;
+    int     lexlen;
     token_s *nterm;
     nfa_s  *nfa;
     mach_s *next;
