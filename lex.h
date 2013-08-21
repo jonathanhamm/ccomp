@@ -158,8 +158,11 @@ struct mach_s
 {
     bool    attr_id;
     bool    composite;
-    bool    typecount;
-    int     lexlen;
+    union {
+        bool    typecount;
+        unsigned count;
+    };
+    unsigned lexlen;
     token_s *nterm;
     nfa_s  *nfa;
     mach_s *next;

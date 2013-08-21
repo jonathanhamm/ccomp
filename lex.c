@@ -126,7 +126,7 @@ token_s *lexspec (const char *file, annotation_f af)
     char *buf;
     char lbuf[2*MAX_LEXLEN + 1];
     token_s *list = NULL, *backup,
-            *p, *pp, *ppp;
+            *p, *pp;
         
     buf = readfile(file);
     if (!buf)
@@ -172,8 +172,24 @@ token_s *lexspec (const char *file, annotation_f af)
             case '=':
                 if (buf[i+1] == '>') {
                     addtok (&list, "=>", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT);
-                    for (p = list->prev; p && p->type.val != LEXTYPE_EOL; p = p->prev);
-                    p->type.attribute = LEXATTR_EOLNEWPROD;
+                    for (p = list->prev; p && p->type.val != LEXTYPE_EOL; p = p->prev) {
+                        if (!p->prev)
+                            pp = p;
+                    }
+                    if (p)
+                        p->type.attribute = LEXATTR_EOLNEWPROD;
+                    else {
+                        p = calloc(1, sizeof(*p));
+                        if (!p) {
+                            perror("Memory Allocation Error");
+                            exit(EXIT_FAILURE);
+                        }
+                        strcmp(p->lexeme, "EOL");
+                        p->next = pp;
+                        p->type.val = LEXTYPE_EOL;
+                        p->type.attribute = LEXATTR_EOLNEWPROD;
+                        pp->prev = p;                        
+                    }
                     i++;
                 }
                 else
@@ -264,7 +280,7 @@ default_:
 doublebreak_:
         ;
     }
-    addtok (&list, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT);
+    addtok(&list, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT);
     while (list->prev) {
         if (list->type.val == LEXTYPE_EOL && list->type.attribute == LEXATTR_DEFAULT) {
             backup = list;
@@ -330,11 +346,13 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno)
             tmpbuf[bpos] = '\0';
             addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_NUM);
         }
-        else if (buf[i] == '=') {
-            
-        }
-        else if (buf[i] == ',') {
-            
+        else if (buf[i] == '=')
+            addtok(tlist, "=", *lineno, LEXTYPE_ANNOTATE, LEXATTR_EQU);
+        else if (buf[i] == ',')
+            addtok(tlist, ",", *lineno, LEXTYPE_ANNOTATE, LEXATTR_COMMA);
+        else {
+            printf("Illegal character sequence in annotation at line %u\n", *lineno);
+            exit(EXIT_FAILURE);
         }
     }
     addtok(tlist, "$", *lineno, LEXTYPE_ANNOTATE, LEXATTR_FAKEEOF);
@@ -455,6 +473,9 @@ nfa_edge_s *nfa_edge_s_(token_s *token, nfa_node_s *state)
     }
     edge->token = token;
     edge->state = state;
+    edge->annotation.attcount = false;
+    edge->annotation.attribute = -1;
+    edge->annotation.length = -1;
     return edge;
 }
 
@@ -505,9 +526,10 @@ void prx_texp (lex_s *lex, token_s **curr, int *count)
         addmachine (lex, *curr);
         *curr = (*curr)->next;
         /*if (!prx_tokenid (lex, curr)) {
-            ++*count;
-            lex->machs->nterm->type.val = *count;
         }*/
+        ++*count;
+        lex->machs->nterm->type.val = *count;
+
         prxa_annotation(curr, lex->machs, (void (*)(token_s **, void *))prxa_regexdef);
         tnode = patch_search (lex->patch, lex->machs->nterm->lexeme);
 
@@ -742,7 +764,22 @@ void prxa_regexdef(token_s **curr, mach_s *mach)
         mach->attr_id = false;
     }
     else if (!strcasecmp((*curr)->lexeme, "length")) {
-        
+        *curr = (*curr)->next;
+        if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_EQU) {
+            *curr = (*curr)->next;
+            if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_NUM) {
+                mach->lexlen = safe_atoui((*curr)->lexeme);
+                *curr = (*curr)->next;
+            }
+            else {
+                printf("Syntax Error at line %d: Expected number but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else {
+            printf("Syntax Error at line %d: Expected = but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            exit(EXIT_FAILURE);
+        }
     }
     else {
         printf("Error at line %d: Unknown regex definition mode %s\n", (*curr)->lineno, (*curr)->lexeme);
