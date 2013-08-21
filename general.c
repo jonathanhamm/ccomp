@@ -16,6 +16,7 @@
     #include <malloc/malloc.h>
 #endif
 
+#define INITLINETABLE_SIZE 64
 #define INITFBUF_SIZE 128
 
 unsigned int safe_atoui (char *str)
@@ -281,6 +282,37 @@ uint16_t pjw_hashf(void *key)
     }
     
     return (uint16_t)(h % HTABLE_SIZE);
+}
+
+inline linetable_s *linetable_s_(void)
+{
+    linetable_s *table;
+    
+    table = malloc(sizeof(*table) + sizeof(ltablerec_s)*INITLINETABLE_SIZE);
+    if (!table) {
+        printf("Memory Allocaton Error");
+        exit(EXIT_FAILURE);
+    }
+    table->size = INITLINETABLE_SIZE;
+    return table;
+}
+
+void addline(linetable_s **linelist_ptr, char *line)
+{
+    linetable_s *linelist = *linelist_ptr;
+    
+    if (linelist->nlines == linelist->size) {
+        linelist->size *= 2;
+        linelist = realloc(linelist, sizeof(*linelist) + sizeof(ltablerec_s)*linelist->size);
+        if (!linelist) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        *linelist_ptr = linelist;
+    }
+    linelist->table[linelist->nlines].line = line;
+    linelist->table[linelist->nlines].errors = NULL;
+    linelist->nlines++;
 }
 
 bool is_allocated (const void *ptr)

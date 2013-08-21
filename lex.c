@@ -923,6 +923,7 @@ lex_s *lex_s_ (void)
     }
     lex->kwtable = idtable_s_();
     lex->tok_hash = hash_(basic_hashf, basic_isequalf);
+    lex->listing = linetable_s_();
     return lex;
 }
 
@@ -988,26 +989,6 @@ idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tda
     }
     nnode->c = *str;
     if (!*str) {
-       /* if (!tdat.is_string && tdat.itype < 0) {
-            table->counter++;
-            switch (table->mode) {
-                case IDT_AUTOINC_TYPE:
-                    tdat.itype = table->counter;
-                    break;
-                case IDT_AUTOINC_ATT:
-                    tdat.att = table->counter;
-                    break;
-                case IDT_AUTOINC_TYPE | IDT_AUTOINC_ATT:
-                    tdat.itype = table->counter;
-                    tdat.att = table->counter;
-                    break;
-                case IDT_MANUAL:
-                default:
-                    break;
-            }
-            nnode->tdat = tdat;
-            nnode->tdat.att = table->counter;
-        }*/
         nnode->tdat = tdat;
         parray_insert (trie, search, nnode);
         return nnode;
@@ -1182,6 +1163,7 @@ lextok_s lexf (lex_s *lex, char *buf)
     c[1] = '\0';
     backup = buf;
     println(lineno, buf);
+    addline(&lex->listing, buf);
     while (*buf != EOF) {
         best.attribute = 0;
         best.n = 0;
@@ -1190,6 +1172,7 @@ lextok_s lexf (lex_s *lex, char *buf)
             if (*buf == '\n') {
                 println(lineno, buf+1);
                 lineno++;
+                addline(&lex->listing, buf+1);
             }
             else if (*buf == EOF)
                 break;

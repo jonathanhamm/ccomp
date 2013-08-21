@@ -28,8 +28,8 @@ typedef struct hash_s hash_s;
 typedef struct hrecord_s hrecord_s;
 typedef struct hashiterator_s hashiterator_s;
 
-typedef struct linenode_s linenode_s;
-typedef struct linelist_s linelist_s;
+typedef struct ltablerec_s ltablerec_s;
+typedef struct linetable_s linetable_s;
 
 struct llist_s
 {
@@ -60,17 +60,17 @@ struct hashiterator_s
     hrecord_s *curr;
 };
 
-struct linenode_s
+struct ltablerec_s
 {
     char *line;
     llist_s *errors;
-    linenode_s *next;
 };
 
-struct linelist_s
+struct linetable_s
 {
-    linenode_s *list;
-    hash_s *hash;
+    unsigned nlines;
+    unsigned size;
+    ltablerec_s table[];
 };
 
 extern unsigned int safe_atoui (char *str);
@@ -98,6 +98,9 @@ extern inline void hiterator_reset (hashiterator_s *iterator);
 extern uint16_t basic_hashf(void *key);
 extern bool basic_isequalf(void *key1, void *key2);
 extern uint16_t pjw_hashf(void *key);
+
+extern inline linetable_s *linetable_s_(void);
+extern void addline(linetable_s **linelist_ptr, char *line);
 
 extern bool is_allocated (const void *ptr);
 

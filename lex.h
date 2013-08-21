@@ -174,7 +174,7 @@ struct lex_s
     idtable_s *idtable;
     hash_s *tok_hash;
     llist_s *patch;
-    linelist_s listing;
+    linetable_s *listing;
 };
 
 struct lextok_s
