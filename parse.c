@@ -214,7 +214,7 @@ parse_s *parse_(void)
         exit(EXIT_FAILURE);
     }
     parse->start = NULL;
-    parse->phash = hash_(str_hashf, str_isequalf);
+    parse->phash = hash_(pjw_hashf, str_isequalf);
     return parse;
 }
 

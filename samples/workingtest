@@ -12,6 +12,7 @@ procedure bob (a : integer; b : real; c : real);
 			derp := 4.7E3 + a+22.1
 		;
 		derp := -3*33;
+        lolol := -3.234;
 		zomg := +32.2 + 3;
 		omg[32] := -omg[32];
 		herp[22*23232.3] := +omg[23];

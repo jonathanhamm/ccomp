@@ -28,6 +28,8 @@ enum basic_ops_ {
 #define LERR_UNKNOWNSYM     LERR_PREFIX "Unknown Character: %s\n"
 #define LERR_TOOLONG        LERR_PREFIX "Token too long: %s\n"
 
+#define ISANNOTATE(curr)    ((*curr)->type.val == LEXTYPE_ANNOTATE)
+
 #define MAX_IDLEN 		10
 #define MAX_INTLEN		10
 #define MAX_REALINT     5
@@ -46,6 +48,8 @@ typedef struct nodelist_s nodelist_s;
 typedef struct lexargs_s lexargs_s;
 typedef struct pnonterm_s pnonterm_s;
 typedef struct match_s match_s;
+
+typedef void (*regex_callback_f) (token_s **, void *);
 
 struct exp__s
 {
@@ -73,6 +77,7 @@ struct match_s
     int n;
     int attribute;
     bool success;
+    bool overflow;
 };
 
 static void printlist (token_s *list);
@@ -94,6 +99,14 @@ static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s *
 static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static int prx_closure (lex_s *lex, token_s **curr);
 
+static void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback);
+static void prxa_regexdef(token_s **curr, mach_s *mach);
+static void setann_val(int *location, int value);
+static void prxa_edgestart(token_s **curr, nfa_edge_s *edge);
+static void prxa_assigment(token_s **curr, nfa_edge_s *edge);
+static int prxa_expression(token_s **curr, nfa_edge_s *edge);
+static void prxa_expression_(token_s **curr, nfa_edge_s *edge);
+
 static void regexdef_callback (token_s **curr, mach_s *mach);
 static void nfaedge_callback (token_s **curr, nfa_edge_s *edge);
 static int prx_annotation (nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
@@ -108,8 +121,6 @@ static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
 
-uint16_t tok_hashf (void *key);
-bool tok_isequalf(void *key1, void *key2);
 
 lex_s *buildlex (const char *file)
 {
@@ -130,7 +141,7 @@ token_s *lexspec (const char *file, annotation_f af)
     char *buf;
     char lbuf[2*MAX_LEXLEN + 1];
     token_s *list = NULL, *backup,
-            *p, *pp, *ppp;
+            *p, *pp;
         
     buf = readfile(file);
     if (!buf)
@@ -176,25 +187,29 @@ token_s *lexspec (const char *file, annotation_f af)
             case '=':
                 if (buf[i+1] == '>') {
                     addtok (&list, "=>", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT);
-                    if ((p = list->prev)) {
-                        if (p->type.val == LEXTYPE_ANNOTATE) {
-                            if ((pp = p->prev)) {
-                                if (pp->type.val == LEXTYPE_NONTERM && (ppp = pp->prev)) {
-                                    if (ppp->type.val == LEXTYPE_EOL)
-                                        ppp->type.attribute = LEXATTR_EOLNEWPROD;
-                                }
-                            }
+                    for (p = list->prev; p && p->type.val != LEXTYPE_EOL; p = p->prev) {
+                        if (!p->prev)
+                            pp = p;
+                    }
+                    if (p)
+                        p->type.attribute = LEXATTR_EOLNEWPROD;
+                    else {
+                        p = calloc(1, sizeof(*p));
+                        if (!p) {
+                            perror("Memory Allocation Error");
+                            exit(EXIT_FAILURE);
                         }
-                        else if (p->type.val ==  LEXTYPE_NONTERM && (pp = p->prev)) {
-                            if (pp->type.val == LEXTYPE_EOL)
-                                pp->type.attribute = LEXATTR_EOLNEWPROD;
-                        }
+                        strcmp(p->lexeme, "EOL");
+                        p->next = pp;
+                        p->type.val = LEXTYPE_EOL;
+                        p->type.attribute = LEXATTR_EOLNEWPROD;
+                        pp->prev = p;                        
                     }
                     i++;
                 }
                 else
-                    goto fallthrough_;
-                    /* FALLTHROUGH */
+                    goto default_;
+                    /* jump to default */
                 break;
             case '<':
                 lbuf[0] = '<';
@@ -208,7 +223,7 @@ token_s *lexspec (const char *file, annotation_f af)
                 }
                 if (i == j) {
                     i--;
-                    goto fallthrough_;
+                    goto default_;
                 }
                 else if (buf[i] == '>' && bpos != MAX_LEXLEN) {
                     lbuf[bpos] = '>';
@@ -224,7 +239,7 @@ token_s *lexspec (const char *file, annotation_f af)
             case NULLSET:
                 addtok (&list, NULLSETSTR, lineno, LEXTYPE_NULLSET, LEXATTR_DEFAULT);
                 break;
-fallthrough_:
+default_:
             default:
                 if (buf[i] <= ' ')
                     break;
@@ -280,7 +295,7 @@ fallthrough_:
 doublebreak_:
         ;
     }
-    addtok (&list, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT);
+    addtok(&list, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT);
     while (list->prev) {
         if (list->type.val == LEXTYPE_EOL && list->type.attribute == LEXATTR_DEFAULT) {
             backup = list;
@@ -300,6 +315,10 @@ doublebreak_:
             list->prev = NULL;
         free(backup);
     }
+  /*  token_s *bob = list;
+    for (; bob; bob = bob->next)
+        printf("%s %u %u\n", bob->lexeme, bob->type.val, bob->type.attribute);
+    asm("hlt");*/
     free(buf);
     return list;
 }
@@ -316,6 +335,7 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno)
                 ++*lineno;
             i++;
         }
+        bpos = 0;
         if (isalpha(buf[i]) || buf[i] == '<') {
             tmpbuf[bpos] = buf[i];
             for (bpos++, i++; isalpha(buf[i]) || buf[i] == '>'; bpos++, i++) {
@@ -342,10 +362,16 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno)
             addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_NUM);
         }
         else if (buf[i] == '=') {
-            
+            i++;
+            addtok(tlist, "=", *lineno, LEXTYPE_ANNOTATE, LEXATTR_EQU);
         }
         else if (buf[i] == ',') {
-            
+            i++;
+            addtok(tlist, ",", *lineno, LEXTYPE_ANNOTATE, LEXATTR_COMMA);
+        }
+        else {
+            printf("Illegal character sequence in annotation at line %u\n", *lineno);
+            exit(EXIT_FAILURE);
         }
     }
     addtok(tlist, "$", *lineno, LEXTYPE_ANNOTATE, LEXATTR_FAKEEOF);
@@ -356,6 +382,7 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
 {
     token_s *ntok;
     
+    printf("adding %s\n", lexeme);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");
@@ -407,26 +434,9 @@ void prx_keywords (lex_s *lex, token_s **curr, int *counter)
     while ((*curr)->type.val == LEXTYPE_TERM) {
         node = NULL;
         lexeme = (*curr)->lexeme;
-        *curr = (*curr)->next;
         ++*counter;
-        switch (prx_tokenid(lex, curr)) {
-            case OP_GETID:
-                node = idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = -1});
-                *curr = (*curr)->next;
-                if (node)
-                    llpush(&lex->patch, node);
-                break;
-            case OP_GETIDATT:
-                node = idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = true, .stype = (*curr)->lexeme, .att = safe_atoui((*curr)->next->lexeme)});
-                *curr = (*curr)->next->next;
-                if (node)
-                    llpush(&lex->patch, node);
-                break;
-            case OP_NOP:
-                idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = false, .itype = *counter, .att = 0});
-            default:
-                break;
-        }
+        printf("adding %s\n", lexeme);
+        idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = false, .itype = *counter, .att = 0});
         *curr = (*curr)->next;
     }
     ++*counter;
@@ -483,6 +493,9 @@ nfa_edge_s *nfa_edge_s_(token_s *token, nfa_node_s *state)
     }
     edge->token = token;
     edge->state = state;
+    edge->annotation.attcount = false;
+    edge->annotation.attribute = -1;
+    edge->annotation.length = -1;
     return edge;
 }
 
@@ -528,14 +541,13 @@ void prx_texp (lex_s *lex, token_s **curr, int *count)
 {
     idtnode_s *tnode = NULL;
     nfa_s *uparent = NULL, *concat = NULL;
-    
+
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
         *curr = (*curr)->next;
-        if (!prx_tokenid (lex, curr)) {
-            ++*count;
-            lex->machs->nterm->type.val = *count;
-        }
+        ++*count;
+        lex->machs->nterm->type.val = *count;
+        prxa_annotation(curr, lex->machs, (void (*)(token_s **, void *))prxa_regexdef);
         tnode = patch_search (lex->patch, lex->machs->nterm->lexeme);
 
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
@@ -675,7 +687,7 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             edge = nfa_edge_s_(*curr, nfa->final);
             addedge(nfa->start, edge);
             *curr = (*curr)->next;
-            prx_annotation(edge, curr, edge, (void (*)(token_s **, void *))nfaedge_callback);
+            prxa_annotation(curr, edge, (void (*)(token_s **curr, void *))prxa_edgestart);
             exp_ = prx_expression_(lex, curr, unfa, concat);
             if (exp_.op == OP_UNION) {
                 if (*unfa) {
@@ -743,250 +755,174 @@ int prx_closure (lex_s *lex, token_s **curr)
     }
 }
 
-int prx_annotation (nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback)
+void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback)
 {
-    char *ret = NULL;
-    annotation_s *ann = ptr;
-    
     if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-        //edge->annotation = safe_atoui((*curr)->lexeme);
-           // *curr = (*curr)->next;
-        prxann_expressionlist (edge, curr, ptr, callback);
-        if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-            if ((*curr)->type.attribute == LEXATTR_FAKEEOF)
-                *curr = (*curr)->next;
-            else {
-                printf("Syntax Error: Expected $ but got %s\n", (*curr)->lexeme);
-                exit(EXIT_FAILURE);
-            }
-        }
+        callback(curr, ptr);
+        if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_FAKEEOF)
+            *curr = (*curr)->next;
         else {
-            printf("Syntax Error: Token type not an annotation\n");
+            printf("Syntax Error at line %d: Expected } but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
         }
     }
-    printf("No syntax error! \n");
-    asm("hlt");
-    return ret;
 }
 
-int prxann_expressionlist (nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback)
+void prxa_regexdef(token_s **curr, mach_s *mach)
 {
-    char *ret1, *ret2;
-    
-    ret1 = prxann_expression(edge, curr, ptr, callback);
-    ret2 = prxann_expression_(edge, curr, ptr, callback);
-    return ret1 ? ret1 : ret2;
-}
-
-/*
- attribute
- length;
- attcount
- typecount
- 
- */
-
-void regexdef_callback (token_s **curr, mach_s *mach)
-{
-    mach_s *iter;
-    
-    if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-        if ((*curr)->type.attribute == LEXATTR_WORD) {
-            if (!strcmp((*curr)->lexeme, "idtype")) {
-                for (iter = mach; iter; iter = iter->next) {
-                    if (iter->attr_id) {
-                        perror("Error: Only one idtype allowed.");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                mach->attr_id = true;
+    if (!strcasecmp((*curr)->lexeme, "typecount"))
+        mach->typecount = true;
+    else if (!strcasecmp((*curr)->lexeme, "idtype")) {
+        mach->attr_id = true;
+        mach->composite = false;
+    }
+    else if (!strcasecmp((*curr)->lexeme, "composite")) {
+        mach->composite = true;
+        mach->attr_id = false;
+    }
+    else if (!strcasecmp((*curr)->lexeme, "length")) {
+        *curr = (*curr)->next;
+        if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_EQU) {
+            *curr = (*curr)->next;
+            if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_NUM) {
+                mach->lexlen = safe_atoui((*curr)->lexeme);
                 *curr = (*curr)->next;
             }
-            else if (!strcmp((*curr)->lexeme, "composite")) {
-                mach->composite = true;
-                *curr = (*curr)->next;
+            else {
+                printf("Syntax Error at line %d: Expected number but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                exit(EXIT_FAILURE);
             }
         }
         else {
-            mach->nterm->type.val = safe_atoui((*curr)->lexeme);
-            *curr = (*curr)->next;
+            printf("Syntax Error at line %d: Expected = but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            exit(EXIT_FAILURE);
         }
+    }
+    else {
+        printf("Error at line %d: Unknown regex definition mode %s\n", (*curr)->lineno, (*curr)->lexeme);
+        exit(EXIT_FAILURE);
+    }
+    *curr = (*curr)->next;
+}
+
+void prxa_assignment(token_s **curr, nfa_edge_s *edge)
+{
+    int val;
+    char *str;
+    
+    if (ISANNOTATE(curr)) {
+        printf("derpadfadfa %s\n", (*curr)->lexeme);
+
+        if ((*curr)->type.attribute == LEXATTR_FAKEEOF) {
+            return;
+        }
+    }
+    else {
+        printf("Error at line %d: Unexpected %s\n", (*curr)->lineno, (*curr)->lexeme);
+        exit(EXIT_FAILURE);
+    }
+    
+    str = (*curr)->lexeme;
+    if (!strcasecmp(str, "attcount")) {
+        if (edge->annotation.attribute != -1) {
+            printf("Error at line %d at %s: Incompatible attribute type combination.\n", (*curr)->lineno, (*curr)->lexeme);
+            exit(EXIT_FAILURE);
+        }
+        edge->annotation.attcount = true;
+    }
+    *curr = (*curr)->next;
+    val = prxa_expression(curr, edge);
+    if (!strcasecmp(str, "attribute"))
+        setann_val(&edge->annotation.attribute, val);
+    else if (!strcasecmp(str, "length"))
+        setann_val(&edge->annotation.length, val);
+    else {
+        printf("Error at line %d: Unknown attribute type: %s\n", (*curr)->lineno, str);
+        exit(EXIT_FAILURE);
     }
 }
 
-void nfaedge_callback (token_s **curr, nfa_edge_s *edge)
+void setann_val(int *location, int value)
 {
-    /*
-    if (!strcasecmp((*curr)->lexeme, "attribute"))
-        value = &ann->attribute;
-    else if (!strcasecmp((*curr)->lexeme, "length"))
-        value = &ann->length;
-    else if (!strcasecmp((*curr)->lexeme, "attcount"))
-        ann->attcount = 1;
-    else if (!strcasecmp((*curr)->lexeme, "typecount"))
-        ann->typecount = 1;
+    if (*location == -1)
+        *location = value;
     else {
-        printf("Error: Expected 'attribute', 'length', 'attcount', or 'typecount', but got: %s\n", (*curr)->lexeme);
+        puts("Error: Regex Attribute used more than once.\n");
         exit(EXIT_FAILURE);
-    }*/
+    }
 }
 
-int prxann_expression (nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback)
-{
-    int *value;
-    char *ret = NULL;
-    annotation_s *ann = ptr;
-    
-    if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
+void prxa_edgestart(token_s **curr, nfa_edge_s *edge)
+{    
+    if (ISANNOTATE(curr)) {
         switch ((*curr)->type.attribute) {
+            case LEXATTR_WORD:
+                prxa_assignment(curr, edge);
+                break;
             case LEXATTR_NUM:
-                if (ptype == ANNOTYPE) {
-                    ann->attribute = safe_atoui((*curr)->lexeme);
-                    *curr = (*curr)->next;
-                }
-                else {
-                    printf("Error: Illegal numeric value %s in this context\n", (*curr)->lexeme);
+                if (edge->annotation.attribute != -1) {
+                    printf("Error at line %d: Edge attribute value %s assigned more than once.", (*curr)->lineno, (*curr)->lexeme);
                     exit(EXIT_FAILURE);
                 }
-                break;
-            case LEXATTR_WORD:
-                if (ptype == ANNOTYPE) {
-                    if (!strcasecmp((*curr)->lexeme, "attribute"))
-                        value = &ann->attribute;
-                    else if (!strcasecmp((*curr)->lexeme, "length"))
-                        value = &ann->length;
-                    else if (!strcasecmp((*curr)->lexeme, "attcount"))
-                        ann->attcount = 1;
-                    else if (!strcasecmp((*curr)->lexeme, "typecount"))
-                        ann->typecount = 1;
-                    else {
-                        printf("Error: Expected 'attribute', 'length', 'attcount', or 'typecount', but got: %s\n", (*curr)->lexeme);
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                else {
-                    if (!strcasecmp((*curr)->lexeme, "idtype"))
-                        ret = "idtype";
-                    else if (!strcasecmp((*curr)->lexeme, "composite"))
-                        ret = "composite";
-                    else {
-                        printf("Error: Expected 'idtype' or 'composite', but got %s\n", (*curr)->lexeme);
-                        exit(EXIT_FAILURE);
-                    }
-                }                
+                edge->annotation.attribute = safe_atoui((*curr)->lexeme);
                 *curr = (*curr)->next;
-                if (ret || ann->attcount || ann->typecount)
-                    return 0;
-                prxann_equals(edge, curr, value);
                 break;
-            default:
-                printf("Syntax Error: Expected word or number but got: %s\n", (*curr)->lexeme);
-                exit(EXIT_FAILURE);
         }
     }
     else {
-        printf("Syntax Error: Token type not an annotation\n");
+        printf("Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
-    return 0;
 }
 
-int prxann_expression_ (nfa_edge_s *edge, token_s **curr, short ptype, void *ptr)
+int prxa_expression(token_s **curr, nfa_edge_s *edge)
 {
-    if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-        switch ((*curr)->type.attribute) {
-            case LEXATTR_COMMA:
-                *curr = (*curr)->next;
-                prxann_expressionlist(edge, curr, ptype, ptr);
-            case LEXATTR_FAKEEOF:
-                break;
-            default:
-                printf("Syntax Error: Expected , or $ but got %s\n", (*curr)->lexeme);
-                exit(EXIT_FAILURE);
-        }
-    }
-    else {
-        printf("Syntax Error: Token type not an annotation\n");
-        exit(EXIT_FAILURE);
-    }
-    return NULL;
-}
-
-void prxann_equals (nfa_edge_s *edge, token_s **curr, int *value)
-{
-    if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
+    int ret = 0;
+    
+    if (ISANNOTATE(curr)) {
         switch ((*curr)->type.attribute) {
             case LEXATTR_EQU:
                 *curr = (*curr)->next;
-                if ((*curr)->type.attribute == LEXATTR_NUM) {
-                    if (*value == -1)
-                        *value = safe_atoui((*curr)->lexeme);
-                    else {
-                        printf("Same type can only be initialized once.\n");
-                        exit(EXIT_FAILURE);
-                    }
+                if (ISANNOTATE(curr)) {
+                    if ((*curr)->type.attribute == LEXATTR_NUM)
+                        ret = safe_atoui((*curr)->lexeme);
                     *curr = (*curr)->next;
+                    prxa_expression_(curr, edge);
                 }
                 else {
-                    printf("Syntax Error: Expected number but got %s\n", (*curr)->lexeme);
+                    printf("Error parsing regex annotation at line %d : %s\n", (*curr)->lineno, (*curr)->lexeme);
                     exit(EXIT_FAILURE);
                 }
+                break;
+            case LEXATTR_FAKEEOF:
+                return -1;
+            default:
+                printf("Syntax error at line %d: Expected = or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                exit(EXIT_FAILURE);
+        }
+    }
+    return ret;
+}
+
+void prxa_expression_(token_s **curr, nfa_edge_s *edge)
+{
+    if (ISANNOTATE(curr)) {
+        switch ((*curr)->type.attribute) {
             case LEXATTR_COMMA:
+                *curr = (*curr)->next;
+                prxa_assignment(curr, edge);
+                break;
             case LEXATTR_FAKEEOF:
                 break;
             default:
-                printf("Syntax Error: Expected = , or $ but got: %s\n", (*curr)->lexeme);
-                break;
+                printf("Syntax error at line %d: Expected , or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                exit(EXIT_FAILURE);
         }
     }
     else {
-        printf("Syntax Error: Token type not an annotation\n");
+        printf("Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
-    return NULL;
-}
-
-
-int prx_tokenid (lex_s *lex, token_s **curr)
-{
-    mach_s *mach = lex->machs, *iter;
-    
-    if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-        //prxann_expression (nfa_edge_s *edge, token_s **curr, annotation_s *ann)
-    }
-    
-    if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
-        if ((*curr)->type.attribute == LEXATTR_WORD) {
-            if (!strcmp((*curr)->lexeme, "idtype")) {
-                for (iter = mach; iter; iter = iter->next) {
-                    if (iter->attr_id) {
-                        perror("Error: Only one idtype allowed.");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                mach->attr_id = true;
-                *curr = (*curr)->next;
-                return OP_NOP;
-            }
-            else if (!strcmp((*curr)->lexeme, "composite")) {
-                mach->composite = true;
-                *curr = (*curr)->next;
-                return OP_NOP;
-            }
-            else {
-                if ((*curr)->next->type.val == LEXTYPE_ANNOTATE)
-                    return OP_GETIDATT;
-                return OP_GETID;
-            }
-        }
-        else {
-            mach->nterm->type.val = safe_atoui((*curr)->lexeme);
-            *curr = (*curr)->next;
-            return OP_NUM;
-        }
-    }
-    return OP_NOP;
 }
 
 lex_s *lex_s_ (void)
@@ -999,7 +935,8 @@ lex_s *lex_s_ (void)
         return NULL;
     }
     lex->kwtable = idtable_s_();
-    lex->tok_hash = hash_(tok_hashf, tok_isequalf);
+    lex->tok_hash = hash_(basic_hashf, basic_isequalf);
+    lex->listing = linetable_s_();
     return lex;
 }
 
@@ -1065,26 +1002,6 @@ idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tda
     }
     nnode->c = *str;
     if (!*str) {
-       /* if (!tdat.is_string && tdat.itype < 0) {
-            table->counter++;
-            switch (table->mode) {
-                case IDT_AUTOINC_TYPE:
-                    tdat.itype = table->counter;
-                    break;
-                case IDT_AUTOINC_ATT:
-                    tdat.att = table->counter;
-                    break;
-                case IDT_AUTOINC_TYPE | IDT_AUTOINC_ATT:
-                    tdat.itype = table->counter;
-                    tdat.att = table->counter;
-                    break;
-                case IDT_MANUAL:
-                default:
-                    break;
-            }
-            nnode->tdat = tdat;
-            nnode->tdat.att = table->counter;
-        }*/
         nnode->tdat = tdat;
         parray_insert (trie, search, nnode);
         return nnode;
@@ -1152,6 +1069,7 @@ void addmachine (lex_s *lex, token_s *tok)
         return; 
     }
     nm->nterm = tok;
+    nm->lexlen = MAX_LEXLEN;
     if (lex->machs)
         nm->next = lex->machs;
     lex->machs = nm;
@@ -1184,12 +1102,17 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
     curr.n = 0;
     curr.attribute = 0;
     curr.success = false;
+    curr.overflow = false;
     if (state == nfa->final)
         curr.success = true;
     for (i = 0; i < state->nedges; i++) {
         switch (state->edges[i]->token->type.val) {
             case LEXTYPE_EPSILON:
-                result = nfa_match (lex, nfa, state->edges[i]->state, buf);
+                result = nfa_match(lex, nfa, state->edges[i]->state, buf);
+                if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
+                    result.success = false;
+                    result.overflow = true;
+                }
                 if (result.success) {
                     curr.success = true;
                     curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
@@ -1200,7 +1123,11 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                 break;
             case LEXTYPE_NONTERM:
                 tmp = getmach(lex, state->edges[i]->token->lexeme);
-                result = nfa_match (lex, tmp->nfa, tmp->nfa->start, buf);
+                result = nfa_match(lex, tmp->nfa, tmp->nfa->start, buf);
+                if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
+                    result.success = false;
+                    result.overflow = true;
+                }
                 if (result.success) {
                     tmpmatch = result.n;
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n]);
@@ -1219,6 +1146,10 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                 tmatch = tokmatch(buf, state->edges[i]->token);
                 if (tmatch && tmatch != EOF) {
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch]);
+                    if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
+                        result.success = false;
+                        result.overflow = true;
+                    }
                     if (result.success) {
                         curr.success = true;
                         curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
@@ -1245,6 +1176,7 @@ lextok_s lexf (lex_s *lex, char *buf)
     c[1] = '\0';
     backup = buf;
     println(lineno, buf);
+    addline(&lex->listing, buf);
     while (*buf != EOF) {
         best.attribute = 0;
         best.n = 0;
@@ -1253,6 +1185,7 @@ lextok_s lexf (lex_s *lex, char *buf)
             if (*buf == '\n') {
                 println(lineno, buf+1);
                 lineno++;
+                addline(&lex->listing, buf+1);
             }
             else if (*buf == EOF)
                 break;
@@ -1398,14 +1331,4 @@ inline bool hashname(lex_s *lex, unsigned long token_val, char *name)
 inline char *getname(lex_s *lex, unsigned long token_val)
 {
     return hashlookup(lex->tok_hash, (void *)token_val);
-}
-
-unsigned short tok_hashf (void *key)
-{
-    return (unsigned long)key % HTABLE_SIZE;
-}
-
-bool tok_isequalf(void *key1, void *key2)
-{
-    return key1 == key2;
 }

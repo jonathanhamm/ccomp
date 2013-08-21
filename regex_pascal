@@ -44,7 +44,7 @@ real
     E ( \+ | - | ε ) <digits> | ε 
 
 <num>=>
-    <digits> <optional_fraction>{1} <optional_exponent>{2}
+    <digits> <optional_fraction>{attribute = 1, length = 15} <optional_exponent>{2}
     
 <relop>=>
     = {0} | <> {1} | < {2} | <= {3} | >= {4} | > {5}
