@@ -72,6 +72,7 @@ struct match_s
     int n;
     int attribute;
     bool success;
+    bool overflow;
 };
 
 static void printlist (token_s *list);
@@ -95,7 +96,9 @@ static int prx_closure (lex_s *lex, token_s **curr);
 
 static void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback);
 static void prxa_regexdef(token_s **curr, mach_s *mach);
+static void setann_val(int *location, int value);
 static void prxa_edgestart(token_s **curr, nfa_edge_s *edge);
+static void prxa_assigment(token_s **curr, nfa_edge_s *edge);
 static int prxa_expression(token_s **curr, nfa_edge_s *edge);
 static void prxa_expression_(token_s **curr, nfa_edge_s *edge);
 
@@ -304,7 +307,6 @@ doublebreak_:
     for (; bob; bob = bob->next)
         printf("%s %u %u\n", bob->lexeme, bob->type.val, bob->type.attribute);
     asm("hlt");*/
-
     free(buf);
     return list;
 }
@@ -321,6 +323,7 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno)
                 ++*lineno;
             i++;
         }
+        bpos = 0;
         if (isalpha(buf[i]) || buf[i] == '<') {
             tmpbuf[bpos] = buf[i];
             for (bpos++, i++; isalpha(buf[i]) || buf[i] == '>'; bpos++, i++) {
@@ -346,10 +349,14 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno)
             tmpbuf[bpos] = '\0';
             addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_NUM);
         }
-        else if (buf[i] == '=')
+        else if (buf[i] == '=') {
+            i++;
             addtok(tlist, "=", *lineno, LEXTYPE_ANNOTATE, LEXATTR_EQU);
-        else if (buf[i] == ',')
+        }
+        else if (buf[i] == ',') {
+            i++;
             addtok(tlist, ",", *lineno, LEXTYPE_ANNOTATE, LEXATTR_COMMA);
+        }
         else {
             printf("Illegal character sequence in annotation at line %u\n", *lineno);
             exit(EXIT_FAILURE);
@@ -363,6 +370,7 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
 {
     token_s *ntok;
     
+    printf("adding %s\n", lexeme);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");
@@ -525,11 +533,8 @@ void prx_texp (lex_s *lex, token_s **curr, int *count)
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
         *curr = (*curr)->next;
-        /*if (!prx_tokenid (lex, curr)) {
-        }*/
         ++*count;
         lex->machs->nterm->type.val = *count;
-
         prxa_annotation(curr, lex->machs, (void (*)(token_s **, void *))prxa_regexdef);
         tnode = patch_search (lex->patch, lex->machs->nterm->lexeme);
 
@@ -788,6 +793,44 @@ void prxa_regexdef(token_s **curr, mach_s *mach)
     *curr = (*curr)->next;
 }
 
+void prxa_assignment(token_s **curr, nfa_edge_s *edge)
+{
+    int val;
+    char *str;
+    
+    if (ISANNOTATE(curr)) {
+        printf("derpadfadfa %s\n", (*curr)->lexeme);
+
+        if ((*curr)->type.attribute == LEXATTR_FAKEEOF) {
+            return;
+        }
+    }
+    else {
+        printf("Error at line %d: Unexpected %s\n", (*curr)->lineno, (*curr)->lexeme);
+        exit(EXIT_FAILURE);
+    }
+    
+    str = (*curr)->lexeme;
+    if (!strcasecmp(str, "attcount")) {
+        if (edge->annotation.attribute != -1) {
+            printf("Error at line %d at %s: Incompatible attribute type combination.\n", (*curr)->lineno, (*curr)->lexeme);
+            exit(EXIT_FAILURE);
+        }
+        edge->annotation.attcount = true;
+    }
+    *curr = (*curr)->next;
+    val = prxa_expression(curr, edge);
+    if (!strcasecmp(str, "attribute"))
+        setann_val(&edge->annotation.attribute, val);
+    else if (!strcasecmp(str, "length"))
+        setann_val(&edge->annotation.length, val);
+    else {
+        printf("Error at line %d: Unknown attribute type: %s\n", (*curr)->lineno, str);
+        exit(EXIT_FAILURE);
+    }
+
+}
+
 void setann_val(int *location, int value)
 {
     if (*location == -1)
@@ -799,31 +842,11 @@ void setann_val(int *location, int value)
 }
 
 void prxa_edgestart(token_s **curr, nfa_edge_s *edge)
-{
-    int val;
-    char *str;
-    
+{    
     if (ISANNOTATE(curr)) {
         switch ((*curr)->type.attribute) {
             case LEXATTR_WORD:
-                str = (*curr)->lexeme;
-                if (!strcasecmp(str, "attcount")) {
-                    if (edge->annotation.attribute != -1) {
-                        printf("Error at line %d at %s: Incompatible attribute type combination.\n", (*curr)->lineno, (*curr)->lexeme);
-                        exit(EXIT_FAILURE);
-                    }
-                    edge->annotation.attcount = true;
-                }
-                *curr = (*curr)->next;
-                val = prxa_expression(curr, edge);
-                if (!strcasecmp(str, "attribute"))
-                    setann_val(&edge->annotation.attribute, val);
-                else if (!strcasecmp(str, "length"))
-                    setann_val(&edge->annotation.length, val);
-                else {
-                    printf("Error at line %d: Unknown attribute type: %s\n", (*curr)->lineno, (*curr)->lexeme);
-                    exit(EXIT_FAILURE);
-                }
+                prxa_assignment(curr, edge);
                 break;
             case LEXATTR_NUM:
                 if (edge->annotation.attribute != -1) {
@@ -832,6 +855,7 @@ void prxa_edgestart(token_s **curr, nfa_edge_s *edge)
                 }
                 edge->annotation.attribute = safe_atoui((*curr)->lexeme);
                 *curr = (*curr)->next;
+                break;
         }
     }
     else {
@@ -875,7 +899,7 @@ void prxa_expression_(token_s **curr, nfa_edge_s *edge)
         switch ((*curr)->type.attribute) {
             case LEXATTR_COMMA:
                 *curr = (*curr)->next;
-                prxa_edgestart(curr, edge);
+                prxa_assignment(curr, edge);
                 break;
             case LEXATTR_FAKEEOF:
                 break;
@@ -1086,12 +1110,17 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
     curr.n = 0;
     curr.attribute = 0;
     curr.success = false;
+    curr.overflow = false;
     if (state == nfa->final)
         curr.success = true;
     for (i = 0; i < state->nedges; i++) {
         switch (state->edges[i]->token->type.val) {
             case LEXTYPE_EPSILON:
-                result = nfa_match (lex, nfa, state->edges[i]->state, buf);
+                result = nfa_match(lex, nfa, state->edges[i]->state, buf);
+                if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
+                    result.success = false;
+                    result.overflow = true;
+                }
                 if (result.success) {
                     curr.success = true;
                     curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
@@ -1102,7 +1131,11 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                 break;
             case LEXTYPE_NONTERM:
                 tmp = getmach(lex, state->edges[i]->token->lexeme);
-                result = nfa_match (lex, tmp->nfa, tmp->nfa->start, buf);
+                result = nfa_match(lex, tmp->nfa, tmp->nfa->start, buf);
+                if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
+                    result.success = false;
+                    result.overflow = true;
+                }
                 if (result.success) {
                     tmpmatch = result.n;
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n]);
@@ -1121,6 +1154,10 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                 tmatch = tokmatch(buf, state->edges[i]->token);
                 if (tmatch && tmatch != EOF) {
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch]);
+                    if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
+                        result.success = false;
+                        result.overflow = true;
+                    }
                     if (result.success) {
                         curr.success = true;
                         curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;

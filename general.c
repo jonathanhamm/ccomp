@@ -9,6 +9,8 @@
 #include "general.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
 
 #if ((defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__))
     #include <malloc/malloc.h>
@@ -176,57 +178,41 @@ hash_s *hash_(hash_f hashf, isequal_f isequalf)
 
 bool hashinsert (hash_s *hash, void *key, void *data)
 {
-    hrecord_s *record, *new, *iter;
+    hrecord_s **entry, *new, *iter;
     
-    record = &hash->table[hash->hash(key)];
-    if (!record->isoccupied) {
-        record->key = key;
-        record->data = data;
-        record->isoccupied = true;
+    entry = &hash->table[hash->hash(key)];
+    if (*entry) {
+        for (iter = *entry; iter; iter = iter->next) {
+            if (hash->isequal(iter->key, key))
+                return false;
+        }
+        hash->collisions++;
     }
-    else {
-        if (hash->isequal(record->key, key))
-            return false;
-        new = malloc(sizeof(*new));
-        if (!new) {
-            perror("Memory Allocation Error");
-            exit(EXIT_FAILURE);
-        }
-        new->key = key;
-        new->data = data;
-        if (record->isoccupied == true) {
-            new->next = NULL;
-            record->next = new;
-        }
-        else {
-            for (iter = record->next; iter; iter = iter->next) {
-                if (hash->isequal(iter->key, key))
-                    return false;
-            }
-            new->next = record->next;
-            record->next = new;
-        }
+    new = malloc(sizeof(*new));
+    if (!new) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
     }
+    new->key = key;
+    new->data = data;
+    new->next = *entry;
+    *entry = new;
+    hash->indices |= (1llu << entry - hash->table);
     hash->nitems++;
     return true;
 }
 
 void *hashlookup (hash_s *hash, void *key)
 {
-    hrecord_s *record;
-    
-    record = &hash->table[hash->hash(key)];
-    if (!record->isoccupied)
-        return NULL;
-    if (hash->isequal(record->key, key))
-        return record->data;
-    else if (record->isoccupied != true) {
-        while (record) {
-            if (hash->isequal(record->key, key))
-                return record->data;
-            record = record->next;
+    hrecord_s **entry, *iter;
+        
+    entry = &hash->table[hash->hash(key)];
+    if (*entry) {
+        for (iter = *entry; iter; iter = iter->next) {
+            if (hash->isequal(iter->key, key))
+                return iter->data;
         }
-    }
+    }    
     return NULL;
 }
 
@@ -241,36 +227,51 @@ hashiterator_s *hashiterator_(hash_s *hash)
     }
     iterator->hash = hash;
     iterator->curr = NULL;
-    iterator->index = -1;
+    iterator->state = hash->indices;
     return iterator;
 }
 
 hrecord_s *hashnext (hashiterator_s *iterator)
 {
-    int i;
-    hash_s *hash;
-
-    if (!iterator->curr || !iterator->curr->next || iterator->curr->isoccupied == true) {
-        hash = iterator->hash;
-        for (i = iterator->index + 1; i < HTABLE_SIZE; i++) {
-            if (hash->table[i].isoccupied) {
-                iterator->index = i;
-                iterator->curr = &hash->table[i];
-                return iterator->curr;
-            }
-        }
-    }
-    else {
+    uint64_t i;
+    hrecord_s *ret;
+    
+    if (iterator->curr) {
+        ret = iterator->curr;
         iterator->curr = iterator->curr->next;
-        return iterator->curr;
+        return ret;
     }
-    return NULL;
+    i = ffsl(iterator->state);
+    if (!i)
+        return NULL;
+    iterator->state &= ~(1llu << --i);
+    ret = iterator->hash->table[i];
+    iterator->curr = ret->next;
+    return ret;
 }
 
 inline void hiterator_reset (hashiterator_s *iterator)
 {
-    iterator->index = -1;
+    iterator->state = iterator->hash->indices;
     iterator->curr = NULL;
+}
+
+/*
+ PJW hash function from textbook
+ */
+uint16_t pjw_hashf(void *key)
+{
+    char *str = key;
+    uint32_t h = 0;
+    uint32_t g;
+    
+    while (*str) {
+        h = (h << 4) + *str++;
+        if ((g = h & (uint32_t)0xf0000000) != 0)
+            h = (h ^ (g >> 24)) ^ g;
+    }
+    
+    return (uint16_t)(h % HTABLE_SIZE);
 }
 
 bool is_allocated (const void *ptr)

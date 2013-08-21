@@ -158,10 +158,7 @@ struct mach_s
 {
     bool    attr_id;
     bool    composite;
-    union {
-        bool    typecount;
-        unsigned count;
-    };
+    bool    typecount;
     unsigned lexlen;
     token_s *nterm;
     nfa_s  *nfa;
@@ -177,6 +174,7 @@ struct lex_s
     idtable_s *idtable;
     hash_s *tok_hash;
     llist_s *patch;
+    linelist_s listing;
 };
 
 struct lextok_s

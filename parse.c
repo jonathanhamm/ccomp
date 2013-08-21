@@ -214,7 +214,7 @@ parse_s *parse_(void)
         exit(EXIT_FAILURE);
     }
     parse->start = NULL;
-    parse->phash = hash_(str_hashf, str_isequalf);
+    parse->phash = hash_(pjw_hashf, str_isequalf);
     return parse;
 }
 
@@ -678,6 +678,8 @@ void compute_firstfollows (parse_s *parser)
         ftable[i].count = &threadcount;
         ftable[i].ninherit = 0;
     }
+    printf("collisions %d\n", parser->phash->collisions);
+    asm("hlt");
     free(iterator);
     threadcount = nitems;
     for (i = 0; i < nitems; i++) {
