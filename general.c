@@ -255,6 +255,16 @@ inline void hiterator_reset (hashiterator_s *iterator)
     iterator->curr = NULL;
 }
 
+uint16_t basic_hashf (void *key)
+{
+    return (unsigned long)key % HTABLE_SIZE;
+}
+
+bool basic_isequalf(void *key1, void *key2)
+{
+    return key1 == key2;
+}
+
 /*
  PJW hash function from textbook
  */

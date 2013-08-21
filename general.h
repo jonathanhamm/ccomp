@@ -95,6 +95,8 @@ extern void *hashlookup (hash_s *hash, void *key);
 extern hashiterator_s *hashiterator_(hash_s *hash);
 extern hrecord_s *hashnext (hashiterator_s *iterator);
 extern inline void hiterator_reset (hashiterator_s *iterator);
+extern uint16_t basic_hashf(void *key);
+extern bool basic_isequalf(void *key1, void *key2);
 extern uint16_t pjw_hashf(void *key);
 
 extern bool is_allocated (const void *ptr);

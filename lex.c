@@ -107,8 +107,6 @@ static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
 
-uint16_t tok_hashf (void *key);
-bool tok_isequalf(void *key1, void *key2);
 
 lex_s *buildlex (const char *file)
 {
@@ -924,7 +922,7 @@ lex_s *lex_s_ (void)
         return NULL;
     }
     lex->kwtable = idtable_s_();
-    lex->tok_hash = hash_(tok_hashf, tok_isequalf);
+    lex->tok_hash = hash_(basic_hashf, basic_isequalf);
     return lex;
 }
 
@@ -1337,14 +1335,4 @@ inline bool hashname(lex_s *lex, unsigned long token_val, char *name)
 inline char *getname(lex_s *lex, unsigned long token_val)
 {
     return hashlookup(lex->tok_hash, (void *)token_val);
-}
-
-unsigned short tok_hashf (void *key)
-{
-    return (unsigned long)key % HTABLE_SIZE;
-}
-
-bool tok_isequalf(void *key1, void *key2)
-{
-    return key1 == key2;
 }
