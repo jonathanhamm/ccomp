@@ -186,7 +186,6 @@ bool hashinsert (hash_s *hash, void *key, void *data)
             if (hash->isequal(iter->key, key))
                 return false;
         }
-        hash->collisions++;
     }
     new = malloc(sizeof(*new));
     if (!new) {

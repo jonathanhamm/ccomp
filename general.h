@@ -46,7 +46,6 @@ struct hrecord_s
 
 struct hash_s
 {
-    int collisions;
     hash_f hash;
     isequal_f isequal;
     uint16_t nitems;
