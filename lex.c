@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <pthread.h>
+#include <wchar.h>
 
 enum basic_ops_ {
     OP_NOP = 0,
@@ -25,8 +26,9 @@ enum basic_ops_ {
 };
 
 #define LERR_PREFIX         "      \tLexical Error: at line: %d: "
-#define LERR_UNKNOWNSYM     LERR_PREFIX "Unknown Character: %s\n"
-#define LERR_TOOLONG        LERR_PREFIX "Token too long: %s\n"
+#define LERR_UNKNOWNSYM     LERR_PREFIX "Unknown Character: %s"
+#define LERR_TOOLONG        LERR_PREFIX "Token too long: %s"
+#define LERR_SPECTOOLONG    LERR_PREFIX "%s too long: %s"
 
 #define ISANNOTATE(curr)    ((*curr)->type.val == LEXTYPE_ANNOTATE)
 
@@ -48,6 +50,7 @@ typedef struct nodelist_s nodelist_s;
 typedef struct lexargs_s lexargs_s;
 typedef struct pnonterm_s pnonterm_s;
 typedef struct match_s match_s;
+typedef struct overflow_s overflow_s;
 
 typedef void (*regex_callback_f) (token_s **, void *);
 
@@ -74,10 +77,15 @@ struct pnonterm_s
 
 struct match_s
 {
-    int n;
+    size_t n;
     int attribute;
     bool success;
-    bool overflow;
+};
+
+struct overflow_s
+{
+    size_t len;
+    char *str;
 };
 
 static void printlist (token_s *list);
@@ -117,9 +125,11 @@ static void prxann_equals (nfa_edge_s *edge, token_s **curr, void *ptr, ann_call
 
 static int prx_tokenid (lex_s *lex, token_s **curr);
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
+match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, overflow_s *overflow);
 static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
+
 
 
 lex_s *buildlex (const char *file)
@@ -142,7 +152,7 @@ token_s *lexspec (const char *file, annotation_f af)
     char lbuf[2*MAX_LEXLEN + 1];
     token_s *list = NULL, *backup,
             *p, *pp;
-        
+    
     buf = readfile(file);
     if (!buf)
         return NULL;
@@ -1092,9 +1102,11 @@ int tokmatch(char *buf, token_s *tok)
     return len;
 }
 
-match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
+int notsucces = 0;
+
+match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, overflow_s *overflow)
 {
-    int tmatch, tmpmatch;
+    size_t tmatch, tmpmatch;
     uint16_t i;
     mach_s *tmp;
     match_s curr, result;
@@ -1102,35 +1114,29 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
     curr.n = 0;
     curr.attribute = 0;
     curr.success = false;
-    curr.overflow = false;
     if (state == nfa->final)
         curr.success = true;
     for (i = 0; i < state->nedges; i++) {
         switch (state->edges[i]->token->type.val) {
             case LEXTYPE_EPSILON:
-                result = nfa_match(lex, nfa, state->edges[i]->state, buf);
-                if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
-                    result.success = false;
-                    result.overflow = true;
-                }
+                result = nfa_match(lex, nfa, state->edges[i]->state, buf, overflow);
                 if (result.success) {
                     curr.success = true;
                     curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
-                    
                     if (result.n > curr.n)
                         curr.n = result.n;
                 }
                 break;
             case LEXTYPE_NONTERM:
                 tmp = getmach(lex, state->edges[i]->token->lexeme);
-                result = nfa_match(lex, tmp->nfa, tmp->nfa->start, buf);
+                result = nfa_match(lex, tmp->nfa, tmp->nfa->start, buf, overflow);
                 if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
-                    result.success = false;
-                    result.overflow = true;
+                    overflow->len = result.n;
+                    overflow->str = state->edges[i]->token->lexeme;
                 }
                 if (result.success) {
                     tmpmatch = result.n;
-                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n]);
+                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n], overflow);
                     if (result.success) {
                         curr.success = true;
                         if (result.n > 0 && result.attribute > 0)
@@ -1145,11 +1151,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
             default: /* case LEXTYPE_TERM */
                 tmatch = tokmatch(buf, state->edges[i]->token);
                 if (tmatch && tmatch != EOF) {
-                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch]);
-                    if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
-                        result.success = false;
-                        result.overflow = true;
-                    }
+                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch], overflow);
                     if (result.success) {
                         curr.success = true;
                         curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
@@ -1165,6 +1167,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
 
 lextok_s lexf (lex_s *lex, char *buf)
 {
+    size_t tmp;
     int idatt = 0;
     mach_s *mach, *bmach;
     match_s res, best;
@@ -1172,15 +1175,22 @@ lextok_s lexf (lex_s *lex, char *buf)
     char c[2], *backup, *error;
     tlookup_s lookup;
     token_s *head = NULL, *tlist = NULL;
+    overflow_s overflow;
     
     c[1] = '\0';
     backup = buf;
     println(lineno, buf);
     addline(&lex->listing, buf);
     while (*buf != EOF) {
+        notsucces = 0;
         best.attribute = 0;
         best.n = 0;
         best.success = false;
+        
+        overflow.len = 0;
+        overflow.str = NULL;
+
+        
         while (*buf <= ' ') {
             if (*buf == '\n') {
                 println(lineno, buf+1);
@@ -1196,7 +1206,7 @@ lextok_s lexf (lex_s *lex, char *buf)
         for (mach = lex->machs; mach; mach = mach->next) {
             if (*buf == EOF)
                 break;
-            res = nfa_match(lex, mach->nfa, mach->nfa->start, buf);
+            res = nfa_match(lex, mach->nfa, mach->nfa->start, buf, &overflow);
             if (res.success && !mach->composite && res.n > best.n) {
                 best = res;
                 bmach = mach;
@@ -1204,8 +1214,8 @@ lextok_s lexf (lex_s *lex, char *buf)
         }
         c[0] = buf[best.n];
         buf[best.n] = '\0';
-        if (best.success) {
-            if (best.n <= MAX_LEXLEN) {
+        if (best.success && !overflow.str) {
+            if (best.n <= bmach->lexlen) {
                 lookup = idtable_lookup(lex->kwtable, buf);
                 if (lookup.is_found) {
                     addtok(&tlist, buf, lineno, lookup.tdat.itype, res.attribute);
@@ -1234,8 +1244,26 @@ lextok_s lexf (lex_s *lex, char *buf)
             else {
                 error = make_lexerr(LERR_TOOLONG, lineno, buf);
                 addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
-                tlist->error = error;
+                adderror(lex->listing, error, lineno);
             }
+        }
+        else if (overflow.str) {
+            buf[best.n] = c[0];
+            printf("Overflow on %s from %.5s, %lu %lu\n", overflow.str, buf, best.n, overflow.len);
+
+            c[0] = buf[overflow.len];
+            
+            buf[overflow.len] = '\0';
+            //for(;;)printf("%.20s\n", buf);
+            tmp = sizeof(LERR_SPECTOOLONG) + overflow.len + MAX_LEXLEN + INT_CHAR_WIDTH;
+            error = calloc(1, tmp+1);
+            if (!error) {
+                perror("Memory Allocation Error");
+                exit(EXIT_FAILURE);
+            }
+            snprintf(error, tmp, LERR_SPECTOOLONG, lineno, overflow.str, buf);
+            best.n = overflow.len;
+            //    for(;;)printf("%s, %.20s\n",error, buf);
         }
         else {
             lookup = idtable_lookup(lex->kwtable, c);
@@ -1247,14 +1275,14 @@ lextok_s lexf (lex_s *lex, char *buf)
             }
             else {
                 if (best.n) {
-                    error = make_lexerr (LERR_UNKNOWNSYM, lineno, buf);
+                    error = make_lexerr(LERR_UNKNOWNSYM, lineno, buf);
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
-                    tlist->error = error;
+                    adderror(lex->listing, error, lineno);
                 }
                 else {
-                    error = make_lexerr (LERR_UNKNOWNSYM, lineno, c);
+                    error = make_lexerr(LERR_UNKNOWNSYM, lineno, c);
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
-                    tlist->error = error;
+                    adderror(lex->listing, error, lineno);
                 }
             }
         }
@@ -1273,7 +1301,7 @@ char *make_lexerr (const char *errmsg, int lineno, char *lexeme)
 {
     char *error;
     
-    error = calloc(1, strlen(errmsg) + MAX_LEXLEN + INT_CHAR_WIDTH);
+    error = calloc(1, strlen(errmsg) + strlen(lexeme) + INT_CHAR_WIDTH);
     if (!error) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
@@ -1299,7 +1327,7 @@ type_s gettype (lex_s *lex, char *buf)
     type_s type;
     size_t len;
     lextok_s ltok;
-    token_s *iter, *backup;
+    token_s *iter;
     
     len = strlen(buf);
     buf[len] = EOF;
@@ -1313,13 +1341,6 @@ type_s gettype (lex_s *lex, char *buf)
         type = iter->type;
     }
     iter = ltok.tokens;
-    while(iter) {
-        backup = iter;
-        iter = iter->next;
-        if (backup->error)
-            free(backup->error);
-        free(backup);
-    }
     return type;
 }
 

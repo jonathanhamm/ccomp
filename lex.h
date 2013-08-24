@@ -90,7 +90,6 @@ struct type_s
 struct token_s
 {
     type_s type;
-    char *error;
     unsigned lineno;
     char lexeme[MAX_LEXLEN + 1];
     token_s *prev;

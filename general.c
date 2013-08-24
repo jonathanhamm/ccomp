@@ -293,6 +293,7 @@ inline linetable_s *linetable_s_(void)
         printf("Memory Allocaton Error");
         exit(EXIT_FAILURE);
     }
+    table->nlines = 0;
     table->size = INITLINETABLE_SIZE;
     return table;
 }
@@ -312,7 +313,21 @@ void addline(linetable_s **linelist_ptr, char *line)
     }
     linelist->table[linelist->nlines].line = line;
     linelist->table[linelist->nlines].errors = NULL;
+    linelist->table[linelist->nlines].tail = NULL;
     linelist->nlines++;
+}
+
+void adderror(linetable_s *linelist, char *message, unsigned lineno)
+{
+    llist_s *n, *list;
+    
+    n = llist_(message);
+    list = linelist->table[--lineno].tail;
+    if (!list)
+        linelist->table[lineno].errors = n;
+    else
+        list->next = n;
+    linelist->table[lineno].tail = n;
 }
 
 bool is_allocated (const void *ptr)

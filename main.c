@@ -79,9 +79,10 @@ int main (int argc, const char *argv[])
     for (iter = list; iter; iter = iter->next)
         printf("%s %d\n\n", iter->lexeme, iter->id);
     iter = list;
+    
 
     files = argsparse_start(&iter);
-    
+
     free_tokens(list);
     lextok = lexf(buildlex(files.regex), readfile(files.source));
     
@@ -93,7 +94,7 @@ int main (int argc, const char *argv[])
 void add_argtoken (argtok_s **tlist, const char *lexeme, int id)
 {
     argtok_s *tok;
-    
+        
     tok = malloc(sizeof(*tok));
     if (!tok) {
         perror("Memory Allocation Error");
@@ -296,7 +297,7 @@ const char **argparse_char (argtok_s **curr, files_s *parent)
         default:
             print_usage("Error: Undefined Program Option: %s", (*curr)->lexeme);
             exit(EXIT_FAILURE);
-            break;
+            return NULL;
     }
 }
 

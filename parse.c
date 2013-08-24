@@ -899,6 +899,7 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
             }
         }
     }
+    return true;
 }
 
 int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)

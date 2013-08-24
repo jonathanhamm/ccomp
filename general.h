@@ -16,9 +16,9 @@
 #include <limits.h>
 #include <stdbool.h>
 
-typedef unsigned long ulong_bool;
-
 #define HTABLE_SIZE 53
+
+typedef unsigned long ulong_bool;
 
 typedef uint16_t (*hash_f)(void *key);
 typedef bool (*isequal_f)(void *key1, void *key2);
@@ -64,6 +64,7 @@ struct ltablerec_s
 {
     char *line;
     llist_s *errors;
+    llist_s *tail;
 };
 
 struct linetable_s
@@ -101,6 +102,7 @@ extern uint16_t pjw_hashf(void *key);
 
 extern inline linetable_s *linetable_s_(void);
 extern void addline(linetable_s **linelist_ptr, char *line);
+extern void adderror(linetable_s *linelist, char *message, unsigned lineno);
 
 extern bool is_allocated (const void *ptr);
 
