@@ -1207,9 +1207,16 @@ lextok_s lexf (lex_s *lex, char *buf)
             if (*buf == EOF)
                 break;
             res = nfa_match(lex, mach->nfa, mach->nfa->start, buf, &overflow);
-            if (res.success && !mach->composite && res.n > best.n) {
-                best = res;
-                bmach = mach;
+            if (!overflow.str && res.n <= mach->lexlen) {
+                printf("%d\n", mach->lexlen);
+                if (res.success && !mach->composite && res.n > best.n) {
+                    best = res;
+                    bmach = mach;
+                }
+            }
+            else if (!overflow.str) {
+                overflow.str = buf;
+                overflow.len = res.n;
             }
         }
         c[0] = buf[best.n];
