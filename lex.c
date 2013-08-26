@@ -780,39 +780,63 @@ void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback)
 
 void prxa_regexdef(token_s **curr, mach_s *mach)
 {
-    if (!strcasecmp((*curr)->lexeme, "typecount"))
-        mach->typecount = true;
-    else if (!strcasecmp((*curr)->lexeme, "idtype")) {
-        mach->attr_id = true;
-        mach->composite = false;
-    }
-    else if (!strcasecmp((*curr)->lexeme, "composite")) {
-        mach->composite = true;
-        mach->attr_id = false;
-    }
-    else if (!strcasecmp((*curr)->lexeme, "length")) {
-        *curr = (*curr)->next;
-        if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_EQU) {
+    while (ISANNOTATE(curr) && (*curr)->type.attribute != LEXATTR_FAKEEOF) {
+        if (!strcasecmp((*curr)->lexeme, "typecount"))
+            mach->typecount = true;
+        else if (!strcasecmp((*curr)->lexeme, "idtype")) {
+            mach->attr_id = true;
+            mach->composite = false;
+        }
+        else if (!strcasecmp((*curr)->lexeme, "composite")) {
+            mach->composite = true;
+            mach->attr_id = false;
+        }
+        else if (!strcasecmp((*curr)->lexeme, "length")) {
             *curr = (*curr)->next;
-            if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_NUM) {
-                mach->lexlen = safe_atoui((*curr)->lexeme);
+            if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_EQU) {
                 *curr = (*curr)->next;
+                if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_NUM) {
+                    mach->lexlen = safe_atoui((*curr)->lexeme);
+                   // *curr = (*curr)->next;
+                }
+                else {
+                    printf("Syntax Error at line %d: Expected number but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                    exit(EXIT_FAILURE);
+                }
             }
             else {
-                printf("Syntax Error at line %d: Expected number but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                printf("Syntax Error at line %d: Expected = but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (!strcasecmp((*curr)->lexeme, "type")) {
+            *curr = (*curr)->next;
+            if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_EQU) {
+                *curr = (*curr)->next;
+                if (ISANNOTATE(curr)) {
+                    switch((*curr)->type.attribute) {
+                        case LEXATTR_WORD:
+                        case LEXATTR_NUM:
+                       //     *curr = (*curr)->next;
+                            break;
+                        default:
+                            printf("Error: Expected word or number but got %s\n", (*curr)->lexeme);
+                            exit(EXIT_FAILURE);
+                            break;
+                    }
+                }
+            }
+            else {
+                printf("Syntax Error at line %d: Expected = but got %s\n", (*curr)->lineno, (*curr)->lexeme);
                 exit(EXIT_FAILURE);
             }
         }
         else {
-            printf("Syntax Error at line %d: Expected = but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            printf("Error at line %d: Unknown regex definition mode %s\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
         }
+        *curr = (*curr)->next;
     }
-    else {
-        printf("Error at line %d: Unknown regex definition mode %s\n", (*curr)->lineno, (*curr)->lexeme);
-        exit(EXIT_FAILURE);
-    }
-    *curr = (*curr)->next;
 }
 
 void prxa_assignment(token_s **curr, nfa_edge_s *edge)
@@ -1172,7 +1196,7 @@ lextok_s lexf (lex_s *lex, char *buf)
     mach_s *mach, *bmach;
     match_s res, best;
     uint16_t lineno = 1;
-    char c[2], *backup, *error;
+    char c[2], *backup, *error, tmpbuf[MAX_LEXLEN];
     tlookup_s lookup;
     token_s *head = NULL, *tlist = NULL;
     overflow_s overflow;
@@ -1270,7 +1294,11 @@ lextok_s lexf (lex_s *lex, char *buf)
             }
             snprintf(error, tmp, LERR_SPECTOOLONG, lineno, overflow.str, buf);
             best.n = overflow.len;
-            //    for(;;)printf("%s, %.20s\n",error, buf);
+            memset(tmpbuf, 0, sizeof(tmpbuf));
+            snprintf(tmpbuf, MAX_LEXLEN, "%s", overflow.str);
+
+            addtok(&tlist, tmpbuf, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
+            //   for(;;)printf("%s, %.20s\n",error, buf);
         }
         else {
             lookup = idtable_lookup(lex->kwtable, c);

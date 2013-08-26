@@ -73,7 +73,7 @@ int main (int argc, const char *argv[])
     argtok_s *list, *iter;
     lextok_s lextok;
     parse_s *p;
-        
+    
     list = arg_tokenize(argc, argv);
 
     for (iter = list; iter; iter = iter->next)

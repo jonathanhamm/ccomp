@@ -43,9 +43,12 @@ real
 <optional_exponent>{composite}=>
     E ( \+ | - | ε ) <digits> | ε 
 
+<numint>{length = 10}=> 
+    <digits>
+
 <num>=>
     <digits> <optional_fraction>{attribute = 1, length = 15} <optional_exponent>{2}
-    
+
 <relop>=>
     = {0} | <> {1} | < {2} | <= {3} | >= {4} | > {5}
     
