@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stddef.h>
 
 #if ((defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__))
     #include <malloc/malloc.h>
@@ -205,7 +204,7 @@ bool hashinsert (hash_s *hash, void *key, void *data)
 void *hashlookup (hash_s *hash, void *key)
 {
     hrecord_s **entry, *iter;
-        
+    
     entry = &hash->table[hash->hash(key)];
     if (*entry) {
         for (iter = *entry; iter; iter = iter->next) {

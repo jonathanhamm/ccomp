@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 #include <pthread.h>
 
 #define INIT_SYNERRSIZE 64
@@ -737,6 +738,9 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     pda_s *curr;
     hrecord_s *hcurr;
     hashiterator_s *hiterator;
+    char bob[] = "jjj";
+    
+    *bob = 'l';
 
     while (tokens) {
         if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_EPSILON) {
@@ -782,12 +786,12 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     }
     for (i = 0; i < n_terminals; i++) {
         tmp = llpop(&terminals);
-        ptable->terms[i] = (token_s *)tmp->ptr;
+        ptable->terms[i] = tmp->ptr;
         free(tmp);
     }
     for (i = 0; i < n_nonterminals; i++) {
         tmp = llpop(&nonterminals);
-        ptable->nterms[i] = (token_s *)tmp->ptr;
+        ptable->nterms[i] = tmp->ptr;
         free(tmp);
     }
     hiterator = hashiterator_(parse->phash);
@@ -926,7 +930,7 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
 size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme)
 {
     size_t oldsize = *errsize;
-    *errsize += strlen(lexeme);
+    *errsize += strlen(lexeme)+2;
     if (*errsize >= *bsize) {
         *bsize *=2;
         *buffer = realloc(*buffer, *bsize);
@@ -938,16 +942,15 @@ size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme
     return oldsize;
 }
 
-
 char *make_synerr (pda_s *pda, token_s **curr)
 {
     bool gotepsilon = false;
     size_t errsize, bsize, oldsize = 0;
     llist_s *iter;
     char *errstr;
-    
+        
     bsize = INIT_SYNERRSIZE;
-    errsize = sizeof(SYNERR_PREFIX);
+    errsize = sizeof(SYNERR_PREFIX)+log10((*curr)->lineno)-2;
     errstr = calloc(1, INIT_SYNERRSIZE);
     if (!errstr) {
         perror("Memory Allocation Error");
@@ -970,8 +973,8 @@ char *make_synerr (pda_s *pda, token_s **curr)
         }
     }
     oldsize = errsize;
-    errsize += (sizeof("or ") - 1) + strlen(LLTOKEN(iter)->lexeme) + sizeof("but got: ") + strlen((*curr)->lexeme);
-    if (errsize >= bsize) {
+    errsize += (sizeof("or ")-1) + strlen(LLTOKEN(iter)->lexeme) + sizeof(" but got: ") + strlen((*curr)->lexeme);
+    if (errsize > bsize) {
         bsize = errsize;
         errstr = realloc(errstr, bsize);
         if (!errstr) {
@@ -979,13 +982,15 @@ char *make_synerr (pda_s *pda, token_s **curr)
             exit(EXIT_FAILURE);
         }
     }
-    
-
-    sprintf(&errstr[oldsize], "or %s but got %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
-    errstr[oldsize] = '\0';
-    
-    for(;;)printf("%s\n", errstr);
-    
+    else if (errsize != bsize){
+        errstr = realloc(errstr, errsize);
+        if (!errstr) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        } 
+    }
+    sprintf(&errstr[oldsize], "or %s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
+    errstr[errsize-1] = '\0';
     return errstr;
 }
 

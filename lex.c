@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <pthread.h>
-#include <wchar.h>
 
 enum basic_ops_ {
     OP_NOP = 0,
@@ -1214,7 +1213,6 @@ lextok_s lexf (lex_s *lex, char *buf)
         overflow.len = 0;
         overflow.str = NULL;
 
-        
         while (*buf <= ' ') {
             if (*buf == '\n') {
                 println(lineno, buf+1);
