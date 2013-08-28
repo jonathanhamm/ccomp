@@ -15,6 +15,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#define INIT_SYNERRSIZE 64
+#define SYNERR_PREFIX "Syntax Error at line %u: Expected "
+
 #define LLFF(node) ((ffnode_s *)node->ptr)
 #define LLTOKEN(node) (LLFF(node)->token)
 
@@ -88,6 +91,8 @@ static void print_parse_table (parsetable_s *ptable, FILE *stream);
 static int match (token_s **curr, token_s *tok);
 static bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index);
 static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
+static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
+static char *make_synerr (pda_s *pda, token_s **curr);
 
 uint16_t str_hashf (void *key);
 bool str_isequalf(void *key1, void *key2);
@@ -499,7 +504,7 @@ void getfollows (follow_s *fparams)
     }
     iterator = hashiterator_(fparams->parser->phash);
     for (curr = hashnext(iterator); curr; curr = hashnext(iterator)) {
-        pda = (pda_s *)curr->data;
+        pda = curr->data;
         for (i = 0; i < pda->nproductions; i++) {
             for (iter = pda->productions[i].start; iter; iter = iter->next) {
                 if (get_pda(fparams->parser, iter->token->lexeme) == fparams->pda) {
@@ -856,11 +861,14 @@ void parse (parse_s *parse, lextok_s lex)
         exit(EXIT_FAILURE);
     }
     nonterm(parse, &lex.tokens, parse->start, index);
+    if (lex.tokens->type.val != LEXTYPE_EOF)
+        printf("Syntax Error at line %u: Expected EOF but got %s\n", lex.tokens->lineno, lex.tokens->lexeme);
+    
 }
 
 int match(token_s **curr, token_s *tok)
 {
-    printf("Trying to match: %s %d %s %d\n", (*curr)->lexeme, (*curr)->type.val, tok->lexeme, tok->type.val);
+    //printf("Trying to match: %s %d %s %d\n", (*curr)->lexeme, (*curr)->type.val, tok->lexeme, tok->type.val);
     if ((*curr)->type.val == tok->type.val) {
         if ((*curr)->type.val != LEXTYPE_EOF) {
             *curr = (*curr)->next;
@@ -877,30 +885,110 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
     int result;
     pda_s *nterm;
     pnode_s *pnode;
+    bool success;
     
     pnode = pda->productions[index].start;
     if (pnode->token->type.val == LEXTYPE_EPSILON)
         return true;
     for (; pnode; pnode = pnode->next) {
-        if ((nterm = get_pda(parse, pnode->token->lexeme))) {
-            result = get_production(parse->parse_table, nterm, curr);
-            if (result < 0) {
-                printf("Syntax Error at %s line: %d\n", (*curr)->lexeme, (*curr)->lineno);
-                exit(EXIT_FAILURE);
+        do {
+            if (!*curr)
+                return true;
+            success = true;
+            if ((nterm = get_pda(parse, pnode->token->lexeme))) {
+                result = get_production(parse->parse_table, nterm, curr);
+                if (result < 0) {
+                    printf("%s\n", make_synerr (nterm, curr));
+
+                    printf("Syntax Error at line: %u: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                    
+                    success = false;
+                    *curr = (*curr)->next;
+                }
+                else {
+                    //printf("%s\n", nterm->productions[result].start->token->lexeme);
+                    nonterm(parse, curr, nterm, result);
+                }
             }
-            printf("%s\n", nterm->productions[result].start->token->lexeme);
-            nonterm(parse, curr, nterm, result);
-        }
-        else {
-            result = match(curr, pnode->token);
-            if (!result) {
-                printf("Syntax Error at %s line: %d\n", (*curr)->lexeme, (*curr)->lineno);
-                exit(EXIT_FAILURE);
+            else {
+                result = match(curr, pnode->token);
+                if (!result) {
+                    printf("Syntax Error at line: %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                    success = false;
+                    *curr = (*curr)->next;
+                }
             }
-        }
+        } while (!success);
     }
     return true;
 }
+
+size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme)
+{
+    size_t oldsize = *errsize;
+    *errsize += strlen(lexeme);
+    if (*errsize >= *bsize) {
+        *bsize *=2;
+        *buffer = realloc(*buffer, *bsize);
+        if (!*buffer) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+    }
+    return oldsize;
+}
+
+
+char *make_synerr (pda_s *pda, token_s **curr)
+{
+    bool gotepsilon = false;
+    size_t errsize, bsize, oldsize = 0;
+    llist_s *iter;
+    char *errstr;
+    
+    bsize = INIT_SYNERRSIZE;
+    errsize = sizeof(SYNERR_PREFIX);
+    errstr = calloc(1, INIT_SYNERRSIZE);
+    if (!errstr) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    sprintf(errstr, SYNERR_PREFIX, (*curr)->lineno);
+    for (iter = pda->firsts; iter->next; iter = iter->next) {
+        if (LLTOKEN(iter)->type.val == LEXTYPE_EPSILON)
+            gotepsilon = true;
+        else {
+            oldsize = errbuf_check(&errstr, &bsize, &errsize, LLTOKEN(iter)->lexeme);
+            sprintf(&errstr[oldsize], "%s, ", LLTOKEN(iter)->lexeme);
+        }
+    }
+    if (gotepsilon || LLTOKEN(iter)->type.val == LEXTYPE_EPSILON) {
+        sprintf(&errstr[oldsize], "%s, ", LLTOKEN(iter)->lexeme);
+        for (iter = pda->follows; iter->next; iter = iter->next) {
+            oldsize = errbuf_check(&errstr, &bsize, &errsize, LLTOKEN(iter)->lexeme);
+            sprintf(&errstr[oldsize], "%s, ", LLTOKEN(iter)->lexeme);
+        }
+    }
+    oldsize = errsize;
+    errsize += (sizeof("or ") - 1) + strlen(LLTOKEN(iter)->lexeme) + sizeof("but got: ") + strlen((*curr)->lexeme);
+    if (errsize >= bsize) {
+        bsize = errsize;
+        errstr = realloc(errstr, bsize);
+        if (!errstr) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+
+    sprintf(&errstr[oldsize], "or %s but got %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
+    errstr[oldsize] = '\0';
+    
+    for(;;)printf("%s\n", errstr);
+    
+    return errstr;
+}
+
 
 int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
 {

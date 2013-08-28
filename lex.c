@@ -1232,7 +1232,7 @@ lextok_s lexf (lex_s *lex, char *buf)
                 break;
             res = nfa_match(lex, mach->nfa, mach->nfa->start, buf, &overflow);
             if (!overflow.str && res.n <= mach->lexlen) {
-                printf("%d\n", mach->lexlen);
+              //  printf("%d\n", mach->lexlen);
                 if (res.success && !mach->composite && res.n > best.n) {
                     best = res;
                     bmach = mach;
@@ -1280,7 +1280,7 @@ lextok_s lexf (lex_s *lex, char *buf)
         }
         else if (overflow.str) {
             buf[best.n] = c[0];
-            printf("Overflow on %s from %.5s, %lu %lu\n", overflow.str, buf, best.n, overflow.len);
+            //printf("Overflow on %s from %.5s, %lu %lu\n", overflow.str, buf, best.n, overflow.len);
 
             c[0] = buf[overflow.len];
             
