@@ -84,10 +84,12 @@ int main (int argc, const char *argv[])
     files = argsparse_start(&iter);
 
     free_tokens(list);
-    lextok = lexf(buildlex(files.regex), readfile(files.source));
+    lextok = lexf(buildlex(files.regex), readfile(files.source), true);
     
     p = build_parse (files.cfg, lextok);
     parse (p, lextok);
+    print_listing(p->listing);
+    free_listing(p->listing);
     return 0;
 }
 

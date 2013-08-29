@@ -153,7 +153,7 @@ void free_llist (void *list)
 
 void println (unsigned no, char *buf)
 {
-    printf("%6d: ", no);
+    printf("%-6d: ", no);
     do {
         if (*buf == EOF)
             return;
@@ -327,6 +327,34 @@ void adderror(linetable_s *linelist, char *message, unsigned lineno)
     else
         list->next = n;
     linelist->table[lineno].tail = n;
+}
+
+void print_listing(linetable_s *table)
+{
+    unsigned i;
+    llist_s *errors;
+    
+    for (i = 0; i < table->nlines; i++) {
+        println(i, table->table[i].line);
+        for (errors = table->table[i].errors; errors; errors = errors->next) {
+            printf("%s\n", (char *)errors->ptr);
+        }
+    }
+}
+
+void free_listing(linetable_s *table)
+{
+    unsigned i;
+    llist_s *errors, *backup;
+    
+    for (i = 0; i < table->nlines; i++) {
+        for (errors = table->table[i].errors; errors; errors = backup) {
+            backup = errors->next;
+            free(errors->ptr);
+            free(errors);
+        }
+    }
+    free(table);
 }
 
 bool is_allocated (const void *ptr)

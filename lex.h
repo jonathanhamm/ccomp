@@ -182,7 +182,7 @@ struct lextok_s
     token_s *tokens;
 };
 
-extern lextok_s lexf (lex_s *lex, char *buf);
+extern lextok_s lexf (lex_s *lex, char *buf, bool listing);
 extern lex_s *buildlex (const char *file);
 extern token_s *lexspec (const char *file, annotation_f af);
 extern idtable_s *idtable_s_ (void);

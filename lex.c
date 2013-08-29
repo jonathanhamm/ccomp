@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <math.h>
 #include <pthread.h>
 
 enum basic_ops_ {
@@ -128,8 +129,6 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, overflo
 static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
-
-
 
 lex_s *buildlex (const char *file)
 {
@@ -1188,7 +1187,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, overflo
     return curr;
 }
 
-lextok_s lexf (lex_s *lex, char *buf)
+lextok_s lexf (lex_s *lex, char *buf, bool listing)
 {
     size_t tmp;
     int idatt = 0;
@@ -1202,8 +1201,8 @@ lextok_s lexf (lex_s *lex, char *buf)
     
     c[1] = '\0';
     backup = buf;
-    println(lineno, buf);
-    addline(&lex->listing, buf);
+    if (listing)
+        addline(&lex->listing, buf);
     while (*buf != EOF) {
         notsucces = 0;
         best.attribute = 0;
@@ -1213,11 +1212,11 @@ lextok_s lexf (lex_s *lex, char *buf)
         overflow.len = 0;
         overflow.str = NULL;
 
-        while (*buf <= ' ') {
+        while (isspace(*buf)) {
             if (*buf == '\n') {
-                println(lineno, buf+1);
                 lineno++;
-                addline(&lex->listing, buf+1);
+                if (listing)
+                    addline(&lex->listing, buf+1);
             }
             else if (*buf == EOF)
                 break;
@@ -1277,6 +1276,8 @@ lextok_s lexf (lex_s *lex, char *buf)
             }
         }
         else if (overflow.str) {
+            adderror(lex->listing, make_lexerr (LERR_TOOLONG, lineno, buf), lineno);
+
             buf[best.n] = c[0];
             //printf("Overflow on %s from %.5s, %lu %lu\n", overflow.str, buf, best.n, overflow.len);
 
@@ -1294,7 +1295,6 @@ lextok_s lexf (lex_s *lex, char *buf)
             best.n = overflow.len;
             memset(tmpbuf, 0, sizeof(tmpbuf));
             snprintf(tmpbuf, MAX_LEXLEN, "%s", overflow.str);
-
             addtok(&tlist, tmpbuf, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
             //   for(;;)printf("%s, %.20s\n",error, buf);
         }
@@ -1364,7 +1364,7 @@ type_s gettype (lex_s *lex, char *buf)
     
     len = strlen(buf);
     buf[len] = EOF;
-    ltok = lexf(lex, buf);
+    ltok = lexf(lex, buf, false);
     buf[len] = '\0';
     type.val = LEXTYPE_ERROR;
     type.attribute = LEXATTR_DEFAULT;

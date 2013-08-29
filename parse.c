@@ -17,7 +17,7 @@
 #include <pthread.h>
 
 #define INIT_SYNERRSIZE 64
-#define SYNERR_PREFIX "Syntax Error at line %u: Expected "
+#define SYNERR_PREFIX "      \tSyntax Error at line %u: Expected "
 
 #define LLFF(node) ((ffnode_s *)node->ptr)
 #define LLTOKEN(node) (LLFF(node)->token)
@@ -124,6 +124,7 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     list = lexspec (file, cfg_annotate);
     head = list;
     parse = parse_();
+    parse->listing = lextok.lex->listing;
     pp_start(parse, &list);
     /*
     for (iter = list; iter; iter = iter->next) {
@@ -853,6 +854,7 @@ void print_parse_table (parsetable_s *ptable, FILE *stream)
 void parse (parse_s *parse, lextok_s lex)
 {
     int index;
+    char *synerr;
     
     token_s *iter;
     
@@ -865,8 +867,15 @@ void parse (parse_s *parse, lextok_s lex)
         exit(EXIT_FAILURE);
     }
     nonterm(parse, &lex.tokens, parse->start, index);
-    if (lex.tokens->type.val != LEXTYPE_EOF)
-        printf("Syntax Error at line %u: Expected EOF but got %s\n", lex.tokens->lineno, lex.tokens->lexeme);
+    if (lex.tokens->type.val != LEXTYPE_EOF) {
+        synerr = malloc(sizeof(SYNERR_PREFIX)+FS_INTWIDTH_DEC(lex.tokens->lineno)+sizeof("EOF but got: ")+strlen(lex.tokens->lexeme)+1);
+        if (!synerr) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        sprintf(synerr, SYNERR_PREFIX "EOF but got %s", lex.tokens->lineno, lex.tokens->lexeme);
+        adderror(parse->listing, synerr, lex.tokens->lineno);
+    }
     
 }
 
@@ -890,6 +899,7 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
     pda_s *nterm;
     pnode_s *pnode;
     bool success;
+    char *synerr;
     
     pnode = pda->productions[index].start;
     if (pnode->token->type.val == LEXTYPE_EPSILON)
@@ -905,7 +915,7 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
                     printf("%s\n", make_synerr (nterm, curr));
 
                     printf("Syntax Error at line: %u: %s\n", (*curr)->lineno, (*curr)->lexeme);
-                    
+                    adderror(parse->listing, make_synerr(nterm, curr), (*curr)->lineno);
                     success = false;
                     *curr = (*curr)->next;
                 }
@@ -917,7 +927,14 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
             else {
                 result = match(curr, pnode->token);
                 if (!result) {
-                    printf("Syntax Error at line: %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                    synerr = malloc(sizeof(SYNERR_PREFIX)+FS_INTWIDTH_DEC((*curr)->lineno)+
+                                    +strlen(pnode->token->lexeme)+sizeof(" but got ")+strlen((*curr)->lexeme)-3);
+                    if (!synerr) {
+                        perror("Memory Allocation Error");
+                        exit(EXIT_FAILURE);
+                    }
+                    sprintf(synerr, SYNERR_PREFIX "%s but got %s", (*curr)->lineno, pnode->token->lexeme, (*curr)->lexeme);
+                    adderror(parse->listing,"Syntax Error", (*curr)->lineno);
                     success = false;
                     *curr = (*curr)->next;
                 }
@@ -950,7 +967,7 @@ char *make_synerr (pda_s *pda, token_s **curr)
     char *errstr;
         
     bsize = INIT_SYNERRSIZE;
-    errsize = sizeof(SYNERR_PREFIX)+log10((*curr)->lineno)-2;
+    errsize = sizeof(SYNERR_PREFIX) + FS_INTWIDTH_DEC((*curr)->lineno);
     errstr = calloc(1, INIT_SYNERRSIZE);
     if (!errstr) {
         perror("Memory Allocation Error");
@@ -990,7 +1007,6 @@ char *make_synerr (pda_s *pda, token_s **curr)
         } 
     }
     sprintf(&errstr[oldsize], "or %s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
-    errstr[errsize-1] = '\0';
     return errstr;
 }
 

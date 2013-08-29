@@ -17,6 +17,7 @@
 #include <stdbool.h>
 
 #define HTABLE_SIZE 53
+#define FS_INTWIDTH_DEC(num) ((size_t)log10(num)-2)
 
 typedef unsigned long ulong_bool;
 
@@ -103,6 +104,9 @@ extern uint16_t pjw_hashf(void *key);
 extern inline linetable_s *linetable_s_(void);
 extern void addline(linetable_s **linelist_ptr, char *line);
 extern void adderror(linetable_s *linelist, char *message, unsigned lineno);
+
+extern void print_listing(linetable_s *table);
+extern void free_listing(linetable_s *table);
 
 extern bool is_allocated (const void *ptr);
 

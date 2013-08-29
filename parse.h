@@ -26,6 +26,7 @@ struct parse_s
 {
     pda_s *start;
     hash_s *phash;
+    linetable_s *listing;
     parsetable_s *parse_table;
 };
 
