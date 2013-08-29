@@ -94,6 +94,7 @@ static bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index);
 static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
 static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
 static char *make_synerr (pda_s *pda, token_s **curr);
+static void panic_recovery (llist_s *follow, token_s **curr);
 
 uint16_t str_hashf (void *key);
 bool str_isequalf(void *key1, void *key2);
@@ -855,16 +856,14 @@ void parse (parse_s *parse, lextok_s lex)
 {
     int index;
     char *synerr;
-    
-    token_s *iter;
-    
-    for (iter = lex.tokens; iter; iter = iter->next)
-        printf("%s %d %d\n", iter->lexeme, iter->type.val, iter->type.attribute);
-    
+    pda_s *nterm;
+            
     index = get_production(parse->parse_table, parse->start, &lex.tokens);
     if (index < 0) {
-        printf("Syntax Error at %s\n", lex.tokens->lexeme);
-        exit(EXIT_FAILURE);
+        nterm = get_pda(parse, parse->start->nterm->lexeme);
+        synerr = make_synerr (nterm, &lex.tokens);
+        adderror(parse->listing, synerr, lex.tokens->lineno);
+        panic_recovery(nterm->follows, &lex.tokens);
     }
     nonterm(parse, &lex.tokens, parse->start, index);
     if (lex.tokens->type.val != LEXTYPE_EOF) {
@@ -1010,6 +1009,18 @@ char *make_synerr (pda_s *pda, token_s **curr)
     return errstr;
 }
 
+void panic_recovery (llist_s *follow, token_s **curr)
+{
+    llist_s *iter;
+    
+    while ((*curr)->type.val != LEXTYPE_EOF) {
+        for (iter = follow; iter; iter = iter->next) {
+            if (LLTOKEN(iter)->type.val == (*curr)->type.val)
+                return;
+        }
+        *curr = (*curr)->next;
+    }
+}
 
 int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
 {

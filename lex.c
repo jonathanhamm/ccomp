@@ -1208,11 +1208,10 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
         best.attribute = 0;
         best.n = 0;
         best.success = false;
-        
         overflow.len = 0;
         overflow.str = NULL;
 
-        while (*buf <= ' ') {
+        while (isspace(*buf)) {
             if (*buf == '\n') {
                 lineno++;
                 if (listing)
@@ -1270,13 +1269,16 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
                     head = tlist;
             }
             else {
-                error = make_lexerr(LERR_TOOLONG, lineno, buf);
                 addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
-                adderror(lex->listing, error, lineno);
+                if (listing) {
+                    error = make_lexerr(LERR_TOOLONG, lineno, buf);
+                    adderror(lex->listing, error, lineno);
+                }
             }
         }
         else if (overflow.str) {
-            adderror(lex->listing, make_lexerr (LERR_TOOLONG, lineno, buf), lineno);
+            if (listing)
+                adderror(lex->listing, make_lexerr (LERR_TOOLONG, lineno, buf), lineno);
 
             buf[best.n] = c[0];
             //printf("Overflow on %s from %.5s, %lu %lu\n", overflow.str, buf, best.n, overflow.len);
@@ -1308,14 +1310,18 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
             }
             else {
                 if (best.n) {
-                    error = make_lexerr(LERR_UNKNOWNSYM, lineno, buf);
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
-                    adderror(lex->listing, error, lineno);
+                    if (listing) {
+                        error = make_lexerr(LERR_UNKNOWNSYM, lineno, buf);
+                        adderror(lex->listing, error, lineno);
+                    }
                 }
                 else {
-                    error = make_lexerr(LERR_UNKNOWNSYM, lineno, c);
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
-                    adderror(lex->listing, error, lineno);
+                    if (listing) {
+                        error = make_lexerr(LERR_UNKNOWNSYM, lineno, c);
+                        adderror(lex->listing, error, lineno);
+                    }
                 }
             }
         }
