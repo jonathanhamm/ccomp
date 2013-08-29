@@ -335,7 +335,7 @@ void print_listing(linetable_s *table)
     llist_s *errors;
     
     for (i = 0; i < table->nlines; i++) {
-        println(i, table->table[i].line);
+        println(i+1, table->table[i].line);
         for (errors = table->table[i].errors; errors; errors = errors->next) {
             printf("%s\n", (char *)errors->ptr);
         }

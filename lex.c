@@ -1212,7 +1212,7 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
         overflow.len = 0;
         overflow.str = NULL;
 
-        while (isspace(*buf)) {
+        while (*buf <= ' ') {
             if (*buf == '\n') {
                 lineno++;
                 if (listing)
