@@ -70,25 +70,20 @@ static void print_usage (const char *message, const char *curr);
 int main (int argc, const char *argv[])
 {
     files_s files;
-    argtok_s *list, *iter;
+    argtok_s *list;
     lextok_s lextok;
     parse_s *p;
     
-    list = arg_tokenize(argc, argv);
+    list = arg_tokenize(argc, argv);    
 
-    for (iter = list; iter; iter = iter->next)
-        printf("%s %d\n\n", iter->lexeme, iter->id);
-    iter = list;
-    
-
-    files = argsparse_start(&iter);
+    files = argsparse_start(&list);
 
     free_tokens(list);
     lextok = lexf(buildlex(files.regex), readfile(files.source), true);
     
     p = build_parse (files.cfg, lextok);
     parse (p, lextok);
-    print_listing(p->listing);
+    print_listing(p->listing, stdout);
     free_listing(p->listing);
     return 0;
 }

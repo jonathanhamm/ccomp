@@ -17,7 +17,7 @@
 #include <pthread.h>
 
 #define INIT_SYNERRSIZE 64
-#define SYNERR_PREFIX "      \tSyntax Error at line %u: Expected "
+#define SYNERR_PREFIX "      --Syntax Error at line %u: Expected "
 
 #define LLFF(node) ((ffnode_s *)node->ptr)
 #define LLTOKEN(node) (LLFF(node)->token)
@@ -184,16 +184,10 @@ void match_phase (lextok_s regex, token_s *cfg)
 
 tfind_s findtok(mach_s *mlist, char *lexeme)
 {
-    uint8_t i;
     mach_s *idtype = NULL;
-    char buf[MAX_LEXLEN+1], *ptr;
     
     while (mlist) {
-        ptr = &mlist->nterm->lexeme[1];
-        for (i = 0; ptr[i] != '>'; i++)
-            buf[i] = ptr[i];
-        buf[i] = '\0';
-        if (!strcmp(buf, lexeme))
+        if (!ntstrcmp(mlist->nterm->lexeme, lexeme))
             return (tfind_s){.found = true, .token = mlist->nterm};
         if (mlist->attr_id)
             idtype = mlist;
@@ -285,8 +279,10 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
         *curr = (*curr)->next;
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         pda = pda_(*curr);
-        if (!hash_pda(parse, (*curr)->lexeme, pda))
+        if (!hash_pda(parse, (*curr)->lexeme, pda)) {
             printf("Error: Redefinition of production: %s\n", (*curr)->lexeme);
+            exit(EXIT_FAILURE);
+        }
         *curr = (*curr)->next;
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
@@ -294,11 +290,15 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
             pp_productions(parse, curr, pda);
             pp_decoration(parse, curr, pda);
         }
-        else
+        else {
             printf("Syntax Error: Expected '=>' but got %s\n", (*curr)->lexeme);
+            exit(EXIT_FAILURE);
+        }
     }
-    else
+    else {
         printf("Syntax Error: Expected nonterminal but got %s\n", (*curr)->lexeme);
+        exit(EXIT_FAILURE);
+    }
 }
 
 void pp_nonterminals (parse_s *parse, token_s **curr)
@@ -313,6 +313,7 @@ void pp_nonterminals (parse_s *parse, token_s **curr)
             break;
         default:
             printf("Syntax Error: Expected EOL or $ but got %s\n", (*curr)->lexeme);
+            exit(EXIT_FAILURE);
             break;
     }
 }
@@ -334,6 +335,7 @@ void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
             break;
         default:
             printf("Syntax Error: Expected token but got %s\n", (*curr)->lexeme);
+            exit(EXIT_FAILURE);
             break;
     }
 }
@@ -353,6 +355,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
             break;
         default:
             printf("Syntax Error: Expected '|', annotation, nonterm, or $, but got %s\n", (*curr)->lexeme);
+            exit(EXIT_FAILURE);
             break;
     }
 }
@@ -380,6 +383,7 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr)
             break;
         default:
             printf("Syntax Error: Expected token, annotation, nonterm, or $, but got %s\n", (*curr)->lexeme);
+            exit(EXIT_FAILURE);
             break;
     }
     return pnode;
@@ -398,6 +402,7 @@ void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda)
             break;
         default:
             printf("Syntax Error: Expected annotation, nonterm, or $, but got %s\n", (*curr)->lexeme);
+            exit(EXIT_FAILURE);
             break;
     }
 }
@@ -634,7 +639,7 @@ llist_s *inherit_follows (follow_s *nterm, llist_s **stack)
     else
         llpush(stack, nterm);
     for (i = 0; i < nterm->ninherit; i++) {
-        nterm->follows = lldeep_concat_foll (nterm->follows, inherit_follows(nterm->inherit[i], stack));
+        nterm->follows = lldeep_concat_foll(nterm->follows, inherit_follows(nterm->inherit[i], stack));
     }
     tmp = llpop(stack);
     free(tmp);
@@ -706,15 +711,6 @@ void compute_firstfollows (parse_s *parser)
     pthread_mutex_destroy(&jlock);
     pthread_cond_destroy(&jcond);
   
-    printf("\n\n");
-    for (i = 0; i < nitems; i++) {
-        printf("\n\nPrinting Firsts for %s\n", ftable[i].pda->nterm->lexeme);
-        for (iter = ftable[i].pda->firsts; iter; iter = iter->next)
-            printf("%s   ", LLTOKEN(iter)->lexeme);
-        printf("\nPrinting Follows for %s\n", ftable[i].pda->nterm->lexeme);
-        for (iter = ftable[i].pda->follows; iter; iter = iter->next)
-            printf("%s   ", LLTOKEN(iter)->lexeme);
-    }
     free(ftable);
 }
 
@@ -740,9 +736,6 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     pda_s *curr;
     hrecord_s *hcurr;
     hashiterator_s *hiterator;
-    char bob[] = "jjj";
-    
-    *bob = 'l';
 
     while (tokens) {
         if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_EPSILON) {
@@ -806,15 +799,11 @@ void build_parse_table (parse_s *parse, token_s *tokens)
          for (first_iter = curr->firsts; first_iter; first_iter = first_iter->next) {
             for (j = 0; j < n_terminals; j++) {
                 if (!strcmp(LLTOKEN(first_iter)->lexeme, ptable->terms[j]->lexeme)) {
-                    if (ptable->table[i][j] != -1)
-                        ;//for(;;)printf("%s\n", ptable->terms[j]->lexeme);
                     ptable->table[i][j] = LLFF(first_iter)->prod;
                     if (LLTOKEN(first_iter)->type.val == LEXTYPE_EPSILON) {
                         for (foll_iter = curr->follows; foll_iter; foll_iter = foll_iter->next) {
                             for (k = 0; k < n_terminals; k++) {
                                 if (!strcmp(LLTOKEN(foll_iter)->lexeme, ptable->terms[k]->lexeme)) {
-                                    if (ptable->table[i][k] != -1)
-                                        ;//for(;;)printf("ambiguity detected\n");
                                     ptable->table[i][k] = LLFF(first_iter)->prod;
 
                                 }
@@ -861,9 +850,10 @@ void parse (parse_s *parse, lextok_s lex)
     index = get_production(parse->parse_table, parse->start, &lex.tokens);
     if (index < 0) {
         nterm = get_pda(parse, parse->start->nterm->lexeme);
+        for (index = 0; parse->parse_table->nterms[index]->type.val != parse->start->nterm->type.val; index++);
         synerr = make_synerr (nterm, &lex.tokens);
         adderror(parse->listing, synerr, lex.tokens->lineno);
-        panic_recovery(nterm->follows, &lex.tokens);
+        panic_recovery(parse->start->follows, &lex.tokens);
     }
     nonterm(parse, &lex.tokens, parse->start, index);
     if (lex.tokens->type.val != LEXTYPE_EOF) {
@@ -875,7 +865,6 @@ void parse (parse_s *parse, lextok_s lex)
         sprintf(synerr, SYNERR_PREFIX "EOF but got %s", lex.tokens->lineno, lex.tokens->lexeme);
         adderror(parse->listing, synerr, lex.tokens->lineno);
     }
-    
 }
 
 int match(token_s **curr, token_s *tok)
@@ -899,6 +888,7 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
     pnode_s *pnode;
     bool success;
     char *synerr;
+    size_t errsize;
     
     pnode = pda->productions[index].start;
     if (pnode->token->type.val == LEXTYPE_EPSILON)
@@ -911,30 +901,31 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
             if ((nterm = get_pda(parse, pnode->token->lexeme))) {
                 result = get_production(parse->parse_table, nterm, curr);
                 if (result < 0) {
-                    printf("%s\n", make_synerr (nterm, curr));
-
-                    printf("Syntax Error at line: %u: %s\n", (*curr)->lineno, (*curr)->lexeme);
                     adderror(parse->listing, make_synerr(nterm, curr), (*curr)->lineno);
                     success = false;
+                    if ((*curr)->type.val == LEXTYPE_EOF)
+                        return false;
                     *curr = (*curr)->next;
                 }
-                else {
-                    //printf("%s\n", nterm->productions[result].start->token->lexeme);
+                else
                     nonterm(parse, curr, nterm, result);
-                }
             }
             else {
                 result = match(curr, pnode->token);
                 if (!result) {
-                    synerr = malloc(sizeof(SYNERR_PREFIX)+FS_INTWIDTH_DEC((*curr)->lineno)+
-                                    +strlen(pnode->token->lexeme)+sizeof(" but got ")+strlen((*curr)->lexeme)-3);
+                    errsize = sizeof(SYNERR_PREFIX)+FS_INTWIDTH_DEC((*curr)->lineno)+
+                                +strlen(pnode->token->lexeme)+sizeof(" but got ")+strlen((*curr)->lexeme)-3;
+                    synerr = malloc(errsize);
                     if (!synerr) {
                         perror("Memory Allocation Error");
                         exit(EXIT_FAILURE);
                     }
                     sprintf(synerr, SYNERR_PREFIX "%s but got %s", (*curr)->lineno, pnode->token->lexeme, (*curr)->lexeme);
-                    adderror(parse->listing,"Syntax Error", (*curr)->lineno);
+                    synerr[errsize-1] = '\n';
+                    adderror(parse->listing, synerr, (*curr)->lineno);
                     success = false;
+                    if ((*curr)->type.val == LEXTYPE_EOF)
+                        return false;
                     *curr = (*curr)->next;
                 }
             }
@@ -962,7 +953,7 @@ char *make_synerr (pda_s *pda, token_s **curr)
 {
     bool gotepsilon = false;
     size_t errsize, bsize, oldsize = 0;
-    llist_s *iter;
+    llist_s *iter, *start;
     char *errstr;
         
     bsize = INIT_SYNERRSIZE;
@@ -973,7 +964,7 @@ char *make_synerr (pda_s *pda, token_s **curr)
         exit(EXIT_FAILURE);
     }
     sprintf(errstr, SYNERR_PREFIX, (*curr)->lineno);
-    for (iter = pda->firsts; iter->next; iter = iter->next) {
+    for (start = iter = pda->firsts; iter->next; iter = iter->next) {
         if (LLTOKEN(iter)->type.val == LEXTYPE_EPSILON)
             gotepsilon = true;
         else {
@@ -989,7 +980,10 @@ char *make_synerr (pda_s *pda, token_s **curr)
         }
     }
     oldsize = errsize;
-    errsize += (sizeof("or ")-1) + strlen(LLTOKEN(iter)->lexeme) + sizeof(" but got: ") + strlen((*curr)->lexeme);
+    if (iter == start)
+        errsize += sizeof("  but got: ") + strlen(LLTOKEN(iter)->lexeme) + strlen((*curr)->lexeme);
+    else
+        errsize += (sizeof(" or  but got: ")-1) + strlen(LLTOKEN(iter)->lexeme) + strlen((*curr)->lexeme);
     if (errsize > bsize) {
         bsize = errsize;
         errstr = realloc(errstr, bsize);
@@ -1005,7 +999,11 @@ char *make_synerr (pda_s *pda, token_s **curr)
             exit(EXIT_FAILURE);
         } 
     }
-    sprintf(&errstr[oldsize], "or %s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
+    if (iter == start)
+        sprintf(&errstr[oldsize], "%s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
+    else
+        sprintf(&errstr[oldsize], "or %s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
+    errstr[errsize-1] = '\n';
     return errstr;
 }
 

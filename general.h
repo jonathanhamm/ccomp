@@ -82,7 +82,7 @@ extern char *readfile (const char *file);
 extern llist_s *llist_ (void *iptr);
 extern void free_llist (void *list);
 
-extern void println (unsigned no, char *buf);
+extern void println (unsigned no, char *buf, void *stream);
 
 extern void llpush (llist_s **list, void *ptr);
 extern llist_s *llpop (llist_s **list);
@@ -105,7 +105,7 @@ extern inline linetable_s *linetable_s_(void);
 extern void addline(linetable_s **linelist_ptr, char *line);
 extern void adderror(linetable_s *linelist, char *message, unsigned lineno);
 
-extern void print_listing(linetable_s *table);
+extern void print_listing(linetable_s *table, void *stream);
 extern void free_listing(linetable_s *table);
 
 extern bool is_allocated (const void *ptr);

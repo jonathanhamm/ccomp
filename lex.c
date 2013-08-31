@@ -25,7 +25,7 @@ enum basic_ops_ {
     OP_NUM
 };
 
-#define LERR_PREFIX         "      \tLexical Error: at line: %d: "
+#define LERR_PREFIX         "      --Lexical Error: at line: %d: "
 #define LERR_UNKNOWNSYM     LERR_PREFIX "Unknown Character: %s"
 #define LERR_TOOLONG        LERR_PREFIX "Token too long: %s"
 #define LERR_SPECTOOLONG    LERR_PREFIX "%s too long: %s"
@@ -51,6 +51,7 @@ typedef struct lexargs_s lexargs_s;
 typedef struct pnonterm_s pnonterm_s;
 typedef struct match_s match_s;
 typedef struct overflow_s overflow_s;
+typedef struct regex_ann_s regex_ann_s;
 
 typedef void (*regex_callback_f) (token_s **, void *);
 
@@ -88,6 +89,12 @@ struct overflow_s
     char *str;
 };
 
+struct regex_ann_s
+{
+    mach_s *mach;
+    llist_s *matchlist;
+};
+
 static void printlist (token_s *list);
 static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
 static uint16_t bsearch_tr (idtnode_s *tnode, char key);
@@ -101,14 +108,14 @@ static int parseregex (lex_s *lex, token_s **curr);
 static void prx_keywords (lex_s *lex, token_s **curr, int *count);
 static void prx_tokens (lex_s *lex, token_s **curr, int *count);
 static void prx_tokens_ (lex_s *lex, token_s **curr, int *count);
-static void prx_texp (lex_s *lex, token_s **curr, int *count);
+static regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count);
 static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static int prx_closure (lex_s *lex, token_s **curr);
 
 static void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback);
-static void prxa_regexdef(token_s **curr, mach_s *mach);
+static void prxa_regexdef(token_s **curr, regex_ann_s *reg);
 static void setann_val(int *location, int value);
 static void prxa_edgestart(token_s **curr, nfa_edge_s *edge);
 static void prxa_assigment(token_s **curr, nfa_edge_s *edge);
@@ -157,22 +164,25 @@ token_s *lexspec (const char *file, annotation_f af)
     for (i = 0, j = 0, lineno = 1, bpos = 0; buf[i] != EOF; i++) {
         switch (buf[i]) {
             case '|':
-                addtok (&list, "|", lineno, LEXTYPE_UNION, LEXATTR_DEFAULT);
+                addtok(&list, "|", lineno, LEXTYPE_UNION, LEXATTR_DEFAULT);
                 break;
             case '(':
-                addtok (&list, "(", lineno, LEXTYPE_OPENPAREN, LEXATTR_DEFAULT);
+                addtok(&list, "(", lineno, LEXTYPE_OPENPAREN, LEXATTR_DEFAULT);
                 break;
             case ')':
-                addtok (&list, ")", lineno, LEXTYPE_CLOSEPAREN, LEXATTR_DEFAULT);
+                addtok(&list, ")", lineno, LEXTYPE_CLOSEPAREN, LEXATTR_DEFAULT);
                 break;
             case '*':
-                addtok (&list, "*", lineno, LEXTYPE_KLEENE, LEXATTR_DEFAULT);
+                addtok(&list, "*", lineno, LEXTYPE_KLEENE, LEXATTR_DEFAULT);
                 break;
             case '+':
-                addtok (&list, "+", lineno, LEXTYPE_POSITIVE, LEXATTR_DEFAULT);
+                addtok(&list, "+", lineno, LEXTYPE_POSITIVE, LEXATTR_DEFAULT);
                 break;
             case '?':
-                addtok (&list, "?", lineno, LEXTYPE_ORNULL, LEXATTR_DEFAULT);
+                addtok(&list, "?", lineno, LEXTYPE_ORNULL, LEXATTR_DEFAULT);
+                break;
+            case '/':
+                addtok(&list, "/", lineno, LEXTYPE_FOLLOW, LEXATTR_DEFAULT);
                 break;
             case '\n':
                 lineno++;
@@ -266,6 +276,7 @@ default_:
                         case '?':
                         case '|':
                         case '{':
+                        case '/':
                             if (bpos > 0) {
                                 lbuf[bpos] = '\0';
                                 addtok (&list, lbuf, lineno, LEXTYPE_TERM, j);
@@ -323,10 +334,6 @@ doublebreak_:
             list->prev = NULL;
         free(backup);
     }
-  /*  token_s *bob = list;
-    for (; bob; bob = bob->next)
-        printf("%s %u %u\n", bob->lexeme, bob->type.val, bob->type.attribute);
-    asm("hlt");*/
     free(buf);
     return list;
 }
@@ -346,7 +353,7 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno)
         bpos = 0;
         if (isalpha(buf[i]) || buf[i] == '<') {
             tmpbuf[bpos] = buf[i];
-            for (bpos++, i++; isalpha(buf[i]) || buf[i] == '>'; bpos++, i++) {
+            for (bpos++, i++; isalpha(buf[i]) || isdigit(buf[i]) || buf[i] == '>'; bpos++, i++) {
                 if (bpos == MAX_LEXLEN)
                     return false;
                 tmpbuf[bpos] = buf[i];
@@ -423,13 +430,17 @@ int parseregex (lex_s *lex, token_s **list)
     int types = LEXID_START;
     
     prx_keywords(lex, list, &types);
-    if ((*list)->type.val != LEXTYPE_EOL)
+    if ((*list)->type.val != LEXTYPE_EOL) {
         printf("Syntax Error at line %u: Expected EOL but got %s\n", (*list)->lineno, (*list)->lexeme);
+        exit(EXIT_FAILURE);
+    }
 
     *list = (*list)->next;
     prx_tokens(lex, list, &types);
-    if ((*list)->type.val != LEXTYPE_EOF)
+    if ((*list)->type.val != LEXTYPE_EOF) {
         printf("Syntax Error at line %u: Expected $ but got %s\n", (*list)->lineno, (*list)->lexeme);
+        exit(EXIT_FAILURE);
+    }
     lex->idtable = idtable_s_();
     return types;
 }
@@ -443,7 +454,6 @@ void prx_keywords (lex_s *lex, token_s **curr, int *counter)
         node = NULL;
         lexeme = (*curr)->lexeme;
         ++*counter;
-        printf("adding %s\n", lexeme);
         idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = false, .itype = *counter, .att = 0});
         *curr = (*curr)->next;
     }
@@ -452,16 +462,40 @@ void prx_keywords (lex_s *lex, token_s **curr, int *counter)
 
 void prx_tokens (lex_s *lex, token_s **curr, int *count)
 {
-    prx_texp (lex, curr, count);
+    prx_texp(lex, curr, count);
     prx_tokens_(lex, curr, count);
 }
 
 void prx_tokens_ (lex_s *lex, token_s **curr, int *count)
 {
+    regex_ann_s *reg;
+    mach_s *mach;
+    llist_s *matches = NULL, *mcurr, *miter;
+    
     if ((*curr)->type.val == LEXTYPE_EOL) {
         *curr = (*curr)->next;
-        prx_texp (lex, curr, count);
-        prx_tokens_ (lex, curr, count);
+        reg = prx_texp (lex, curr, count);
+        if (reg)
+            llpush(&matches, reg);
+        prx_tokens_(lex, curr, count);
+    }
+    while (matches) {
+        mcurr = llpop(&matches);
+        reg = mcurr->ptr;
+        for (miter = reg->matchlist; miter; miter = miter->next) {
+            for (mach = lex->machs; mach; mach = mach->next) {
+                printf("Comparing %s %s\n", mach->nterm->lexeme, miter->ptr);
+                if (!ntstrcmp(mach->nterm->lexeme, miter->ptr))
+                    break;
+            }
+            if (!mach) {
+                printf("Error: regex %s not found.\n", miter->ptr);
+                exit(EXIT_FAILURE);
+            }
+            mach->nterm->type = reg->mach->nterm->type;
+        }
+        free_llist(reg->matchlist);
+        free(mcurr);
     }
 }
 /*********************************** EXPERIMENTAL NEW ROUTINES *************************************/
@@ -545,30 +579,46 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
     }
 }
 
-void prx_texp (lex_s *lex, token_s **curr, int *count)
+regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
 {
     idtnode_s *tnode = NULL;
     nfa_s *uparent = NULL, *concat = NULL;
-
+    regex_ann_s *reg;
+    
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         addmachine (lex, *curr);
         *curr = (*curr)->next;
         ++*count;
         lex->machs->nterm->type.val = *count;
-        prxa_annotation(curr, lex->machs, (void (*)(token_s **, void *))prxa_regexdef);
+        reg = malloc(sizeof(*reg));
+        if (!reg) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        reg->mach = lex->machs;
+        reg->matchlist = NULL;
+        prxa_annotation(curr, reg, (void (*)(token_s **, void *))prxa_regexdef);
+        if (!reg->matchlist) {
+            free(reg);
+            reg = NULL;
+        }
         tnode = patch_search (lex->patch, lex->machs->nterm->lexeme);
-
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
             lex->machs->nfa = prx_expression(lex , curr, &uparent, &concat);
             if (uparent)
                 lex->machs->nfa = uparent;
         }
-        else
+        else {
             printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+            exit(EXIT_FAILURE);
+        }
     }
-    else
+    else {
         printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+        exit(EXIT_FAILURE);
+    }
+    return reg;
 }
 
 nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
@@ -648,6 +698,8 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
             default:
                 *curr = (*curr)->next;
                 printf("Syntax Error line %u: Expected '(' , terminal, or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                exit(EXIT_FAILURE);
+                /* make compiler happy */
                 return (exp__s){.op = -1, .nfa = NULL};
         }
     }
@@ -674,8 +726,10 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             *curr = (*curr)->next;
             backup1 = *unfa;
             nfa = prx_expression(lex, curr, &unfa_, &concat_);
-            if ((*curr)->type.val != LEXTYPE_CLOSEPAREN)
+            if ((*curr)->type.val != LEXTYPE_CLOSEPAREN) {
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                exit(EXIT_FAILURE);
+            }
             *curr = (*curr)->next;
             *unfa = backup1;
             if (unfa_) {
@@ -727,7 +781,7 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             break;
         default:
             printf("Syntax Error at line %u: Expected '(' , terminal , or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-            return NULL;
+            exit(EXIT_FAILURE);
     }
     return nfa;
 }
@@ -776,8 +830,10 @@ void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback)
     }
 }
 
-void prxa_regexdef(token_s **curr, mach_s *mach)
+void prxa_regexdef(token_s **curr, regex_ann_s *reg)
 {
+    mach_s *mach = reg->mach;
+    
     while (ISANNOTATE(curr) && (*curr)->type.attribute != LEXATTR_FAKEEOF) {
         if (!strcasecmp((*curr)->lexeme, "typecount"))
             mach->typecount = true;
@@ -814,8 +870,10 @@ void prxa_regexdef(token_s **curr, mach_s *mach)
                 if (ISANNOTATE(curr)) {
                     switch((*curr)->type.attribute) {
                         case LEXATTR_WORD:
+                            llpush(&reg->matchlist, (*curr)->lexeme);
+                            break;
                         case LEXATTR_NUM:
-                       //     *curr = (*curr)->next;
+                            mach->nterm->type.val = safe_atoui((*curr)->lexeme);
                             break;
                         default:
                             printf("Error: Expected word or number but got %s\n", (*curr)->lexeme);
@@ -843,7 +901,6 @@ void prxa_assignment(token_s **curr, nfa_edge_s *edge)
     char *str;
     
     if (ISANNOTATE(curr)) {
-        printf("derpadfadfa %s\n", (*curr)->lexeme);
 
         if ((*curr)->type.attribute == LEXATTR_FAKEEOF) {
             return;
@@ -1090,6 +1147,18 @@ uint16_t bsearch_tr (idtnode_s *tnode, char key)
     return mid;
 }
 
+int ntstrcmp (char *nterm, char *str)
+{
+    int i, result;
+    char *ptr;
+    
+    ptr = &nterm[1];
+    for (i = 0; ptr[i] != '>'; i++);
+    ptr[i] = '\0';
+    result = strcmp(ptr, str);
+    ptr[i] = '>';
+    return result;
+}
 
 void addmachine (lex_s *lex, token_s *tok)
 {
@@ -1277,16 +1346,9 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
             }
         }
         else if (overflow.str) {
-            if (listing)
-                adderror(lex->listing, make_lexerr (LERR_TOOLONG, lineno, buf), lineno);
-
             buf[best.n] = c[0];
-            //printf("Overflow on %s from %.5s, %lu %lu\n", overflow.str, buf, best.n, overflow.len);
-
             c[0] = buf[overflow.len];
-            
             buf[overflow.len] = '\0';
-            //for(;;)printf("%.20s\n", buf);
             tmp = sizeof(LERR_SPECTOOLONG) + overflow.len + MAX_LEXLEN + INT_CHAR_WIDTH;
             error = calloc(1, tmp+1);
             if (!error) {
@@ -1298,6 +1360,9 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
             memset(tmpbuf, 0, sizeof(tmpbuf));
             snprintf(tmpbuf, MAX_LEXLEN, "%s", overflow.str);
             addtok(&tlist, tmpbuf, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
+            if (listing)
+                adderror(lex->listing, make_lexerr (LERR_TOOLONG, lineno, buf), lineno);
+
             //   for(;;)printf("%s, %.20s\n",error, buf);
         }
         else {
@@ -1339,13 +1404,16 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
 char *make_lexerr (const char *errmsg, int lineno, char *lexeme)
 {
     char *error;
+    size_t errsize;
     
-    error = calloc(1, strlen(errmsg) + strlen(lexeme) + INT_CHAR_WIDTH);
+    errsize = strlen(errmsg) + strlen(lexeme) + INT_CHAR_WIDTH;
+    error = calloc(1, errsize);
     if (!error) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
     sprintf(error, errmsg, lineno, lexeme);
+    error[errsize-1] = '\n';
     return error;
 }
 

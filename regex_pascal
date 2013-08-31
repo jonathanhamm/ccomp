@@ -41,12 +41,12 @@ real
     . <digits> | ε
         
 <optional_exponent>{composite}=>
-    E ( \+ | - | ε ) <digits> | ε 
+    (E ( \+ | - | ε ) <digits>) | ε 
 
 <numint>{length = 10}=> 
     <digits>
 
-<num>{type=3}=>
+<num>{type=numint}=>
     <digits> <optional_fraction>{attribute = 1, length = 15} <optional_exponent>{2}
 
 <relop>=>
@@ -56,7 +56,7 @@ real
     \+ {0} | - {1} | or {2}
 
 <mulop>=>
-    \* {0} | / {2} | div {3} | mod {4} | and {5}
+    \* {0} | \/ {2} | div {3} | mod {4} | and {5}
 
 <assignop>=>
     :=

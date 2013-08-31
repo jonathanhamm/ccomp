@@ -38,6 +38,7 @@ enum lex_types_ {
     LEXTYPE_EOF,
     LEXTYPE_NULLSET,
     LEXTYPE_START,
+    LEXTYPE_FOLLOW,
     LEXTYPE_ANNOTATE
 };
 
@@ -186,6 +187,7 @@ extern lextok_s lexf (lex_s *lex, char *buf, bool listing);
 extern lex_s *buildlex (const char *file);
 extern token_s *lexspec (const char *file, annotation_f af);
 extern idtable_s *idtable_s_ (void);
+extern int ntstrcmp (char *nterm, char *str);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
 extern void *idtable_insert (idtable_s *table, char *str, tdat_s tdat);

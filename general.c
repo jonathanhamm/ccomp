@@ -18,6 +18,8 @@
 #define INITLINETABLE_SIZE 64
 #define INITFBUF_SIZE 128
 
+static void printline(char *buf, FILE *stream);
+
 unsigned int safe_atoui (char *str)
 {
     unsigned long i;
@@ -151,13 +153,20 @@ void free_llist (void *list)
     }
 }
 
-void println (unsigned no, char *buf)
+void println (unsigned no, char *buf, void *stream)
 {
     printf("%-6d: ", no);
+    printline(buf, stream);
+}
+
+void printline(char *buf, FILE *stream)
+{
     do {
-        if (*buf == EOF)
+        if (*buf == EOF) {
+            fputc('\n', stream);
             return;
-        putchar(*buf);
+        }
+        fputc(*buf, stream);
     }
     while (*buf++ != '\n');
 }
@@ -329,15 +338,15 @@ void adderror(linetable_s *linelist, char *message, unsigned lineno)
     linelist->table[lineno].tail = n;
 }
 
-void print_listing(linetable_s *table)
+void print_listing(linetable_s *table, void *stream)
 {
     unsigned i;
     llist_s *errors;
     
     for (i = 0; i < table->nlines; i++) {
-        println(i+1, table->table[i].line);
+        println(i+1, table->table[i].line, stream);
         for (errors = table->table[i].errors; errors; errors = errors->next) {
-            printf("%s\n", (char *)errors->ptr);
+            printline(errors->ptr, stream);
         }
     }
 }
