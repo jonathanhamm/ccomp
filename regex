@@ -18,7 +18,7 @@
     ε
 
 <texp>=>
-    nonterm <tokenid> prodsym <expression>
+    nonterm <tokenid> prodsym <expression> <follow>
     {
         addgraph(nonterm);
     }
@@ -66,6 +66,7 @@
         return: {<expression>}
         
     }
+    
 <expression'>=>
     union <expression>
     {
@@ -156,6 +157,9 @@
     }
     |
     ε <annotation>
+
+<follow>=>
+    follow <expression>
 
 <annotation>=>
     integer {setannotation(edge, integer.val) | ε

@@ -181,9 +181,6 @@ token_s *lexspec (const char *file, annotation_f af)
             case '?':
                 addtok(&list, "?", lineno, LEXTYPE_ORNULL, LEXATTR_DEFAULT);
                 break;
-            case '/':
-                addtok(&list, "/", lineno, LEXTYPE_FOLLOW, LEXATTR_DEFAULT);
-                break;
             case '\n':
                 lineno++;
                 addtok (&list, "EOL", lineno, LEXTYPE_EOL, LEXATTR_DEFAULT);
@@ -605,7 +602,7 @@ regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
         tnode = patch_search (lex->patch, lex->machs->nterm->lexeme);
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
-            lex->machs->nfa = prx_expression(lex , curr, &uparent, &concat);
+            lex->machs->nfa = prx_expression(lex, curr, &uparent, &concat);
             if (uparent)
                 lex->machs->nfa = uparent;
         }

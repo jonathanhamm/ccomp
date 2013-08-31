@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <limits.h>
+#include <string.h>
 #include <stdbool.h>
 
 #define HTABLE_SIZE 53
@@ -90,6 +91,7 @@ extern bool llcontains (llist_s *list, void *ptr);
 extern llist_s *llconcat (llist_s *first, llist_s *second);
 extern llist_s *llcopy (llist_s *node);
 
+extern size_t nlstrlen(const char *str);
 
 extern hash_s *hash_(hash_f hashf, isequal_f isequalf);
 extern bool hashinsert (hash_s *hash, void *key, void *data);

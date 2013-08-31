@@ -38,7 +38,6 @@ enum lex_types_ {
     LEXTYPE_EOF,
     LEXTYPE_NULLSET,
     LEXTYPE_START,
-    LEXTYPE_FOLLOW,
     LEXTYPE_ANNOTATE
 };
 
@@ -161,7 +160,8 @@ struct mach_s
     bool    typecount;
     unsigned lexlen;
     token_s *nterm;
-    nfa_s  *nfa;
+    nfa_s   *nfa;
+    nfa_s   *follow;
     mach_s *next;
 };
 

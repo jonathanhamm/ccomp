@@ -153,6 +153,14 @@ void free_llist (void *list)
     }
 }
 
+size_t nlstrlen(const char *str)
+{
+    const char *ptr = str;
+    
+    while (*ptr++ != '\n');
+    return ptr - str;
+}
+
 void println (unsigned no, char *buf, void *stream)
 {
     printf("%-6d: ", no);

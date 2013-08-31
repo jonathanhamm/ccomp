@@ -844,6 +844,8 @@ void print_parse_table (parsetable_s *ptable, FILE *stream)
 void parse (parse_s *parse, lextok_s lex)
 {
     int index;
+    size_t errsize;
+
     char *synerr;
     pda_s *nterm;
             
@@ -857,12 +859,14 @@ void parse (parse_s *parse, lextok_s lex)
     }
     nonterm(parse, &lex.tokens, parse->start, index);
     if (lex.tokens->type.val != LEXTYPE_EOF) {
-        synerr = malloc(sizeof(SYNERR_PREFIX)+FS_INTWIDTH_DEC(lex.tokens->lineno)+sizeof("EOF but got: ")+strlen(lex.tokens->lexeme)+1);
+        errsize = (sizeof(SYNERR_PREFIX)-1)+FS_INTWIDTH_DEC(lex.tokens->lineno)+sizeof("EOF but got: ")+strlen(lex.tokens->lexeme);
+        synerr = malloc(errsize);
         if (!synerr) {
             perror("Memory Allocation Error");
             exit(EXIT_FAILURE);
         }
         sprintf(synerr, SYNERR_PREFIX "EOF but got %s", lex.tokens->lineno, lex.tokens->lexeme);
+        synerr[errsize-1] = '\n';
         adderror(parse->listing, synerr, lex.tokens->lineno);
     }
 }
@@ -955,9 +959,9 @@ char *make_synerr (pda_s *pda, token_s **curr)
     size_t errsize, bsize, oldsize = 0;
     llist_s *iter, *start;
     char *errstr;
-        
+    
     bsize = INIT_SYNERRSIZE;
-    errsize = sizeof(SYNERR_PREFIX) + FS_INTWIDTH_DEC((*curr)->lineno);
+    errsize = sizeof(SYNERR_PREFIX) + FS_INTWIDTH_DEC((*curr)->lineno)-1;
     errstr = calloc(1, INIT_SYNERRSIZE);
     if (!errstr) {
         perror("Memory Allocation Error");
@@ -981,9 +985,9 @@ char *make_synerr (pda_s *pda, token_s **curr)
     }
     oldsize = errsize;
     if (iter == start)
-        errsize += sizeof("  but got: ") + strlen(LLTOKEN(iter)->lexeme) + strlen((*curr)->lexeme);
+        errsize += sizeof(" but got: ") + strlen(LLTOKEN(iter)->lexeme) + strlen((*curr)->lexeme);
     else
-        errsize += (sizeof(" or  but got: ")-1) + strlen(LLTOKEN(iter)->lexeme) + strlen((*curr)->lexeme);
+        errsize += sizeof(" or  but got: ") + strlen(LLTOKEN(iter)->lexeme) + strlen((*curr)->lexeme);
     if (errsize > bsize) {
         bsize = errsize;
         errstr = realloc(errstr, bsize);
@@ -1003,6 +1007,7 @@ char *make_synerr (pda_s *pda, token_s **curr)
         sprintf(&errstr[oldsize], "%s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
     else
         sprintf(&errstr[oldsize], "or %s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
+
     errstr[errsize-1] = '\n';
     return errstr;
 }
