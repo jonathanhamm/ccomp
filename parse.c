@@ -950,44 +950,46 @@ size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme
             exit(EXIT_FAILURE);
         }
     }
-    return oldsize;
+    return oldsize+1;
 }
 
 char *make_synerr (pda_s *pda, token_s **curr)
 {
     bool gotepsilon = false;
-    size_t errsize, bsize, oldsize = 0;
+    size_t errsize, bsize, oldsize;
     llist_s *iter, *start;
     char *errstr;
     
     bsize = INIT_SYNERRSIZE;
-    errsize = sizeof(SYNERR_PREFIX) + FS_INTWIDTH_DEC((*curr)->lineno)-1;
+    errsize = sizeof(SYNERR_PREFIX) + FS_INTWIDTH_DEC((*curr)->lineno);
     errstr = calloc(1, INIT_SYNERRSIZE);
     if (!errstr) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
     sprintf(errstr, SYNERR_PREFIX, (*curr)->lineno);
+    oldsize = errsize;
     for (start = iter = pda->firsts; iter->next; iter = iter->next) {
         if (LLTOKEN(iter)->type.val == LEXTYPE_EPSILON)
             gotepsilon = true;
         else {
             oldsize = errbuf_check(&errstr, &bsize, &errsize, LLTOKEN(iter)->lexeme);
-            sprintf(&errstr[oldsize], "%s, ", LLTOKEN(iter)->lexeme);
+            sprintf(&errstr[oldsize], "%s ", LLTOKEN(iter)->lexeme);
         }
     }
     if (gotepsilon || LLTOKEN(iter)->type.val == LEXTYPE_EPSILON) {
-        sprintf(&errstr[oldsize], "%s, ", LLTOKEN(iter)->lexeme);
+        sprintf(&errstr[oldsize], "%s ", LLTOKEN(iter)->lexeme);
+        errsize += strlen(LLTOKEN(iter)->lexeme);
         for (iter = pda->follows; iter->next; iter = iter->next) {
             oldsize = errbuf_check(&errstr, &bsize, &errsize, LLTOKEN(iter)->lexeme);
-            sprintf(&errstr[oldsize], "%s, ", LLTOKEN(iter)->lexeme);
+            sprintf(&errstr[oldsize], "%s ", LLTOKEN(iter)->lexeme);
         }
     }
     oldsize = errsize;
     if (iter == start)
         errsize += sizeof(" but got: ") + strlen(LLTOKEN(iter)->lexeme) + strlen((*curr)->lexeme);
     else
-        errsize += sizeof(" or  but got: ") + strlen(LLTOKEN(iter)->lexeme) + strlen((*curr)->lexeme);
+        errsize += sizeof("  but got: ") + strlen(LLTOKEN(iter)->lexeme) + strlen((*curr)->lexeme);
     if (errsize > bsize) {
         bsize = errsize;
         errstr = realloc(errstr, bsize);
@@ -1003,10 +1005,7 @@ char *make_synerr (pda_s *pda, token_s **curr)
             exit(EXIT_FAILURE);
         } 
     }
-    if (iter == start)
-        sprintf(&errstr[oldsize], "%s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
-    else
-        sprintf(&errstr[oldsize], "or %s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
+    sprintf(&errstr[oldsize], "%s but got: %s", LLTOKEN(iter)->lexeme, (*curr)->lexeme);
 
     errstr[errsize-1] = '\n';
     return errstr;

@@ -14,7 +14,7 @@ procedure bob (a : integer; b : real; c : real);
 			derp := 4.7E3 + a+22.1
 		;
 		derp := -3*33;
-        lolol := -3.233434343434344;
+        lolol := -3.23344;
 		zomg := +32.2 + 3;
 		omg[32] := -omg[32];
 		herp[22*23232.3] := +omg[23];
@@ -25,6 +25,7 @@ procedure bob (a : integer; b : real; c : real);
 			if d = 3 then
 			begin 
 				ted := tom div d;
+                zomg := 33333.1;
 				tom := tom * d
 			end
 		end;
@@ -89,7 +90,6 @@ begin
 		x := y*x
 end;
 
-
 procedure bosstweed (aaaaaaa : real ; omnomnom : 
 
 integer; omgomgomg : real);
@@ -102,8 +102,7 @@ begin
 		call bosstweed (34.2 , omnomnom, 234*2.2)
 end;
 begin
-	tom := ted+32+31+tom*5*(5 + (33443+22+ted) * ((53+22)*888)+43.2);
+	tom := ted+32+31+tom*5*(5 + (33443+22+ted) * ((53+22)*888)+43.2)+44323.32134E-32;
 	call bob (+3, -324.1, ted * 23);
 	ted := -32.443E-12
 end.
-293479823047198374012387423423423423423423423423423

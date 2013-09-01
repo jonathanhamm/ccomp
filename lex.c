@@ -49,8 +49,8 @@ typedef struct exp__s exp__s;
 typedef struct nodelist_s nodelist_s;
 typedef struct lexargs_s lexargs_s;
 typedef struct pnonterm_s pnonterm_s;
-typedef struct match_s match_s;
 typedef struct overflow_s overflow_s;
+typedef struct match_s match_s;
 typedef struct regex_ann_s regex_ann_s;
 
 typedef void (*regex_callback_f) (token_s **, void *);
@@ -76,17 +76,18 @@ struct pnonterm_s
     uint32_t offset;
 };
 
+struct overflow_s
+{
+    size_t len;
+    char *str;
+};
+
 struct match_s
 {
     size_t n;
     int attribute;
     bool success;
-};
-
-struct overflow_s
-{
-    size_t len;
-    char *str;
+    overflow_s overflow;
 };
 
 struct regex_ann_s
@@ -132,7 +133,7 @@ static void prxann_equals (nfa_edge_s *edge, token_s **curr, void *ptr, ann_call
 
 static int prx_tokenid (lex_s *lex, token_s **curr);
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
-match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, overflow_s *overflow);
+match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf);
 static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
@@ -583,7 +584,7 @@ regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
     regex_ann_s *reg;
     
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
-        addmachine (lex, *curr);
+        addmachine(lex, *curr);
         *curr = (*curr)->next;
         ++*count;
         lex->machs->nterm->type.val = *count;
@@ -599,7 +600,7 @@ regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
             free(reg);
             reg = NULL;
         }
-        tnode = patch_search (lex->patch, lex->machs->nterm->lexeme);
+        tnode = patch_search(lex->patch, lex->machs->nterm->lexeme);
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
             *curr = (*curr)->next;
             lex->machs->nfa = prx_expression(lex, curr, &uparent, &concat);
@@ -838,7 +839,7 @@ void prxa_regexdef(token_s **curr, regex_ann_s *reg)
             mach->attr_id = true;
             mach->composite = false;
         }
-        else if (!strcasecmp((*curr)->lexeme, "composite")) {
+        else if (!strcasecmp((*curr)->lexeme, "definition")) {
             mach->composite = true;
             mach->attr_id = false;
         }
@@ -846,10 +847,8 @@ void prxa_regexdef(token_s **curr, regex_ann_s *reg)
             *curr = (*curr)->next;
             if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_EQU) {
                 *curr = (*curr)->next;
-                if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_NUM) {
+                if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_NUM)
                     mach->lexlen = safe_atoui((*curr)->lexeme);
-                   // *curr = (*curr)->next;
-                }
                 else {
                     printf("Syntax Error at line %d: Expected number but got %s\n", (*curr)->lineno, (*curr)->lexeme);
                     exit(EXIT_FAILURE);
@@ -889,6 +888,8 @@ void prxa_regexdef(token_s **curr, regex_ann_s *reg)
             exit(EXIT_FAILURE);
         }
         *curr = (*curr)->next;
+        if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_COMMA)
+            *curr = (*curr)->next;
     }
 }
 
@@ -1190,9 +1191,7 @@ int tokmatch(char *buf, token_s *tok)
     return len;
 }
 
-int notsucces = 0;
-
-match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, overflow_s *overflow)
+match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
 {
     size_t tmatch, tmpmatch;
     uint16_t i;
@@ -1202,12 +1201,14 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, overflo
     curr.n = 0;
     curr.attribute = 0;
     curr.success = false;
+    curr.overflow.str = NULL;
+    curr.overflow.len = 0;
     if (state == nfa->final)
         curr.success = true;
     for (i = 0; i < state->nedges; i++) {
         switch (state->edges[i]->token->type.val) {
             case LEXTYPE_EPSILON:
-                result = nfa_match(lex, nfa, state->edges[i]->state, buf, overflow);
+                result = nfa_match(lex, nfa, state->edges[i]->state, buf);
                 if (result.success) {
                     curr.success = true;
                     curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
@@ -1217,14 +1218,14 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, overflo
                 break;
             case LEXTYPE_NONTERM:
                 tmp = getmach(lex, state->edges[i]->token->lexeme);
-                result = nfa_match(lex, tmp->nfa, tmp->nfa->start, buf, overflow);
+                result = nfa_match(lex, tmp->nfa, tmp->nfa->start, buf);
                 if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
-                    overflow->len = result.n;
-                    overflow->str = state->edges[i]->token->lexeme;
+                    result.overflow.str = state->edges[i]->token->lexeme;
+                    result.overflow.len = result.n;
                 }
-                if (result.success) {
+                else if (result.success) {
                     tmpmatch = result.n;
-                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n], overflow);
+                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n]);
                     if (result.success) {
                         curr.success = true;
                         if (result.n > 0 && result.attribute > 0)
@@ -1239,7 +1240,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, overflo
             default: /* case LEXTYPE_TERM */
                 tmatch = tokmatch(buf, state->edges[i]->token);
                 if (tmatch && tmatch != EOF) {
-                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch], overflow);
+                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch]);
                     if (result.success) {
                         curr.success = true;
                         curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
@@ -1270,13 +1271,12 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
     if (listing)
         addline(&lex->listing, buf);
     while (*buf != EOF) {
-        notsucces = 0;
         best.attribute = 0;
         best.n = 0;
         best.success = false;
-        overflow.len = 0;
         overflow.str = NULL;
-
+        overflow.len = 0;
+        
         while (isspace(*buf)) {
             if (*buf == '\n') {
                 lineno++;
@@ -1292,22 +1292,25 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
         for (mach = lex->machs; mach; mach = mach->next) {
             if (*buf == EOF)
                 break;
-            res = nfa_match(lex, mach->nfa, mach->nfa->start, buf, &overflow);
-            if (!overflow.str && res.n <= mach->lexlen) {
-              //  printf("%d\n", mach->lexlen);
+            res = nfa_match(lex, mach->nfa, mach->nfa->start, buf);
+            if (!res.overflow.str &&  res.n <= mach->lexlen) {
                 if (res.success && !mach->composite && res.n > best.n) {
                     best = res;
                     bmach = mach;
                 }
             }
-            else if (!overflow.str) {
-                overflow.str = buf;
-                overflow.len = res.n;
+            else {
+                if (!res.overflow.str) {
+                    overflow.str = buf;
+                    overflow.len = res.n;
+                }
+                else
+                    overflow = res.overflow;
             }
         }
         c[0] = buf[best.n];
         buf[best.n] = '\0';
-        if (best.success && !overflow.str) {
+        if (best.success) {
             if (best.n <= bmach->lexlen) {
                 lookup = idtable_lookup(lex->kwtable, buf);
                 if (lookup.is_found) {
@@ -1346,21 +1349,12 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
             buf[best.n] = c[0];
             c[0] = buf[overflow.len];
             buf[overflow.len] = '\0';
-            tmp = sizeof(LERR_SPECTOOLONG) + overflow.len + MAX_LEXLEN + INT_CHAR_WIDTH;
-            error = calloc(1, tmp+1);
-            if (!error) {
-                perror("Memory Allocation Error");
-                exit(EXIT_FAILURE);
-            }
-            snprintf(error, tmp, LERR_SPECTOOLONG, lineno, overflow.str, buf);
-            best.n = overflow.len;
             memset(tmpbuf, 0, sizeof(tmpbuf));
-            snprintf(tmpbuf, MAX_LEXLEN, "%s", overflow.str);
+            snprintf(tmpbuf, MAX_LEXLEN, "%s", buf);
             addtok(&tlist, tmpbuf, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
             if (listing)
                 adderror(lex->listing, make_lexerr (LERR_TOOLONG, lineno, buf), lineno);
-
-            //   for(;;)printf("%s, %.20s\n",error, buf);
+            best.n = overflow.len;
         }
         else {
             lookup = idtable_lookup(lex->kwtable, c);

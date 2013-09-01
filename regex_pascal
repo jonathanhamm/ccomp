@@ -24,30 +24,38 @@ real
 [
 ]
 
-<letter>{composite}=>
+<letter>{definition}=>
     a | b | c | d | e | f | g | h | i | j | k | l | m | n | o | p | q | r | s | t | u | v | w | x | y | z |
     A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | Q | R | S | T | U | V | W | X | Y | Z
 
-<digit>{composite}=>
+<digit>{definition}=>
     0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 <id>{idtype}=>
     <letter> (<letter> | <digit> ) *
     
-<digits>{composite}=>
+<digits>{definition}=>
     <digit> <digit> *
 
-<optional_fraction>{composite}=>
-    . <digits> | ε
+<fraction>{definition}=>
+    . <digits>
         
-<optional_exponent>{composite}=>
-    (E ( \+ | - | ε ) <digits>) | ε 
+<exponent>{definition}=>
+    E ( \+ | - | ε ) <digits> {length = 2}
 
-<numint>{length = 10}=> 
+<numint>{length = 10, definition}=> 
     <digits>
+<numreal>{definition}=>
+    <digits>{length = 5} <fraction>{length = 6}
+<numlreal>{definition}=>
+    <numreal> <exponent>
 
-<num>{type=numint}=>
-    <digits> <optional_fraction>{attribute = 1, length = 15} <optional_exponent>{2}
+<num>=>
+    <numint> {attribute = 0, length = 10} 
+    |
+    <numreal> {attribute = 1}
+    |
+    <numlreal> {attribute = 2}
 
 <relop>=>
     = {0} | <> {1} | < {2} | <= {3} | >= {4} | > {5}
