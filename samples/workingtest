@@ -31,7 +31,7 @@ procedure bob (a : integer; b : real; c : real);
 		end;
 		derp := derp mod c + b/a - ted*omg[30]
 	end;
-begin
+begin+~~
 	while zomg <> omg do
 		zomg := omg*zomg and ted-omg[3 mod 4];
 	if omg <= 823.22 then

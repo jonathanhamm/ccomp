@@ -16,6 +16,7 @@
 #include <limits.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define HTABLE_SIZE 53
 #define FS_INTWIDTH_DEC(num) ((size_t)log10(num)-2)

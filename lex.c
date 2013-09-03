@@ -140,13 +140,11 @@ static mach_s *getmach(lex_s *lex, char *id);
 
 lex_s *buildlex (const char *file)
 {
-    token_s *list, *iter;
+    token_s *list;
     lex_s *lex;
 
     lex = lex_s_();
     list = lexspec (file, regex_annotate);
-    for (iter = list; iter; iter = iter->next)
-        printf("%s %d\n", iter->lexeme, iter->lineno);
     lex->typestart = parseregex(lex, &list);
     return lex;
 }
@@ -395,7 +393,6 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
 {
     token_s *ntok;
     
-    printf("adding %s\n", lexeme);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");

@@ -113,10 +113,9 @@ void printpda(pda_s *start)
 
 parse_s *build_parse (const char *file, lextok_s lextok)
 {
-    char *buf;
     parse_s *parse;
-    token_s *list, *iter, *head;
-    llist_s *firsts, *fiter;
+    token_s *list, *head;
+    llist_s *firsts;
     FILE *fptable;
     
     fptable = fopen("parsetable", "w");
@@ -127,13 +126,6 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     parse = parse_();
     parse->listing = lextok.lex->listing;
     pp_start(parse, &list);
-    /*
-    for (iter = list; iter; iter = iter->next) {
-        if (iter->type.val != LEXTYPE_NONTERM)
-            printf("%s %d\n", iter->lexeme, iter->type.val);
-    }
-    printf("\n");*/
-
     compute_firstfollows (parse);
     firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
     build_parse_table (parse, head);
@@ -146,40 +138,30 @@ parse_s *build_parse (const char *file, lextok_s lextok)
 void match_phase (lextok_s regex, token_s *cfg)
 {
     type_s type;
-    tlookup_s result;
     mach_s *idmach = NULL;
     tfind_s tfind;
     
     assert(idtable_lookup(regex.lex->kwtable, "integer").is_found);
-    printf("\n\n");
 
     for (idmach = regex.lex->machs; idmach; idmach = idmach->next) {
         if (idmach->attr_id)
             break;
     }
     for (; cfg; cfg = cfg->next) {
-        if (!strcmp(cfg->lexeme, "-"))
-            printf("found - : %d\n", cfg->type.val);
         if (cfg->type.val == LEXTYPE_EPSILON) {
             continue;
         }
         tfind = findtok(regex.lex->machs, cfg->lexeme);
-        if (tfind.found) {
-            printf("found from mach\n");
+        if (tfind.found) 
             cfg->type = tfind.token->type;
-        }
         else {
             
             type = gettype(regex.lex, cfg->lexeme);
             if (type.val != LEXTYPE_ERROR)
                 cfg->type = type;
         }
-        printf("cfg type val: %u\n", cfg->type.val);
         assert(cfg->type.val < 100);
-        if (!strcmp(cfg->lexeme, "-"))
-            printf("found - : %d\n", cfg->type.val);
     }
-    printf("\n\n");
 }
 
 tfind_s findtok(mach_s *mlist, char *lexeme)
@@ -873,7 +855,6 @@ void parse (parse_s *parse, lextok_s lex)
 
 int match(token_s **curr, token_s *tok)
 {
-    //printf("Trying to match: %s %d %s %d\n", (*curr)->lexeme, (*curr)->type.val, tok->lexeme, tok->type.val);
     if ((*curr)->type.val == tok->type.val) {
         if ((*curr)->type.val != LEXTYPE_EOF) {
             *curr = (*curr)->next;
@@ -881,7 +862,6 @@ int match(token_s **curr, token_s *tok)
         }
         return 2;
     }
-    printf("Syntax Error at %s when expected %s line: %d\n", (*curr)->lexeme, tok->lexeme, (*curr)->lineno);
     return 0;
 }
 
@@ -933,7 +913,8 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
                     *curr = (*curr)->next;
                 }
             }
-        } while (!success);
+        }
+        while (!success);
     }
     return true;
 }
@@ -978,8 +959,9 @@ char *make_synerr (pda_s *pda, token_s **curr)
         }
     }
     if (gotepsilon || LLTOKEN(iter)->type.val == LEXTYPE_EPSILON) {
+        oldsize = errbuf_check(&errstr, &bsize, &errsize, LLTOKEN(iter)->lexeme);
         sprintf(&errstr[oldsize], "%s ", LLTOKEN(iter)->lexeme);
-        errsize += strlen(LLTOKEN(iter)->lexeme);
+        errsize += strlen(LLTOKEN(iter)->lexeme)+1;
         for (iter = pda->follows; iter->next; iter = iter->next) {
             oldsize = errbuf_check(&errstr, &bsize, &errsize, LLTOKEN(iter)->lexeme);
             sprintf(&errstr[oldsize], "%s ", LLTOKEN(iter)->lexeme);
