@@ -634,7 +634,6 @@ void compute_firstfollows (parse_s *parser)
     int i, status, nitems;
     pda_s *tmp;
     hrecord_s *curr;
-    llist_s *iter;
     hashiterator_s *iterator;
     follow_s *ftable;
     pthread_mutex_t jlock;
@@ -773,7 +772,7 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     }
     hiterator = hashiterator_(parse->phash);
     for (hcurr = hashnext(hiterator); hcurr; hcurr = hashnext(hiterator)) {
-        curr = (pda_s *)hcurr->data;
+        curr = hcurr->data;
         for (i = 0; i < n_nonterminals; i++) {
             if (!strcmp(curr->nterm->lexeme, ptable->nterms[i]->lexeme))
                 break;
@@ -827,7 +826,6 @@ void parse (parse_s *parse, lextok_s lex)
 {
     int index;
     size_t errsize;
-
     char *synerr;
     pda_s *nterm;
             
@@ -961,7 +959,6 @@ char *make_synerr (pda_s *pda, token_s **curr)
     if (gotepsilon || LLTOKEN(iter)->type.val == LEXTYPE_EPSILON) {
         oldsize = errbuf_check(&errstr, &bsize, &errsize, LLTOKEN(iter)->lexeme);
         sprintf(&errstr[oldsize], "%s ", LLTOKEN(iter)->lexeme);
-        errsize += strlen(LLTOKEN(iter)->lexeme)+1;
         for (iter = pda->follows; iter->next; iter = iter->next) {
             oldsize = errbuf_check(&errstr, &bsize, &errsize, LLTOKEN(iter)->lexeme);
             sprintf(&errstr[oldsize], "%s ", LLTOKEN(iter)->lexeme);
