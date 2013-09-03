@@ -1,29 +1,29 @@
-<start>=>
+<start> ->
 	<nonterminal>
 	<nonterminals>
 
-<nonterminals>=>
+<nonterminals> ->
 	<nonterminal> <nonterminals>
 	|
 	\E
 
-<nonterminal>=>
+<nonterminal> ->
 	EOL nonterm prodsym <production> <productions> <decoration>
 
-<productions>=>
+<productions> ->
 	UNION <production> <productions>
 	|
 	\E
 
-<production>=>
+<production> ->
 	token <tokens>
 
-<tokens>=>
+<tokens> ->
 	token <tokens>
 	|
 	\E
 
-<decoration>=>
+<decoration> ->
 	{ * }
 	|
 	\E

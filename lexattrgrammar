@@ -1,12 +1,12 @@
-<annotation>=> 
+<annotation> -> 
     num | <assignment>
     
 <assignment>
     word <expression>
     
-<expression>=>
+<expression> ->
     = num <expression'> | ε
 
-<expression'>=>
+<expression'> ->
     , <assigment> | ε
     

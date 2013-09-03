@@ -24,47 +24,47 @@ real
 [
 ]
 
-<letter>{definition}=>
+<letter>{definition} ->
     a | b | c | d | e | f | g | h | i | j | k | l | m | n | o | p | q | r | s | t | u | v | w | x | y | z |
     A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P | Q | R | S | T | U | V | W | X | Y | Z
 
-<digit>{definition}=>
+<digit>{definition} ->
     0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
-<id>{idtype}=>
+<id>{idtype}->
     <letter> (<letter> | <digit> ) *
     
-<digits>{definition}=>
+<digits>{definition} ->
     <digit> <digit> *
 
-<fraction>{definition}=>
+<fraction>{definition} ->
     . <digits>
         
-<exponent>{definition}=>
+<exponent>{definition} ->
     E ( \+ | - | ε ) <digits> {length = 2}
 
-<numint>{length = 10, definition}=> 
+<numint>{length = 10, definition} -> 
     <digits>
-<numreal>{definition}=>
+<numreal>{definition} ->
     <digits>{length = 5} <fraction>{length = 6}
-<numlreal>{definition}=>
+<numlreal>{definition} ->
     <numreal> <exponent>
 
-<num>=>
+<num> ->
     <numint> {attribute = 0, length = 10} 
     |
     <numreal> {attribute = 1}
     |
     <numlreal> {attribute = 2}
 
-<relop>=>
+<relop> ->
     = {0} | <> {1} | < {2} | <= {3} | >= {4} | > {5}
     
-<addop>=>
+<addop> ->
     \+ {0} | - {1} | or {2}
 
-<mulop>=>
+<mulop> ->
     \* {0} | \/ {2} | div {3} | mod {4} | and {5}
 
-<assignop>=>
+<assignop> ->
     :=

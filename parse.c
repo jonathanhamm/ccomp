@@ -273,7 +273,7 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
             pp_decoration(parse, curr, pda);
         }
         else {
-            printf("Syntax Error: Expected '=>' but got %s\n", (*curr)->lexeme);
+            printf("Syntax Error: Expected '->' but got %s\n", (*curr)->lexeme);
             exit(EXIT_FAILURE);
         }
     }

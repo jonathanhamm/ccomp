@@ -1,8 +1,8 @@
-<start>=>
+<start> ->
     <keywords>
     <tokens>
 
-<keywords>=>
+<keywords> ->
     terminal <keywords>
     {
         addkeyword(terminal);
@@ -10,19 +10,19 @@
     |
     ε
 
-<tokens>=>
+<tokens> ->
     <texp> <tokens'>
-<tokens'>=>
+<tokens'> ->
     EOL <texp> <tokens'>
     |
     ε
 
-<texp>=>
+<texp> ->
     nonterm <tokenid> prodsym <expression> <follow>
     {
         addgraph(nonterm);
     }
-<expression>=>
+<expression> ->
     <term> <closure> <expression'>
     {
         <term>:
@@ -67,7 +67,7 @@
         
     }
     
-<expression'>=>
+<expression'> ->
     union <expression>
     {
         makenode(<expression>);
@@ -87,7 +87,7 @@
         return { .op := NOP, .expression := NULL }
     }
 
-<term>=>
+<term> ->
     ( <expression> )
     {
         makenode(<expression>);
@@ -158,16 +158,16 @@
     |
     ε <annotation>
 
-<follow>=>
+<follow> ->
     follow <expression>
 
-<annotation>=>
+<annotation> ->
     integer {setannotation(edge, integer.val) | ε
     
-<tokenid>=>
+<tokenid> ->
     { integer } | ε
 
-<closure>=>
+<closure> ->
     * { <closure>.curr := kleenestar; }
     | 
     + { <closure>.curr := pos; } 

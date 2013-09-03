@@ -1,4 +1,4 @@
-<program>=>
+<program> ->
 	program id \( <identifier_list> \) ;
 	<program'>
 	<compound_statement>
@@ -8,7 +8,7 @@
 		<program>.code := "derr derrr derr derr derr";
 	}
 
-<program'>=>
+<program'> ->
 	<declarations> <dec>
 	{}
 	|
@@ -17,13 +17,13 @@
 	|
 	ε
 	
-<dec>=>
+<dec> ->
 	<subprogram_declarations>
 	{}
 	|
 	ε
 
-<identifier_list>=>
+<identifier_list> ->
 	id <identifier_list'>
 	{
 		<identifier_list>.type := file;
@@ -38,7 +38,7 @@
 		addtype (id.entry, <identifier_list>.type);
 		<id>.grr := ---598234;
 	}
-<identifier_list'>=>
+<identifier_list'> ->
 	, id <identifier_list'>
 	{
 		<identifier_list'>.type := file;
@@ -47,77 +47,77 @@
 	|
 	ε
 
-<declarations>=>
+<declarations> ->
 	var id : <type> ; <declarations'>
-<declarations'>=>
+<declarations'> ->
 	var id : <type> ; <declarations'>
 	|
 	ε
 
-<type>=>
+<type> ->
 	<standard_type>
 	|
 	array [ num . . num ] of <standard_type>
 
-<standard_type>=>
+<standard_type> ->
 	integer
 	|
 	real
 	
-<subprogram_declarations>=>
+<subprogram_declarations> ->
 	<subprogram_declaration> ; <subprogram_declarations'>
-<subprogram_declarations'>=>
+<subprogram_declarations'> ->
 	<subprogram_declaration> ; <subprogram_declarations'>
 	|
 	ε
 
-<subprogram_declaration>=>
+<subprogram_declaration> ->
 	<subprogram_head>
 	<subprogram_declaration'>
 	<compound_statement>
-<subprogram_declaration'>=>
+<subprogram_declaration'> ->
 	<declarations> <dec>
 	|
 	<subprogram_declarations>
 	|
 	ε
 
-<subprogram_head>=>
+<subprogram_head> ->
 	procedure id <subprogram_head'>;
-<subprogram_head'>=>
+<subprogram_head'> ->
 	<arguments>
 	|
 	ε
 
-<arguments>=>
+<arguments> ->
 	\( <parameter_list> \)
-<parameter_list>=>
+<parameter_list> ->
 	id : <type> <parameter_list'>
-<parameter_list'>=>
+<parameter_list'> ->
 	; id : <type> <parameter_list'>
 	|
 	ε
 	
-<compound_statement>=>
+<compound_statement> ->
 	begin
 	<compound_statement'>
 	end
-<compound_statement'>=>
+<compound_statement'> ->
 	<optional_statements>
 	|
 	ε
 	
-<optional_statements>=>
+<optional_statements> ->
 	<statement_list>
 
-<statement_list>=>
+<statement_list> ->
 	<statement> <statement_list'>
-<statement_list'>=>
+<statement_list'> ->
 	; <statement> <statement_list'>
 	|
 	ε
 
-<statement>=>
+<statement> ->
 	<variable> assignop <expression>
 	|
 	<procedure_statement>
@@ -127,60 +127,60 @@
 	while <expression> do <statement>
 	|
 	if <expression> then <statement> <statement'>
-<statement'>=>
+<statement'> ->
 	else <statement>
 	|
 	ε
 	
-<variable>=>
+<variable> ->
 	id <variable'>
-<variable'>=>
+<variable'> ->
 	[ <expression> ]
 	|
 	ε
 
-<procedure_statement>=>
+<procedure_statement> ->
 	call id <procedure_statement'>
-<procedure_statement'>=>
+<procedure_statement'> ->
 	\( <expression_list> \)
 	|
 	ε
 	
-<expression_list>=>
+<expression_list> ->
 	<expression> <expression_list'>
-<expression_list'>=>
+<expression_list'> ->
 	, <expression> <expression_list'>
 	|
 	ε
 	
-<expression>=>
+<expression> ->
 	<simple_expression> <expression'>
-<expression'>=>
+<expression'> ->
 	relop <simple_expression>
 	|
 	ε
 	
-<simple_expression>=>
+<simple_expression> ->
 	<sign> <term> <simple_expression'>
 	|
 	<term> <simple_expression'>
-<simple_expression'>=>
+<simple_expression'> ->
 	addop <term> <simple_expression'>
 	|
 	ε
 
-<term>=>
+<term> ->
 	<factor> <term'>
 	{
 		<term>.val := <term>[1].val * <term'>.val;
 		
 	}
-<term'>=>
+<term'> ->
 	mulop <factor> <term'>
 	|
 	ε
 
-<factor>=>
+<factor> ->
 	id <factor'>
 	|
 	num
@@ -188,10 +188,10 @@
 	\( <expression> \)
 	|
 	not <factor>
-<factor'>=>
+<factor'> ->
 	[ <expression> ]
 	|
 	ε
 
-<sign>=>
+<sign> ->
 	\+ | \-

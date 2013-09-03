@@ -198,9 +198,9 @@ token_s *lexspec (const char *file, annotation_f af)
                     exit(EXIT_FAILURE);
                 }
                 break;
-            case '=':
+            case '-':
                 if (buf[i+1] == '>') {
-                    addtok (&list, "=>", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT);
+                    addtok (&list, "->", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT);
                     for (p = list->prev; p && p->type.val != LEXTYPE_EOL; p = p->prev) {
                         if (!p->prev)
                             pp = p;
@@ -605,7 +605,7 @@ regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
                 lex->machs->nfa = uparent;
         }
         else {
-            printf("Syntax Error at line %u: Expected '=>' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+            printf("Syntax Error at line %u: Expected '->' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
         }
     }
