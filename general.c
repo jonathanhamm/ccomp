@@ -163,7 +163,7 @@ size_t nlstrlen(const char *str)
 
 void println (unsigned no, char *buf, void *stream)
 {
-    printf("%6d: ", no);
+    fprintf(stream, "%6d: ", no);
     printline(buf, stream);
 }
 
