@@ -217,7 +217,7 @@ token_s *lexspec (const char *file, annotation_f af)
                         p->next = pp;
                         p->type.val = LEXTYPE_EOL;
                         p->type.attribute = LEXATTR_EOLNEWPROD;
-                        pp->prev = p;                        
+                        pp->prev = p;
                     }
                     i++;
                 }

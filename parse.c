@@ -631,22 +631,18 @@ llist_s *inherit_follows (follow_s *nterm, llist_s **stack)
 void compute_firstfollows (parse_s *parser)
 {
     bool ready = false;
-    int i, status, nitems;
+    int i, status, nitems = parser->phash->nitems;
     pda_s *tmp;
     hrecord_s *curr;
     hashiterator_s *iterator;
-    follow_s *ftable;
+    follow_s ftable[nitems];
     pthread_mutex_t jlock;
     pthread_cond_t jcond;
     llist_s *stack = NULL;
     uint16_t threadcount = 0;
-    
+
+    memset(ftable, 0, sizeof(ftable));
     nitems = parser->phash->nitems;
-    ftable = calloc(nitems, sizeof(*ftable));
-    if (!ftable) {
-        perror("Memory Allocation Error");
-        exit(EXIT_FAILURE);
-    }
     status = pthread_mutex_init(&jlock, NULL);
     if (status) {
         perror("Error: Failed to initialize mutex lock");
@@ -659,7 +655,7 @@ void compute_firstfollows (parse_s *parser)
     }
     iterator = hashiterator_(parser->phash);
     for (curr = hashnext(iterator), i = 0; curr; curr = hashnext(iterator), i++) {
-        tmp = (pda_s *)curr->data;
+        tmp = curr->data;
         tmp->firsts = getfirsts(parser, tmp);
         ftable[i].parser = parser;
         ftable[i].table = ftable;
@@ -691,8 +687,6 @@ void compute_firstfollows (parse_s *parser)
         ftable[i].pda->follows = inherit_follows(&ftable[i], &stack);
     pthread_mutex_destroy(&jlock);
     pthread_cond_destroy(&jcond);
-  
-    free(ftable);
 }
 
 bool lllex_contains (llist_s *list, char *lex)

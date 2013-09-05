@@ -58,6 +58,8 @@
 	<standard_type>
 	|
 	array [ num . . num ] of <standard_type>
+    {
+    }
 
 <standard_type> ->
 	integer
@@ -182,14 +184,19 @@
 
 <factor> ->
 	id <factor'>
+    { <factor>.type := id.array.type }
 	|
 	num
+    { <factor>.type := num.type}
 	|
 	\( <expression> \)
+    { <factor>.type := <expression>.type }
 	|
 	not <factor>
+    { <factor>.type := <factor1>.type }
 <factor'> ->
 	[ <expression> ]
+    { <factor'>.type := <expression>.type }
 	|
 	ε
 
