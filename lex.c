@@ -43,8 +43,6 @@ enum basic_ops_ {
 
 #define INT_CHAR_WIDTH      10
 
-typedef void (*ann_callback_f) (token_s **, void *);
-
 typedef struct exp__s exp__s;
 typedef struct nodelist_s nodelist_s;
 typedef struct lexargs_s lexargs_s;
@@ -53,6 +51,7 @@ typedef struct overflow_s overflow_s;
 typedef struct match_s match_s;
 typedef struct regex_ann_s regex_ann_s;
 
+typedef void (*ann_callback_f) (token_s **, void *);
 typedef void (*regex_callback_f) (token_s **, void *);
 
 struct exp__s
@@ -101,7 +100,7 @@ static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
 static uint16_t bsearch_tr (idtnode_s *tnode, char key);
 static idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat);
 static tlookup_s trie_lookup (idtnode_s *trie, char *str);
-static unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno);
+static unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *data);
 
 static lex_s *lex_s_ (void);
 static idtnode_s *patch_search (llist_s *patch, char *lexeme);
@@ -144,12 +143,12 @@ lex_s *buildlex (const char *file)
     lex_s *lex;
 
     lex = lex_s_();
-    list = lexspec (file, regex_annotate);
+    list = lexspec (file, regex_annotate, NULL);
     lex->typestart = parseregex(lex, &list);
     return lex;
 }
 
-token_s *lexspec (const char *file, annotation_f af)
+token_s *lexspec (const char *file, annotation_f af, void *data)
 {
     unsigned i, j, lineno, tmp, bpos;
     char *buf;
@@ -190,7 +189,7 @@ token_s *lexspec (const char *file, annotation_f af)
                     addtok(&list, "EPSILON", lineno, LEXTYPE_EPSILON, LEXATTR_DEFAULT);
                 break;
             case '{':
-                tmp = af(&list, &buf[i], &lineno);
+                tmp = af(&list, &buf[i], &lineno, data);
                 if (tmp)
                     i += tmp;
                 else {
@@ -334,7 +333,7 @@ doublebreak_:
     return list;
 }
 
-unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno)
+unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *data)
 {
     unsigned i = 0, bpos = 0;
     char tmpbuf[MAX_LEXLEN+1];
@@ -556,7 +555,6 @@ void reparent (nfa_node_s *parent, nfa_node_s *oldparent)
     
     for (i = 0; i < oldparent->nedges; i++)
         addedge (parent, oldparent->edges[i]);
-    free(oldparent);
 }
 
 void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
@@ -638,7 +636,7 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             clos_nfa->start = term->start;
             clos_nfa->final = nfa_node_s_();
             addedge(term->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
-            addedge(clos_nfa->final, nfa_edge_s_(make_epsilon(), clos_nfa->final));
+            addedge(clos_nfa->final, nfa_edge_s_(make_epsilon(), term->start));
             term = clos_nfa;
             break;
         case CLOSTYPE_ORNULL:

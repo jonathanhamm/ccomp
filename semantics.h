@@ -10,8 +10,12 @@
 #ifndef SEMANTICS_H_
 #define SEMANTICS_H_
 
-#include "lex.h"
 #include "general.h"
-#include "semantics.h"
+#include <stdint.h>
+
+
+extern lex_s *semant_init(void);
+extern uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data);
+
 
 #endif

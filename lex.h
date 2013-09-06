@@ -79,7 +79,7 @@ typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
 typedef struct lextok_s lextok_s;
 
-typedef unsigned (*annotation_f) (token_s **, char *, unsigned *);
+typedef unsigned (*annotation_f) (token_s **, char *, unsigned *, void *);
 
 struct type_s
 {
@@ -185,7 +185,7 @@ struct lextok_s
 
 extern lextok_s lexf (lex_s *lex, char *buf, bool listing);
 extern lex_s *buildlex (const char *file);
-extern token_s *lexspec (const char *file, annotation_f af);
+extern token_s *lexspec (const char *file, annotation_f af, void *data);
 extern idtable_s *idtable_s_ (void);
 extern int ntstrcmp (char *nterm, char *str);
 extern void addstate (mach_s *mach, token_s *tok);

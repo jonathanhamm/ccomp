@@ -10,6 +10,7 @@
 
 #include "general.h"
 #include "parse.h"
+#include "semantics.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -57,7 +58,6 @@ struct tfind_s
 
 static void match_phase (lextok_s regex, token_s *cfg);
 static tfind_s findtok(mach_s *mlist, char *lexeme);
-static uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno);
 static parse_s *parse_(void);
 static pda_s *pda_(token_s *token);
 static production_s *addproduction (pda_s *pda);
@@ -113,6 +113,7 @@ void printpda(pda_s *start)
 
 parse_s *build_parse (const char *file, lextok_s lextok)
 {
+    lex_s *semantics;
     parse_s *parse;
     token_s *list, *head;
     llist_s *firsts;
@@ -121,7 +122,8 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     fptable = fopen("parsetable", "w");
     assert(idtable_lookup(lextok.lex->kwtable, ")").is_found);
 
-    list = lexspec (file, cfg_annotate);
+    semantics = semant_init();
+    list = lexspec (file, cfg_annotate, semantics);
     head = list;
     parse = parse_();
     parse->listing = lextok.lex->listing;
@@ -178,14 +180,6 @@ tfind_s findtok(mach_s *mlist, char *lexeme)
     if (idtype)
         return (tfind_s){.found = false, .token = idtype->nterm};
     return (tfind_s){.found = false, .token = NULL};
-}
-
-uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno)
-{
-    uint32_t i;
-    
-    for (i = 1; buf[i] != '}'; i++);
-    return i+1;
 }
 
 parse_s *parse_(void)
