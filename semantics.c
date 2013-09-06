@@ -26,7 +26,6 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
     lextok_s ltok;
     static unsigned anlineno = 1;
     
-    assert(*lineno != 12);
     for (i = 1; buf[i] != '}'; i++);
     buf[i] = EOF;
     
@@ -35,6 +34,6 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
     *lineno += ltok.lines;
             
     print_listing(((lex_s *)data)->listing, stdout);
-    
+    puts("\n\n\n");
     return i;
 }

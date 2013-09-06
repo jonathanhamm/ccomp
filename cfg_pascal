@@ -4,9 +4,7 @@
 	<compound_statement>
 	.
 	{
-		<program>.type := derp;
-		<program>.code := "derr derrr derr derr derr";
-	} 
+	}        
 
 <program'> ->
 	<declarations> <dec>
@@ -26,23 +24,10 @@
 <identifier_list> ->
 	id <identifier_list'>
 	{
-		<identifier_list>.type := file;
-		<id>.bob := if a < b then
-						blah
-					else
-						if a+b <> 324.12 then
-							derp (he.qr, <derp>.y)
-						else
-							printf(derp)
-					;
-		addtype (id.entry, <identifier_list>.type);
-		<id>.grr := ---598234;
 	}
 <identifier_list'> ->
 	, id <identifier_list'>
 	{
-		<identifier_list'>.type := file;
-		addtype (id.entry, <identifier_list>.type);
 	}
 	|
 	ε
@@ -66,7 +51,7 @@
     { <standard_type>.type := integer }
 	|
 	real
-    { <standard_type.type> := real }
+    { <standard_type>.type := real }
 	
 <subprogram_declarations> ->
 	<subprogram_declaration> ; <subprogram_declarations'>
@@ -191,10 +176,12 @@
     { <factor>.type := num.type}
 	|
 	\( <expression> \)
-    { <factor>.type := <expression>.type }
+    { 
+        <factor>.type := <expression>.type 
+    }
 	|
 	not <factor>
-    { <factor>.type := <factor1>.type }
+    { <factor___>.type := <factor1>.type }
 <factor'> ->
 	[ <expression> ]
     { <factor'>.type := <expression>.type }

@@ -1270,7 +1270,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
         overflow.str = NULL;
         overflow.len = 0;
         
-        while (isspace(*buf)) {
+        while (isspace(*buf) || !*buf) {
             if (*buf == '\n') {
                 lineno++;
                 if (listing)
@@ -1361,6 +1361,8 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                 if (best.n) {
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
                     if (listing) {
+                        printf("illegal symbol: %c %d\n", *buf, *buf);
+                       // assert(*buf != '_');
                         error = make_lexerr(LERR_UNKNOWNSYM, lineno, buf);
                         adderror(lex->listing, error, lineno);
                     }
@@ -1368,6 +1370,8 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                 else {
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
                     if (listing) {
+                        printf("illegal symbol: %c %d\n", c[0], c[0]);
+                       // assert(c[0] != '_');
                         error = make_lexerr(LERR_UNKNOWNSYM, lineno, c);
                         adderror(lex->listing, error, lineno);
                     }
