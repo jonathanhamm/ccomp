@@ -38,15 +38,13 @@ enum lex_types_ {
     LEXTYPE_EOF,
     LEXTYPE_NULLSET,
     LEXTYPE_START,
+    LEXTYPE_CROSS,
     LEXTYPE_ANNOTATE
 };
 
 #define LEXID_START         LEXTYPE_ANNOTATE
 
 #define MAX_LEXLEN 31
-#define NULLSET (char)232
-#define NULLSETSTR_(null) #null
-#define NULLSETSTR  NULLSETSTR_(NULLSET)
 
 #define LEXATTR_DEFAULT     0
 #define LEXATTR_WSPACEEOL   1

@@ -183,9 +183,18 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 addtok (&list, "EOL", lineno, LEXTYPE_EOL, LEXATTR_DEFAULT);
                 break;
             case (char)0xCE:
-                i++;
-                if (buf[i] == (char)0xB5)
+                if (buf[i+1] == (char)0xB5)
                     addtok(&list, "EPSILON", lineno, LEXTYPE_EPSILON, LEXATTR_DEFAULT);
+                i++;
+                break;
+            case (char)0xE2:
+                if (buf[i+1] == (char)0xA8) {
+                    if (buf[i+2] == (char)0xAF) {
+                        strcpy(lbuf, "\xE2\xA8\xAF");
+                        addtok(&list, lbuf, lineno, LEXTYPE_TERM, LEXATTR_DEFAULT);
+                        i += 2;
+                    }
+                }
                 break;
             case '{':
                 tmp = af(&list, &buf[i], &lineno, data);
@@ -248,9 +257,6 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                     i--;
                 }
                 break;
-            case NULLSET:
-                addtok (&list, NULLSETSTR, lineno, LEXTYPE_NULLSET, LEXATTR_DEFAULT);
-                break;
 default_:
             default:
                 if (buf[i] <= ' ')
@@ -277,11 +283,10 @@ default_:
                             }
                             i--;
                             goto doublebreak_;
-                        case NULLSET:
-                            addtok (&list, NULLSETSTR, lineno, LEXTYPE_NULLSET, LEXATTR_DEFAULT);
-                            goto doublebreak_;
-                            /* DOUBLEBREAK */
                         default:
+                            if (buf[i] >= 0x80)
+                                for(;;)printf("%c %d\n", buf[i], buf[i]);
+
                             break;
                     }
                     if (buf[i] == '\\')
@@ -1270,7 +1275,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
         overflow.str = NULL;
         overflow.len = 0;
         
-        while (isspace(*buf) || !*buf) {
+        while (isspace(*buf)) {
             if (*buf == '\n') {
                 lineno++;
                 if (listing)
@@ -1296,6 +1301,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                 if (!res.overflow.str) {
                     overflow.str = buf;
                     overflow.len = res.n;
+                    best.success = false;
                 }
                 else
                     overflow = res.overflow;
@@ -1362,7 +1368,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
                     if (listing) {
                         printf("illegal symbol: %c %d\n", *buf, *buf);
-                       // assert(*buf != '_');
+                        assert(*buf != EOF);
                         error = make_lexerr(LERR_UNKNOWNSYM, lineno, buf);
                         adderror(lex->listing, error, lineno);
                     }
@@ -1371,7 +1377,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
                     if (listing) {
                         printf("illegal symbol: %c %d\n", c[0], c[0]);
-                       // assert(c[0] != '_');
+                        assert(c[0] != EOF);
                         error = make_lexerr(LERR_UNKNOWNSYM, lineno, c);
                         adderror(lex->listing, error, lineno);
                     }

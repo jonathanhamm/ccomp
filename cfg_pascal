@@ -170,7 +170,7 @@
 
 <factor> ->
 	id <factor'>
-    { <factor>.type := id.array.type × 33}
+    { <factor>.type := id.array.type ⨯ 33}
 	|
 	num
     { <factor>.type := num.type}
@@ -181,7 +181,7 @@
     }
 	|
 	not <factor>
-    { <factor___>.type := <factor1>.type }
+    { <factor________________________________________>.type := <factor1>.type }
 <factor'> ->
 	[ <expression> ]
     { <factor'>.type := <expression>.type }
