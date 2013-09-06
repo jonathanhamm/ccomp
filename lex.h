@@ -180,10 +180,11 @@ struct lex_s
 struct lextok_s
 {
     lex_s *lex;
+    uint32_t lines;
     token_s *tokens;
 };
 
-extern lextok_s lexf (lex_s *lex, char *buf, bool listing);
+extern lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing);
 extern lex_s *buildlex (const char *file);
 extern token_s *lexspec (const char *file, annotation_f af, void *data);
 extern idtable_s *idtable_s_ (void);

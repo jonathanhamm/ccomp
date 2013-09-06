@@ -6,11 +6,11 @@
 	{
 		<program>.type := derp;
 		<program>.code := "derr derrr derr derr derr";
-	}
+	} 
 
 <program'> ->
 	<declarations> <dec>
-	{}
+	{}             
 	|
 	<subprogram_declarations>
 	{}

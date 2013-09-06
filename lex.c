@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <math.h>
-#include <pthread.h>
 
 enum basic_ops_ {
     OP_NOP = 0,
@@ -340,7 +339,7 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *dat
 
     buf++;
     while (buf[i] != '}') {
-        while (buf[i] <= ' ') {
+        while (isspace(buf[i])) {
             if (buf[i] == '\n')
                 ++*lineno;
             i++;
@@ -1249,13 +1248,12 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
     return curr;
 }
 
-lextok_s lexf (lex_s *lex, char *buf, bool listing)
+lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
 {
-    size_t tmp;
     int idatt = 0;
     mach_s *mach, *bmach;
     match_s res, best;
-    uint16_t lineno = 1;
+    uint16_t lineno = linestart;
     char c[2], *backup, *error, tmpbuf[MAX_LEXLEN];
     tlookup_s lookup;
     token_s *head = NULL, *tlist = NULL;
@@ -1263,7 +1261,7 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
     
     c[1] = '\0';
     backup = buf;
-    if (listing)
+    if (listing && *buf != EOF)
         addline(&lex->listing, buf);
     while (*buf != EOF) {
         best.attribute = 0;
@@ -1379,12 +1377,12 @@ lextok_s lexf (lex_s *lex, char *buf, bool listing)
         buf[best.n] = c[0];
         if (best.n)
             buf += best.n;
-        else
+        else 
             buf++;
     }
     addtok(&tlist, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT);
     hashname(lex, LEXTYPE_EOF, "$");
-    return (lextok_s){.lex = lex, .tokens = head};
+    return (lextok_s){.lex = lex, .lines = lineno, .tokens = head};
 }
 
 char *make_lexerr (const char *errmsg, int lineno, char *lexeme)
@@ -1424,7 +1422,7 @@ type_s gettype (lex_s *lex, char *buf)
     
     len = strlen(buf);
     buf[len] = EOF;
-    ltok = lexf(lex, buf, false);
+    ltok = lexf(lex, buf, 1, false);
     buf[len] = '\0';
     type.val = LEXTYPE_ERROR;
     type.attribute = LEXATTR_DEFAULT;

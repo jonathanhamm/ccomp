@@ -23,11 +23,18 @@ lex_s *semant_init(void)
 uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
 {
     uint32_t i;
+    lextok_s ltok;
+    static unsigned anlineno = 1;
     
+    assert(*lineno != 12);
     for (i = 1; buf[i] != '}'; i++);
     buf[i] = EOF;
     
-    lexf(data, &buf[1], true);
+    ltok = lexf(data, &buf[1], anlineno, true);
+    anlineno = ltok.lines;
+    *lineno += ltok.lines;
+            
+    print_listing(((lex_s *)data)->listing, stdout);
     
-    return i+1;
+    return i;
 }
