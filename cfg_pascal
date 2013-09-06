@@ -63,8 +63,10 @@
 
 <standard_type> ->
 	integer
+    { <standard_type>.type := integer }
 	|
 	real
+    { <standard_type.type> := real }
 	
 <subprogram_declarations> ->
 	<subprogram_declaration> ; <subprogram_declarations'>
@@ -174,7 +176,6 @@
 <term> ->
 	<factor> <term'>
 	{
-		<term>.val := <term>[1].val * <term'>.val;
 		
 	}
 <term'> ->
@@ -184,7 +185,7 @@
 
 <factor> ->
 	id <factor'>
-    { <factor>.type := id.array.type }
+    { <factor>.type := id.array.type × 33}
 	|
 	num
     { <factor>.type := num.type}
@@ -199,6 +200,6 @@
     { <factor'>.type := <expression>.type }
 	|
 	ε
-
+    
 <sign> ->
 	\+ | \-
