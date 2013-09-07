@@ -4,11 +4,12 @@
 	<compound_statement>
 	.
 	{
+        bob := derp
 	}        
 
 <program'> ->
 	<declarations> <dec>
-	{}             
+	{<_________________________________>}             
 	|
 	<subprogram_declarations>
 	{}

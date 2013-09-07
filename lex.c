@@ -333,7 +333,6 @@ doublebreak_:
             list->prev = NULL;
         free(backup);
     }
-    free(buf);
     return list;
 }
 
@@ -1266,8 +1265,10 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
     
     c[1] = '\0';
     backup = buf;
-    if (listing && *buf != EOF)
+    if (listing && *buf != EOF) {
         addline(&lex->listing, buf);
+        lineno++;
+    }
     while (*buf != EOF) {
         best.attribute = 0;
         best.n = 0;
@@ -1367,7 +1368,6 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                 if (best.n) {
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
                     if (listing) {
-                        printf("illegal symbol: %c %d\n", *buf, *buf);
                         assert(*buf != EOF);
                         error = make_lexerr(LERR_UNKNOWNSYM, lineno, buf);
                         adderror(lex->listing, error, lineno);
@@ -1376,7 +1376,6 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                 else {
                     addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
                     if (listing) {
-                        printf("illegal symbol: %c %d\n", c[0], c[0]);
                         assert(c[0] != EOF);
                         error = make_lexerr(LERR_UNKNOWNSYM, lineno, c);
                         adderror(lex->listing, error, lineno);

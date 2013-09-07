@@ -337,6 +337,7 @@ void adderror(linetable_s *linelist, char *message, unsigned lineno)
 {
     llist_s *n, *list;
     
+    assert(lineno <= linelist->nlines);
     n = llist_(message);
     list = linelist->table[--lineno].tail;
     if (!list)

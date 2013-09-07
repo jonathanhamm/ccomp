@@ -19,7 +19,7 @@ or
 
 <id>{idtype}-> <letter> (<letter> | <digit> ) *
 
-<nonterm>-> < <letter> (<letter> | _ | <digit> | ' )* >
+<nonterm>-> < (<letter> | _)(<letter> | _ | <digit> | ' )* >
 
 <num>-> <digit> <digit>* (. <digit>+)?
     
