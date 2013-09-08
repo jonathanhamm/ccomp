@@ -78,6 +78,7 @@ static llist_s *clone_firsts (llist_s *firsts, int production);
 static llist_s *getfirsts (parse_s *parser, pda_s *pda);
 static void getfollows (follow_s *fparams);
 static inline ffnode_s *makeEOF (void);
+static inline token_s *tmakeEOF (void);
 static follow_s *get_neighbor_params (follow_s *table, pda_s *pda);
 static llist_s *lldeep_concat_foll (llist_s *first, llist_s *second);
 static bool llpnode_contains(llist_s *list, token_s *tok);
@@ -540,6 +541,11 @@ void getfollows (follow_s *fparams)
 
 inline ffnode_s *makeEOF (void)
 {
+    return makeffnode(tmakeEOF(), 1);
+}
+
+inline token_s *tmakeEOF (void)
+{
     token_s *tok;
     
     tok = calloc(1, sizeof(*tok));
@@ -550,7 +556,7 @@ inline ffnode_s *makeEOF (void)
     tok->lexeme[0] = '$';
     tok->type.val = LEXTYPE_EOF;
     tok->type.attribute = LEXATTR_FAKEEOF;
-    return makeffnode(tok, 1);
+    return tok;
 }
 
 follow_s *get_neighbor_params (follow_s *table, pda_s *pda)
@@ -705,7 +711,7 @@ bool lllex_contains (llist_s *list, char *lex)
 void build_parse_table (parse_s *parse, token_s *tokens)
 {
     uint16_t    i, j, k,
-                n_terminals = 0,
+                n_terminals = 1,
                 n_nonterminals = 0;
     llist_s *terminals = NULL,
             *nonterminals = NULL, *tmp;
@@ -714,9 +720,10 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     pda_s *curr;
     hrecord_s *hcurr;
     hashiterator_s *hiterator;
-
+    
+    llpush(&terminals, tmakeEOF());
     while (tokens) {
-        if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_EPSILON) {
+        if (tokens->type.val == LEXTYPE_TERM) {
             if (!lllex_contains(terminals, tokens->lexeme)) {
                 llpush(&terminals, tokens);
                 n_terminals++;
@@ -776,15 +783,13 @@ void build_parse_table (parse_s *parse, token_s *tokens)
         }
          for (first_iter = curr->firsts; first_iter; first_iter = first_iter->next) {
             for (j = 0; j < n_terminals; j++) {
-                if (!strcmp(LLTOKEN(first_iter)->lexeme, ptable->terms[j]->lexeme)) {
+                if (!strcmp(LLTOKEN(first_iter)->lexeme, ptable->terms[j]->lexeme))
                     ptable->table[i][j] = LLFF(first_iter)->prod;
-                    if (LLTOKEN(first_iter)->type.val == LEXTYPE_EPSILON) {
-                        for (foll_iter = curr->follows; foll_iter; foll_iter = foll_iter->next) {
-                            for (k = 0; k < n_terminals; k++) {
-                                if (!strcmp(LLTOKEN(foll_iter)->lexeme, ptable->terms[k]->lexeme)) {
-                                    ptable->table[i][k] = LLFF(first_iter)->prod;
-
-                                }
+                else if (LLTOKEN(first_iter)->type.val == LEXTYPE_EPSILON) {
+                    for (foll_iter = curr->follows; foll_iter; foll_iter = foll_iter->next) {
+                        for (k = 0; k < n_terminals; k++) {
+                            if (!strcmp(LLTOKEN(foll_iter)->lexeme, ptable->terms[k]->lexeme)) {
+                                ptable->table[i][k] = LLFF(first_iter)->prod;
                             }
                         }
                     }

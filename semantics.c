@@ -159,12 +159,21 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
 
 void sem_start (token_s **curr)
 {
-    
+    sem_statements(curr);
 }
 
 void sem_statements (token_s **curr)
 {
-    
+    switch((*curr)->type.val) {
+        case SEMTYPE_IF:
+            sem_statement(curr);
+            sem_statements(curr);
+        case SEMTYPE_FI:
+        case SEMTYPE_ELSE:
+            break;
+            
+    }
+
 }
 
 void sem_statement (token_s **curr)
