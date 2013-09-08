@@ -1,19 +1,57 @@
 <start>->
-    <expressions>
+    <statements>
   
-    
-<expressions>->
-    <expression>
-    <expressions>
+<statements>->
+    <statement>
+    <statements>
     |
     ε
 
-<expression>->
-    <assignment> | <condition>
-    
-<condition>->
-    if <boolstmt> then <expression> <else>
+<statement>->
+    nonterm . id assignop <expression>
+    |
+    if <expression> then <statements> <else>
 <else>->
-    else <expression>
+    else <statements> fi
+    |
+    fi
 
-<
+<expression> ->
+	<simple_expression> <expression'>
+<expression'> ->
+	relop <simple_expression>
+	|
+	ε
+	
+<simple_expression> ->
+	<sign> <term> <simple_expression'>
+	|
+	<term> <simple_expression'>
+    
+<simple_expression'> ->
+	addop <term> <simple_expression'>
+	|
+	ε
+
+<term> ->
+	<factor> <term'>
+
+<term'> ->
+	mulop <factor> <term'>
+	|
+	ε
+
+<factor> ->
+	id <factor'>
+	|
+	num
+	|
+	not <factor>
+
+<factor'> ->
+	[ <expression> ]
+	|
+	ε
+    
+<sign> ->
+	\+ | \-

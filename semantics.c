@@ -34,9 +34,12 @@
 
 enum semantic_types_ {
     SEMTYPE_IF = LEXTYPE_START,
+    SEMTYPE_THEN,
     SEMTYPE_ELSE,
+    SEMTYPE_FI,
     SEMTYPE_AND,
     SEMTYPE_OR,
+    SEMTYPE_NOT,
     SEMTYPE_OPENPAREN,
     SEMTYPE_CLOSEPAREN,
     SEMTYPE_DOT,
@@ -49,8 +52,84 @@ enum semantic_types_ {
     SEMTYPE_NUM,
     SEMTYPE_RELOP,
     SEMTYPE_ASSIGNOP,
-    SEMTYPE_CROSS
+    SEMTYPE_CROSS,
+    SEMTYPE_ADDOP,
+    SEMTYPE_MULOP
 };
+
+/*
+<start>->
+<statements>
+
+<statements>->
+<statement>
+<statements>
+|
+ε
+
+<statement>->
+nonterm . id assignop <expression>
+|
+if <expression> then <statements> <else>
+<else>->
+else <statements> fi
+|
+fi
+
+<expression> ->
+<simple_expression> <expression'>
+<expression'> ->
+relop <simple_expression>
+|
+ε
+
+<simple_expression> ->
+<sign> <term> <simple_expression'>
+|
+<term> <simple_expression'>
+
+<simple_expression'> ->
+addop <term> <simple_expression'>
+|
+ε
+
+<term> ->
+<factor> <term'>
+
+<term'> ->
+mulop <factor> <term'>
+|
+ε
+
+<factor> ->
+id <factor'>
+|
+num
+|
+not <factor>
+
+<factor'> ->
+[ <expression> ]
+|
+ε
+
+<sign> ->
+\+ | \-*/
+
+static void sem_start (token_s **curr);
+static void sem_statements (token_s **curr);
+static void sem_statement (token_s **curr);
+static void sem_else (token_s **curr);
+static void sem_expression (token_s **curr);
+static void sem_expression_ (token_s **curr);
+static void sem_simple_expression (token_s **curr);
+static void sem_simple_expression_ (token_s **curr);
+static void sem_term (token_s **curr);
+static void sem_term_ (token_s **curr);
+static void sem_factor (token_s **curr);
+static void sem_factor_ (token_s **curr);
+static void sem_sign (token_s **curr);
+
 
 lex_s *semant_init(void)
 {
@@ -76,4 +155,69 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
         printf("%s %d\n", iter->lexeme, iter->type.val);
     
     return i;
+}
+
+void sem_start (token_s **curr)
+{
+    
+}
+
+void sem_statements (token_s **curr)
+{
+    
+}
+
+void sem_statement (token_s **curr)
+{
+    
+}
+
+void sem_else (token_s **curr)
+{
+    
+}
+
+void sem_expression (token_s **curr)
+{
+    
+}
+
+void sem_expression_ (token_s **curr)
+{
+    
+}
+
+void sem_simple_expression (token_s **curr)
+{
+    
+}
+
+void sem_simple_expression_ (token_s **curr)
+{
+    
+}
+
+void sem_term (token_s **curr)
+{
+    
+}
+
+void sem_term_ (token_s **curr)
+{
+    
+}
+
+void sem_factor (token_s **curr)
+{
+    
+}
+
+void sem_factor_ (token_s **curr)
+{
+    
+}
+
+void sem_sign (token_s **curr)
+{
+    
 }

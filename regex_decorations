@@ -1,8 +1,10 @@
 if
-else
 then
+else
+fi
 and
 or
+not
 \(
 \)
 .
@@ -30,3 +32,9 @@ or
 <assignop>-> :=
 
 <cross>-> ⨯
+
+<addop>->
+    \+ {0} | - {1}
+
+<mulop>->
+    \* {0} | \/ {1}

@@ -88,6 +88,7 @@ static void compute_firstfollows (parse_s *parser);
 static bool lllex_contains (llist_s *list, char *lex);
 static void build_parse_table (parse_s *parse, token_s *tokens);
 static void print_parse_table (parsetable_s *ptable, FILE *stream);
+static void print_firfol (parse_s *parse, FILE *stream);
 
 static int match (token_s **curr, token_s *tok);
 static bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index);
@@ -117,9 +118,14 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     parse_s *parse;
     token_s *list, *head;
     llist_s *firsts;
-    FILE *fptable;
+    FILE *fptable, *firfol;
     
     fptable = fopen("parsetable", "w");
+    firfol = fopen("firstfollow", "w");
+    if (!(fptable && firfol)) {
+        perror("File IO Error");
+        exit(EXIT_FAILURE);
+    }
     assert(idtable_lookup(lextok.lex->kwtable, ")").is_found);
 
     semantics = semant_init();
@@ -128,13 +134,14 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     parse = parse_();
     parse->listing = lextok.lex->listing;
     pp_start(parse, &list);
-    compute_firstfollows (parse);
-    firsts = getfirsts (parse, get_pda(parse, parse->start->nterm->lexeme));
-    build_parse_table (parse, head);
-    print_parse_table (parse->parse_table, fptable);
+    compute_firstfollows(parse);
+    firsts = getfirsts(parse, get_pda(parse, parse->start->nterm->lexeme));
+    build_parse_table(parse, head);
+    print_parse_table(parse->parse_table, fptable);
+    print_firfol(parse, firfol);
     fclose(fptable);
+    fclose(firfol);
     match_phase(lextok, head);
-    
     print_listing(semantics->listing, stdout);    
     return parse;
 }
@@ -269,12 +276,12 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
             pp_decoration(parse, curr, pda);
         }
         else {
-            printf("Syntax Error: Expected '->' but got %s\n", (*curr)->lexeme);
+            printf("Syntax Error at line %d: Expected '->' but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
         }
     }
     else {
-        printf("Syntax Error: Expected nonterminal but got %s\n", (*curr)->lexeme);
+        printf("Syntax Error at line %d: Expected nonterminal but got %s\n", (*curr)->lineno, (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
 }
@@ -290,7 +297,7 @@ void pp_nonterminals (parse_s *parse, token_s **curr)
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error: Expected EOL or $ but got %s\n", (*curr)->lexeme);
+            printf("Syntax Error at line %d: Expected EOL or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
             break;
     }
@@ -312,7 +319,7 @@ void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
             production->start->next = token;
             break;
         default:
-            printf("Syntax Error: Expected token but got %s\n", (*curr)->lexeme);
+            printf("Syntax Error at line %d: Expected token but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
             break;
     }
@@ -332,7 +339,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error: Expected '|', annotation, nonterm, or $, but got %s\n", (*curr)->lexeme);
+            printf("Syntax Error at line %d: Expected '|', annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
             break;
     }
@@ -360,7 +367,7 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr)
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error: Expected token, annotation, nonterm, or $, but got %s\n", (*curr)->lexeme);
+            printf("Syntax Error at line %d: Expected token, annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
             break;
     }
@@ -379,7 +386,7 @@ void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda)
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error: Expected annotation, nonterm, or $, but got %s\n", (*curr)->lexeme);
+            printf("Syntax Error at line %d: Expected annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
             break;
     }
@@ -811,6 +818,29 @@ void print_parse_table (parsetable_s *ptable, FILE *stream)
     }
     fprintf(stream, "\n");
 }
+
+void print_firfol (parse_s *parse, FILE *stream)
+{
+    llist_s *iter;
+    pda_s *curr;
+    hrecord_s *hcurr;
+    hashiterator_s *hiter;
+    
+    hiter = hashiterator_(parse->phash);
+    for (hcurr = hashnext(hiter); hcurr; hcurr = hashnext(hiter)) {
+        curr = hcurr->data;
+        fprintf(stream, "%s:\n", curr->nterm->lexeme);
+        fprintf(stream, "firsts:\n\t");
+        for (iter = curr->firsts; iter; iter = iter->next)
+            fprintf(stream, "%s\t", LLTOKEN(iter)->lexeme);
+        fprintf(stream, "\nfollows:\n\t");
+        for (iter = curr->follows; iter; iter = iter->next)
+            fprintf(stream, "%s\t", LLTOKEN(iter)->lexeme);
+        fprintf(stream, "\n\n");
+    }
+    free(hiter);
+}
+
 
 void parse (parse_s *parse, lextok_s lex)
 {

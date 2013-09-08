@@ -259,7 +259,7 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 break;
 default_:
             default:
-                if (buf[i] <= ' ')
+                if (isspace(buf[i]))
                     break;
                 for (bpos = 0, j = LEXATTR_CHARDIG; buf[i] > ' ' && buf[i] != EOF; bpos++, i++)
                 {
@@ -283,11 +283,6 @@ default_:
                             }
                             i--;
                             goto doublebreak_;
-                        default:
-                            if (buf[i] >= 0x80)
-                                for(;;)printf("%c %d\n", buf[i], buf[i]);
-
-                            break;
                     }
                     if (buf[i] == '\\')
                         i++;
