@@ -133,11 +133,9 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     build_parse_table (parse, head);
     print_parse_table (parse->parse_table, fptable);
     fclose(fptable);
-    match_phase (lextok, head);
+    match_phase(lextok, head);
     
-    print_listing(semantics->listing, stdout);
-    puts("\n\n");
-
+    print_listing(semantics->listing, stdout);    
     return parse;
 }
 

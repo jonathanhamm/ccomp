@@ -18,7 +18,12 @@
 	
 <dec> ->
 	<subprogram_declarations>
-	{}
+	{
+        if <subprogram_declarations>.type = 4 then 
+            <subprogram_declarations>.type = 32;
+        else
+            derp;
+    }
 	|
 	ε
 

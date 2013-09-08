@@ -1,0 +1,19 @@
+<start>->
+    <expressions>
+  
+    
+<expressions>->
+    <expression>
+    <expressions>
+    |
+    ε
+
+<expression>->
+    <assignment> | <condition>
+    
+<condition>->
+    if <boolstmt> then <expression> <else>
+<else>->
+    else <expression>
+
+<
