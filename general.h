@@ -104,6 +104,8 @@ extern inline void hiterator_reset (hashiterator_s *iterator);
 extern uint16_t basic_hashf(void *key);
 extern bool basic_isequalf(void *key1, void *key2);
 extern uint16_t pjw_hashf(void *key);
+extern bool str_isequalf(void *key1, void *key2);
+
 
 extern inline linetable_s *linetable_s_(void);
 extern void addline(linetable_s **linelist_ptr, char *line);

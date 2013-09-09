@@ -7,6 +7,7 @@
  */
 
 #include "general.h"
+#include "lex.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -324,6 +325,17 @@ uint16_t pjw_hashf(void *key)
     }
     
     return (uint16_t)(h % HTABLE_SIZE);
+}
+
+bool str_isequalf(void *key1, void *key2)
+{
+    int i;
+    
+    for (i = 0; i < (MAX_LEXLEN + 1) / sizeof(uint64_t); i++) {
+        if (((uint64_t *)key1)[i] != ((uint64_t *)key2)[i])
+            return false;
+    }
+    return true;
 }
 
 inline linetable_s *linetable_s_(void)

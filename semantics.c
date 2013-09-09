@@ -13,13 +13,13 @@
 #include <stdlib.h>
 
 #define REGEX_DECORATIONS_FILE "regex_decorations"
-#define MACHID_START            5000
+#define MACHID_START            36
 
 #define ATT_TNUM    1
 #define ATT_TSTR    2
 
 enum semantic_types_ {
-    SEMTYPE_IF = LEXTYPE_START,
+    SEMTYPE_IF = LEXID_START+1,
     SEMTYPE_THEN,
     SEMTYPE_ELSE,
     SEMTYPE_FI,
@@ -35,14 +35,13 @@ enum semantic_types_ {
     SEMTYPE_CLOSEBRACKET,
     SEMTYPE_ID,
     /*gap for id types*/
-    SEMTYPE_NONTERM,
+    SEMTYPE_NONTERM = MACHID_START,
     SEMTYPE_NUM,
     SEMTYPE_RELOP,
     SEMTYPE_ASSIGNOP,
     SEMTYPE_CROSS,
     SEMTYPE_ADDOP,
     SEMTYPE_MULOP,
-    SEMTYPE_EOF,
 };
 
 typedef struct att_s att_s;
@@ -54,11 +53,6 @@ struct att_s
         void *pdata;
         intptr_t idata;
     };
-};
-
-struct attr_s
-{
-    hash_s *table;
 };
 
 static void sem_start (token_s **curr);
@@ -77,7 +71,22 @@ static void sem_sign (token_s **curr);
 static void sem_match (token_s **curr, int type);
 
 static att_s *att_s_ (void *data, unsigned tid);
-static void attadd (hash_s *table, char *id, void *data);
+static void attadd (semantics_s *s, char *id, void *data);
+
+semantics_s *semantics_s_(char *id)
+{
+    semantics_s *s;
+    
+    s = malloc(sizeof(*s));
+    if (!s) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    s->id = id;
+    s->table = hash_(pjw_hashf, str_isequalf);
+    s->child = NULL;
+    return s;
+}
 
 lex_s *semant_init(void)
 {
@@ -98,7 +107,7 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
     *lineno += ltok.lines;
 
     token_s *iter;
-    puts("\n\ntokens:\n");
+    printf("\n\ntokens %d:\n", SEMTYPE_NONTERM);
     for(iter =  ltok.tokens; iter; iter = iter->next)
         printf("%s %d\n", iter->lexeme, iter->type.val);
     
@@ -119,7 +128,7 @@ void sem_statements (token_s **curr)
             sem_statements(curr);
         case SEMTYPE_FI:
         case SEMTYPE_ELSE:
-        case SEMTYPE_EOF:
+        case LEXTYPE_EOF:
             break;
         default:
             printf("Syntax Error at line %d: Expected if nonterm fi else or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -196,7 +205,7 @@ void sem_expression_ (token_s **curr)
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
-        case SEMTYPE_EOF:
+        case LEXTYPE_EOF:
             break;
         default:
             printf("Syntax Error at line %d: Expected relop ] fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -238,7 +247,7 @@ void sem_simple_expression_ (token_s **curr)
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
-        case SEMTYPE_EOF:
+        case LEXTYPE_EOF:
             break;
         default:
             printf("Syntax Error at line %d: Expected + - ] = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -268,7 +277,7 @@ void sem_term_ (token_s **curr)
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
-        case SEMTYPE_EOF:
+        case LEXTYPE_EOF:
             break;
         default:
             printf("Syntax Error at line %d: Expected * / ] + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -313,7 +322,7 @@ void sem_factor_ (token_s **curr)
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
-        case SEMTYPE_EOF:
+        case LEXTYPE_EOF:
             break;
         default:
             printf("Syntax Error at line %d: Expected [ ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -357,7 +366,7 @@ att_s *att_s_ (void *data, unsigned tid)
     return att;
 }
 
-void attadd (hash_s *table, char *id, void *data)
+void attadd (semantics_s *s, char *id, void *data)
 {
-    hashinsert_(table, id, data);
+    hashinsert_(s->table, id, data);
 }

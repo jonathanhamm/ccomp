@@ -24,7 +24,7 @@ enum term_args_ {
 };
 
 #define DEFAULT_REGEX   "regex_pascal"
-#define DEFAULT_CFG     "cfgdec_grammar"
+#define DEFAULT_CFG     "cfg_pascal"
 #define DEFAULT_SOURCE  "samples/workingtest"
 
 #define COMP_HELP       "Usage: \n" \

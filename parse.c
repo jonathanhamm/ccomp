@@ -99,7 +99,6 @@ static char *make_synerr (pda_s *pda, token_s **curr);
 static void panic_recovery (llist_s *follow, token_s **curr);
 
 uint16_t str_hashf (void *key);
-bool str_isequalf(void *key1, void *key2);
 
 void printpda(pda_s *start)
 {
@@ -1063,15 +1062,4 @@ bool hash_pda (parse_s *parser, char *name, pda_s *pda)
 uint16_t str_hashf (void *key)
 {
     return *(uint64_t *)key % HTABLE_SIZE;
-}
-
-bool str_isequalf(void *key1, void *key2)
-{
-    int i;
-    
-    for (i = 0; i < (MAX_LEXLEN + 1) / sizeof(uint64_t); i++) {
-        if (((uint64_t *)key1)[i] != ((uint64_t *)key2)[i])
-            return false;
-    }
-    return true;
 }

@@ -14,7 +14,7 @@
 #include "general.h"
 
 enum lex_attr_ {
-    LEXATTR_NUM = 0,
+    LEXATTR_NUM,
     LEXATTR_WORD,
     LEXATTR_EQU,
     LEXATTR_COMMA,
@@ -22,7 +22,7 @@ enum lex_attr_ {
 };
 
 enum lex_types_ {
-    LEXTYPE_ERROR = 0,
+    LEXTYPE_ERROR,
     LEXTYPE_TERM,
     LEXTYPE_EOL,
     LEXTYPE_UNION,
