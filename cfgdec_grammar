@@ -24,7 +24,7 @@
 	ε
 	
 <simple_expression> ->
-	<sign> <term> <simple_expression'>
+	<sign> <simple_expression>
 	|
 	<term> <simple_expression'>
     
