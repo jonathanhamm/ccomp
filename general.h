@@ -96,6 +96,7 @@ extern size_t nlstrlen(const char *str);
 
 extern hash_s *hash_(hash_f hashf, isequal_f isequalf);
 extern bool hashinsert (hash_s *hash, void *key, void *data);
+extern void hashinsert_ (hash_s *hash, void *key, void *data);
 extern void *hashlookup (hash_s *hash, void *key);
 extern hashiterator_s *hashiterator_(hash_s *hash);
 extern hrecord_s *hashnext (hashiterator_s *iterator);

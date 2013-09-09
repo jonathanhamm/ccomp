@@ -15,6 +15,9 @@
 #define REGEX_DECORATIONS_FILE "regex_decorations"
 #define MACHID_START            5000
 
+#define ATT_TNUM    1
+#define ATT_TSTR    2
+
 enum semantic_types_ {
     SEMTYPE_IF = LEXTYPE_START,
     SEMTYPE_THEN,
@@ -42,6 +45,22 @@ enum semantic_types_ {
     SEMTYPE_EOF,
 };
 
+typedef struct att_s att_s;
+
+struct att_s
+{
+    unsigned tid;
+    union {
+        void *pdata;
+        intptr_t idata;
+    };
+};
+
+struct attr_s
+{
+    hash_s *table;
+};
+
 static void sem_start (token_s **curr);
 static void sem_statements (token_s **curr);
 static void sem_statement (token_s **curr);
@@ -56,6 +75,9 @@ static void sem_factor (token_s **curr);
 static void sem_factor_ (token_s **curr);
 static void sem_sign (token_s **curr);
 static void sem_match (token_s **curr, int type);
+
+static att_s *att_s_ (void *data, unsigned tid);
+static void attadd (hash_s *table, char *id, void *data);
 
 lex_s *semant_init(void)
 {
@@ -319,4 +341,23 @@ void sem_match (token_s **curr, int type)
         printf("Syntax Error at line %d: Got %s\n", (*curr)->lineno, (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
+}
+
+att_s *att_s_ (void *data, unsigned tid)
+{
+    att_s *att;
+    
+    att = malloc(sizeof(*att));
+    if (!att) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    att->tid = tid;
+    att->pdata = data;
+    return att;
+}
+
+void attadd (hash_s *table, char *id, void *data)
+{
+    hashinsert_(table, id, data);
 }

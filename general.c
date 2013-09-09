@@ -218,6 +218,32 @@ bool hashinsert (hash_s *hash, void *key, void *data)
     return true;
 }
 
+void hashinsert_ (hash_s *hash, void *key, void *data)
+{
+    hrecord_s **entry, *new, *iter;
+    
+    entry = &hash->table[hash->hash(key)];
+    if (*entry) {
+        for (iter = *entry; iter; iter = iter->next) {
+            if (hash->isequal(iter->key, key)) {
+                iter->data = data;
+                return;
+            }
+        }
+    }
+    new = malloc(sizeof(*new));
+    if (!new) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    new->key = key;
+    new->data = data;
+    new->next = *entry;
+    *entry = new;
+    hash->indices |= (1llu << entry - hash->table);
+    hash->nitems++;
+}
+
 void *hashlookup (hash_s *hash, void *key)
 {
     hrecord_s **entry, *iter;
