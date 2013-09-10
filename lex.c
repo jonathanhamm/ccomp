@@ -1385,6 +1385,8 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
             buf++;
     }
     addtok(&tlist, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT);
+    if (!head)
+        head = tlist;
     hashname(lex, LEXTYPE_EOF, "$");
     return (lextok_s){.lex = lex, .lines = lineno, .tokens = head};
 }

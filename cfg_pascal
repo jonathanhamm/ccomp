@@ -4,7 +4,7 @@
 	<compound_statement>
 	.
 	{
-        bob := derp
+        <bob>.derp := derp
 	}        
 
 <program'> ->
@@ -20,9 +20,10 @@
 	<subprogram_declarations>
 	{
         if <subprogram_declarations>.type = 4 then 
-            <subprogram_declarations>.type = 32;
+            <subprogram_declarations>.type := 32
         else
-            derp;
+            derp
+        fi
     }
 	|
 	ε
@@ -176,10 +177,10 @@
 
 <factor> ->
 	id <factor'>
-    { <factor>.type := id.array.type ⨯ 33}
+    { <factor>.type := <omg>.z}
 	|
 	num
-    { <factor>.type := num.type}
+    { <factor>.type := <derp>.x}
 	|
 	\( <expression> \)
     { 
@@ -187,7 +188,7 @@
     }
 	|
 	not <factor>
-    { <factor________________________________________>.type := <factor1>.type }
+    { <factor__________>.type := <factor1>.type }
 <factor'> ->
 	[ <expression> ]
     { <factor'>.type := <expression>.type }

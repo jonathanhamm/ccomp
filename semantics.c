@@ -13,7 +13,7 @@
 #include <stdlib.h>
 
 #define REGEX_DECORATIONS_FILE "regex_decorations"
-#define MACHID_START            36
+#define MACHID_START            35
 
 #define ATT_TNUM    1
 #define ATT_TSTR    2
@@ -33,9 +33,9 @@ enum semantic_types_ {
     SEMTYPE_SEMICOLON,
     SEMTYPE_OPENBRACKET,
     SEMTYPE_CLOSEBRACKET,
-    SEMTYPE_ID,
     /*gap for id types*/
-    SEMTYPE_NONTERM = MACHID_START,
+    SEMTYPE_ID = MACHID_START,
+    SEMTYPE_NONTERM,
     SEMTYPE_NUM,
     SEMTYPE_RELOP,
     SEMTYPE_ASSIGNOP,
@@ -67,6 +67,8 @@ static void sem_term (token_s **curr);
 static void sem_term_ (token_s **curr);
 static void sem_factor (token_s **curr);
 static void sem_factor_ (token_s **curr);
+static void sem_idsuffix (token_s **curr);
+static void sem_dot (token_s **curr);
 static void sem_sign (token_s **curr);
 static void sem_match (token_s **curr, int type);
 
@@ -97,20 +99,19 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
 {
     uint32_t i;
     lextok_s ltok;
+    token_s *iter;
     static unsigned anlineno = 0;
         
     for (i = 1; buf[i] != '}'; i++);
     buf[i] = EOF;
     
+    addtok(tlist, "generated {", *lineno, LEXTYPE_ANNOTATE, LEXATTR_DEFAULT);
     ltok = lexf(data, &buf[1], anlineno, true);
     anlineno = ltok.lines;
     *lineno += ltok.lines;
-
-    token_s *iter;
-    printf("\n\ntokens %d:\n", SEMTYPE_NONTERM);
-    for(iter =  ltok.tokens; iter; iter = iter->next)
-        printf("%s %d\n", iter->lexeme, iter->type.val);
-    
+    (*tlist)->next = ltok.tokens;
+    for(iter = ltok.tokens; iter->next; iter = iter->next);
+    *tlist = iter;
     return i;
 }
 
@@ -132,7 +133,7 @@ void sem_statements (token_s **curr)
             break;
         default:
             printf("Syntax Error at line %d: Expected if nonterm fi else or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
     }
 
 }
@@ -142,8 +143,11 @@ void sem_statement (token_s **curr)
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
             *curr = (*curr)->next;
+            printf("matching dot type\n");
             sem_match(curr, SEMTYPE_DOT);
+            printf("matching id type %d %d\n", SEMTYPE_ID, (*curr)->type.val);
             sem_match(curr, SEMTYPE_ID);
+            printf("matching assignop type\n");
             sem_match(curr, SEMTYPE_ASSIGNOP);
             sem_expression(curr);
             break;
@@ -183,6 +187,7 @@ void sem_expression (token_s **curr)
         case SEMTYPE_NOT:
         case SEMTYPE_NUM:
         case SEMTYPE_ID:
+        case SEMTYPE_NONTERM:
             sem_simple_expression(curr);
             sem_expression_(curr);
             break;
@@ -209,7 +214,7 @@ void sem_expression_ (token_s **curr)
             break;
         default:
             printf("Syntax Error at line %d: Expected relop ] fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
             
     }
 }
@@ -224,11 +229,12 @@ void sem_simple_expression (token_s **curr)
         case SEMTYPE_NOT:
         case SEMTYPE_NUM:
         case SEMTYPE_ID:
+        case SEMTYPE_NONTERM:
             sem_term(curr);
             break;
         default:
             printf("Syntax Error at line %d: Expected + - not number or identifier but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
     }
 }
 
@@ -251,7 +257,7 @@ void sem_simple_expression_ (token_s **curr)
             break;
         default:
             printf("Syntax Error at line %d: Expected + - ] = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
     }
 }
 
@@ -281,7 +287,7 @@ void sem_term_ (token_s **curr)
             break;
         default:
             printf("Syntax Error at line %d: Expected * / ] + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
     }
 }
 
@@ -290,7 +296,11 @@ void sem_factor (token_s **curr)
     switch((*curr)->type.val) {
         case SEMTYPE_ID:
             *curr = (*curr)->next;
-            sem_factor_(curr);
+            sem_idsuffix(curr);
+            break;
+        case SEMTYPE_NONTERM:
+            *curr = (*curr)->next;
+            sem_idsuffix(curr);
             break;
         case SEMTYPE_NUM:
             *curr = (*curr)->next;
@@ -300,8 +310,8 @@ void sem_factor (token_s **curr)
             sem_factor(curr);
             break;
         default:
-            printf("Syntax Error at line %d: Expected identifier number or not but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            printf("Syntax Error at line %d: Expected identifier nonterm number or not but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            //exit(EXIT_FAILURE);
     }
 }
 
@@ -322,13 +332,45 @@ void sem_factor_ (token_s **curr)
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
+        case SEMTYPE_DOT:
         case LEXTYPE_EOF:
             break;
         default:
             printf("Syntax Error at line %d: Expected [ ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+          //  exit(EXIT_FAILURE);
     }
 }
+
+void sem_idsuffix (token_s **curr)
+{
+    sem_factor_(curr);
+    sem_dot(curr);
+}
+
+void sem_dot (token_s **curr)
+{
+    switch((*curr)->type.val) {
+        case SEMTYPE_DOT:
+            *curr = (*curr)->next;
+            sem_match(curr, SEMTYPE_ID);
+            break;
+        case SEMTYPE_CLOSEBRACKET:
+        case SEMTYPE_MULOP:
+        case SEMTYPE_ADDOP:
+        case SEMTYPE_RELOP:
+        case SEMTYPE_FI:
+        case SEMTYPE_ELSE:
+        case SEMTYPE_THEN:
+        case SEMTYPE_IF:
+        case SEMTYPE_NONTERM:
+        case LEXTYPE_EOF:
+            break;
+        default:
+            printf("Syntax Error at line %d: Expected . ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            //exit(EXIT_FAILURE);
+    }
+}
+
 
 void sem_sign (token_s **curr)
 {
@@ -338,7 +380,7 @@ void sem_sign (token_s **curr)
     }
     else {
         printf("Syntax Error at line %d: Expected + or - but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
     }
 }
 
@@ -348,7 +390,7 @@ void sem_match (token_s **curr, int type)
         *curr = (*curr)->next;
     else {
         printf("Syntax Error at line %d: Got %s\n", (*curr)->lineno, (*curr)->lexeme);
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
     }
 }
 
@@ -359,7 +401,7 @@ att_s *att_s_ (void *data, unsigned tid)
     att = malloc(sizeof(*att));
     if (!att) {
         perror("Memory Allocation Error");
-        exit(EXIT_FAILURE);
+       // exit(EXIT_FAILURE);
     }
     att->tid = tid;
     att->pdata = data;

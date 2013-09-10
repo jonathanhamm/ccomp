@@ -42,7 +42,9 @@
 	ε
 
 <factor> ->
-	id <factor'>
+	id <idsuffix>
+    |
+    nonterm  <idsuffix>
 	|
 	num
 	|
@@ -52,6 +54,14 @@
 	[ <expression> ]
 	|
 	ε
-    
+
+<idsuffix> ->
+    <factor'> <dot>
+
+<dot> ->
+    . id 
+    |
+    ε
+
 <sign> ->
 	\+ | \-

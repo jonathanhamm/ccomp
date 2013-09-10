@@ -56,6 +56,7 @@ struct tfind_s
     token_s *token;
 };
 
+static token_s *nexttoken(token_s **curr);
 static void match_phase (lextok_s regex, token_s *cfg);
 static tfind_s findtok(mach_s *mlist, char *lexeme);
 static parse_s *parse_(void);
@@ -142,8 +143,18 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     fclose(fptable);
     fclose(firfol);
     match_phase(lextok, head);
-    print_listing(semantics->listing, stdout);    
+    print_listing(semantics->listing, stdout);
+    printf("\n\n");
     return parse;
+}
+
+token_s *nexttoken(token_s **curr)
+{
+    *curr = (*curr)->next;
+    if ((*curr)->type.val == LEXTYPE_ANNOTATE) {
+        
+    }
+    return *curr;
 }
 
 void match_phase (lextok_s regex, token_s *cfg)
@@ -833,8 +844,7 @@ void print_firfol (parse_s *parse, FILE *stream)
     hiter = hashiterator_(parse->phash);
     for (hcurr = hashnext(hiter); hcurr; hcurr = hashnext(hiter)) {
         curr = hcurr->data;
-        fprintf(stream, "%s:\n", curr->nterm->lexeme);
-        fprintf(stream, "firsts:\n\t");
+        fprintf(stream, "%s:\nfirsts:\n\t", curr->nterm->lexeme);
         for (iter = curr->firsts; iter; iter = iter->next)
             fprintf(stream, "%s\t", LLTOKEN(iter)->lexeme);
         fprintf(stream, "\nfollows:\n\t");
