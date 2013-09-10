@@ -49,6 +49,8 @@
 	num
 	|
 	not <factor>
+    |
+    \( <expression> \)
 
 <factor'> ->
 	[ <expression> ]

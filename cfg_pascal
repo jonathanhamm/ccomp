@@ -9,7 +9,9 @@
 
 <program'> ->
 	<declarations> <dec>
-	{<_________________________________>}             
+	{
+        <program'>.type := (a.num - b)
+    }
 	|
 	<subprogram_declarations>
 	{}

@@ -277,19 +277,8 @@ sem_else_s sem_else (token_s **curr)
 
 sem_expression_s sem_expression (token_s **curr)
 {
-    switch((*curr)->type.val) {
-        case SEMTYPE_ADDOP:
-        case SEMTYPE_NOT:
-        case SEMTYPE_NUM:
-        case SEMTYPE_ID:
-        case SEMTYPE_NONTERM:
-            sem_simple_expression(curr);
-            sem_expression_(curr);
-            break;
-        default:
-            printf("Syntax Error at line %d: Expected addop not num or id but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            break;
-    }
+    sem_simple_expression(curr);
+    sem_expression_(curr);
 }
 
 sem_expression__s sem_expression_ (token_s **curr)
@@ -305,10 +294,12 @@ sem_expression__s sem_expression_ (token_s **curr)
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
+        case SEMTYPE_CLOSEPAREN:
         case LEXTYPE_EOF:
             break;
         default:
             printf("Syntax Error at line %d: Expected relop ] fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            asm("hlt");
             //exit(EXIT_FAILURE);
             
     }
@@ -318,14 +309,16 @@ sem_simple_expression_s sem_simple_expression (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
-            *curr = (*curr)->next;
+            sem_sign(curr);
             sem_simple_expression(curr);
             break;
         case SEMTYPE_NOT:
         case SEMTYPE_NUM:
         case SEMTYPE_ID:
         case SEMTYPE_NONTERM:
+        case SEMTYPE_OPENPAREN:
             sem_term(curr);
+            sem_simple_expression_(curr);
             break;
         default:
             printf("Syntax Error at line %d: Expected + - not number or identifier but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -348,6 +341,7 @@ sem_simple_expression__s sem_simple_expression_ (token_s **curr)
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
+        case SEMTYPE_CLOSEPAREN:
         case LEXTYPE_EOF:
             break;
         default:
@@ -378,6 +372,7 @@ sem_term__s sem_term_ (token_s **curr)
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
+        case SEMTYPE_CLOSEPAREN:
         case LEXTYPE_EOF:
             break;
         default:
@@ -403,6 +398,11 @@ sem_factor_s sem_factor (token_s **curr)
         case SEMTYPE_NOT:
             *curr = (*curr)->next;
             sem_factor(curr);
+            break;
+        case SEMTYPE_OPENPAREN:
+            *curr = (*curr)->next;
+            sem_expression(curr);
+            sem_match(curr, SEMTYPE_CLOSEPAREN);
             break;
         default:
             printf("Syntax Error at line %d: Expected identifier nonterm number or not but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -430,6 +430,7 @@ sem_factor__s sem_factor_ (token_s **curr)
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_DOT:
+        case SEMTYPE_CLOSEPAREN:
         case LEXTYPE_EOF:
             break;
         default:
@@ -467,6 +468,7 @@ sem_dot_s sem_dot (token_s **curr)
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
+        case SEMTYPE_CLOSEPAREN:
         case LEXTYPE_EOF:
             sem_dot.id = NULL;
             break;
