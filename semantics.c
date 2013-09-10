@@ -55,7 +55,6 @@ struct att_s
     };
 };
 
-static void sem_start (token_s **curr);
 static void sem_statements (token_s **curr);
 static void sem_statement (token_s **curr);
 static void sem_else (token_s **curr);
@@ -104,20 +103,22 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
         
     for (i = 1; buf[i] != '}'; i++);
     buf[i] = EOF;
-    
+        
     addtok(tlist, "generated {", *lineno, LEXTYPE_ANNOTATE, LEXATTR_DEFAULT);
     ltok = lexf(data, &buf[1], anlineno, true);
     anlineno = ltok.lines;
     *lineno += ltok.lines;
     (*tlist)->next = ltok.tokens;
-    for(iter = ltok.tokens; iter->next; iter = iter->next);
-    *tlist = iter;
+    ltok.tokens->prev = *tlist;
+    while ((*tlist)->next)
+        *tlist = (*tlist)->next;
     return i;
 }
 
 void sem_start (token_s **curr)
 {
     sem_statements(curr);
+    sem_match(curr, LEXTYPE_EOF);
 }
 
 void sem_statements (token_s **curr)
@@ -169,7 +170,8 @@ void sem_else (token_s **curr)
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_expression(curr);
+            sem_statements(curr);
+            sem_match(curr, SEMTYPE_FI);
             break;
         case SEMTYPE_FI:
             *curr = (*curr)->next;

@@ -22,7 +22,7 @@
         if <subprogram_declarations>.type = 4 then 
             <subprogram_declarations>.type := 32
         else
-            derp
+            <derp>.haha := 23
         fi
     }
 	|
