@@ -15,6 +15,9 @@
 #define REGEX_DECORATIONS_FILE "regex_decorations"
 #define MACHID_START            35
 
+#define SEMSIGN_POS 0
+#define SEMSIGN_NEG 1
+
 #define ATT_TNUM    1
 #define ATT_TSTR    2
 
@@ -46,6 +49,96 @@ enum semantic_types_ {
 
 typedef struct att_s att_s;
 
+/* Return Structures */
+typedef struct sem_statements_s sem_statements_s;
+typedef struct sem_statement_s sem_statement_s;
+typedef struct sem_else_s sem_else_s;
+typedef struct sem_expression_s sem_expression_s;
+typedef struct sem_expression__s sem_expression__s;
+typedef struct sem_simple_expression_s sem_simple_expression_s;
+typedef struct sem_simple_expression__s sem_simple_expression__s;
+typedef struct sem_term_s sem_term_s;
+typedef struct sem_term__s sem_term__s;
+typedef struct sem_factor_s sem_factor_s;
+typedef struct sem_factor__s sem_factor__s;
+typedef struct sem_idsuffix_s sem_idsuffix_s;
+typedef struct sem_dot_s sem_dot_s;
+typedef struct sem_sign_s sem_sign_s;
+
+struct sem_statements_s
+{
+    
+};
+
+struct sem_statement_s
+{
+    
+};
+
+struct sem_else_s
+{
+    
+};
+
+struct sem_expression_s
+{
+    bool type;
+    union {
+        double real_;
+        int int_;
+    };
+};
+
+struct sem_expression__s
+{
+    
+};
+
+struct sem_simple_expression_s
+{
+    
+};
+
+struct sem_simple_expression__s
+{
+    
+};
+
+struct sem_term_s
+{
+    
+};
+
+struct sem_term__s
+{
+    
+};
+
+struct sem_factor_s
+{
+    
+};
+
+struct sem_factor__s
+{
+    uint16_t index;;
+};
+
+struct sem_idsuffix_s
+{
+    
+};
+
+struct sem_dot_s
+{
+    char *id;
+};
+
+struct sem_sign_s
+{
+    unsigned value;
+};
+
 struct att_s
 {
     unsigned tid;
@@ -55,21 +148,21 @@ struct att_s
     };
 };
 
-static void sem_statements (token_s **curr);
-static void sem_statement (token_s **curr);
-static void sem_else (token_s **curr);
-static void sem_expression (token_s **curr);
-static void sem_expression_ (token_s **curr);
-static void sem_simple_expression (token_s **curr);
-static void sem_simple_expression_ (token_s **curr);
-static void sem_term (token_s **curr);
-static void sem_term_ (token_s **curr);
-static void sem_factor (token_s **curr);
-static void sem_factor_ (token_s **curr);
-static void sem_idsuffix (token_s **curr);
-static void sem_dot (token_s **curr);
-static void sem_sign (token_s **curr);
-static void sem_match (token_s **curr, int type);
+static sem_statements_s sem_statements (token_s **curr);
+static sem_statement_s sem_statement (token_s **curr);
+static sem_else_s sem_else (token_s **curr);
+static sem_expression_s sem_expression (token_s **curr);
+static sem_expression__s sem_expression_ (token_s **curr);
+static sem_simple_expression_s sem_simple_expression (token_s **curr);
+static sem_simple_expression__s sem_simple_expression_ (token_s **curr);
+static sem_term_s sem_term (token_s **curr);
+static sem_term__s sem_term_ (token_s **curr);
+static sem_factor_s sem_factor (token_s **curr);
+static sem_factor__s sem_factor_ (token_s **curr);
+static sem_idsuffix_s sem_idsuffix (token_s **curr);
+static sem_dot_s sem_dot (token_s **curr);
+static sem_sign_s sem_sign (token_s **curr);
+static bool sem_match (token_s **curr, int type);
 
 static att_s *att_s_ (void *data, unsigned tid);
 static void attadd (semantics_s *s, char *id, void *data);
@@ -121,7 +214,7 @@ void sem_start (token_s **curr)
     sem_match(curr, LEXTYPE_EOF);
 }
 
-void sem_statements (token_s **curr)
+sem_statements_s sem_statements (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_IF:
@@ -139,7 +232,7 @@ void sem_statements (token_s **curr)
 
 }
 
-void sem_statement (token_s **curr)
+sem_statement_s sem_statement (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
@@ -165,7 +258,7 @@ void sem_statement (token_s **curr)
     }
 }
 
-void sem_else (token_s **curr)
+sem_else_s sem_else (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
@@ -182,7 +275,7 @@ void sem_else (token_s **curr)
     }
 }
 
-void sem_expression (token_s **curr)
+sem_expression_s sem_expression (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
@@ -199,7 +292,7 @@ void sem_expression (token_s **curr)
     }
 }
 
-void sem_expression_ (token_s **curr)
+sem_expression__s sem_expression_ (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_RELOP:
@@ -221,7 +314,7 @@ void sem_expression_ (token_s **curr)
     }
 }
 
-void sem_simple_expression (token_s **curr)
+sem_simple_expression_s sem_simple_expression (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
@@ -240,7 +333,7 @@ void sem_simple_expression (token_s **curr)
     }
 }
 
-void sem_simple_expression_ (token_s **curr)
+sem_simple_expression__s sem_simple_expression_ (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
@@ -263,13 +356,13 @@ void sem_simple_expression_ (token_s **curr)
     }
 }
 
-void sem_term (token_s **curr)
+sem_term_s sem_term (token_s **curr)
 {
     sem_factor(curr);
     sem_term_(curr);
 }
 
-void sem_term_ (token_s **curr)
+sem_term__s sem_term_ (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_MULOP:
@@ -293,7 +386,7 @@ void sem_term_ (token_s **curr)
     }
 }
 
-void sem_factor (token_s **curr)
+sem_factor_s sem_factor (token_s **curr)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ID:
@@ -317,8 +410,10 @@ void sem_factor (token_s **curr)
     }
 }
 
-void sem_factor_ (token_s **curr)
+sem_factor__s sem_factor_ (token_s **curr)
 {
+    sem_factor__s sem_factor_;
+    
     switch((*curr)->type.val) {
         case SEMTYPE_OPENBRACKET:
             *curr = (*curr)->next;
@@ -339,21 +434,28 @@ void sem_factor_ (token_s **curr)
             break;
         default:
             printf("Syntax Error at line %d: Expected [ ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-          //  exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);
     }
 }
 
-void sem_idsuffix (token_s **curr)
+sem_idsuffix_s sem_idsuffix (token_s **curr)
 {
+    sem_idsuffix_s sem_idsuffix;
+    
     sem_factor_(curr);
     sem_dot(curr);
+    
+    return sem_idsuffix;
 }
 
-void sem_dot (token_s **curr)
+sem_dot_s sem_dot (token_s **curr)
 {
+    sem_dot_s sem_dot;
+    
     switch((*curr)->type.val) {
         case SEMTYPE_DOT:
             *curr = (*curr)->next;
+            sem_dot.id = (*curr)->lexeme;
             sem_match(curr, SEMTYPE_ID);
             break;
         case SEMTYPE_CLOSEBRACKET:
@@ -366,34 +468,38 @@ void sem_dot (token_s **curr)
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case LEXTYPE_EOF:
+            sem_dot.id = NULL;
             break;
         default:
             printf("Syntax Error at line %d: Expected . ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            //exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);
     }
+    return sem_dot;
 }
 
-
-void sem_sign (token_s **curr)
+sem_sign_s sem_sign (token_s **curr)
 {
+    sem_sign_s sem_sign;
+    
     if ((*curr)->type.val == SEMTYPE_ADDOP) {
+        sem_sign.value = (*curr)->type.attribute;
         *curr = (*curr)->next;
-        
+        return sem_sign;
     }
     else {
         printf("Syntax Error at line %d: Expected + or - but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-        //exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 }
 
-void sem_match (token_s **curr, int type)
+bool sem_match (token_s **curr, int type)
 {
-    if ((*curr)->type.val == type)
+    if ((*curr)->type.val == type) {
         *curr = (*curr)->next;
-    else {
-        printf("Syntax Error at line %d: Got %s\n", (*curr)->lineno, (*curr)->lexeme);
-        //exit(EXIT_FAILURE);
+        return true;
     }
+    printf("Syntax Error at line %d: Got %s\n", (*curr)->lineno, (*curr)->lexeme);
+    return false;
 }
 
 att_s *att_s_ (void *data, unsigned tid)
@@ -403,7 +509,7 @@ att_s *att_s_ (void *data, unsigned tid)
     att = malloc(sizeof(*att));
     if (!att) {
         perror("Memory Allocation Error");
-       // exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     }
     att->tid = tid;
     att->pdata = data;
