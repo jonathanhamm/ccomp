@@ -78,7 +78,7 @@ struct linetable_s
 };
 
 extern unsigned int safe_atoui (char *str);
-
+extern double safe_atod (char *str);
 extern char *readfile (const char *file);
 
 extern llist_s *llist_ (void *iptr);

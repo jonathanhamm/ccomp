@@ -21,10 +21,11 @@
 <dec> ->
 	<subprogram_declarations>
 	{
+        <dec>.value := (4*3*4)+40*(3*2*1)/(4-3.2)
         if <subprogram_declarations>.type = 4 then 
             <subprogram_declarations>.type := 32
         else
-            <derp>.haha := 23
+            <derp>.haha := 23+ not hi
         fi
     }
 	|

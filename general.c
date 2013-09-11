@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #if ((defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__))
     #include <malloc/malloc.h>
@@ -25,12 +26,24 @@ unsigned int safe_atoui (char *str)
 {
     unsigned long i;
     
-    i = strtoul(str, NULL, 10);
+    i = strtoul(str, NULL, FS_INTWIDTH_DEC(UINT_MAX));
     if (i > UINT_MAX) {
-        perror("Specified Attributed out of Range");
+        perror("Specified Attribute out of Range");
         exit(EXIT_FAILURE);
     }
     return (int)i;
+}
+
+double safe_atod (char *str)
+{
+    double d;
+    
+    d = strtod(str, NULL);
+    if(d == HUGE_VAL || d == HUGE_VALF || d == HUGE_VALL ) {
+        perror("Error parsing number");
+        exit(EXIT_FAILURE);
+    }
+    return d;
 }
 
 char *readfile (const char *file)
