@@ -26,12 +26,13 @@ unsigned int safe_atoui (char *str)
 {
     unsigned long i;
     
-    i = strtoul(str, NULL, FS_INTWIDTH_DEC(UINT_MAX));
+    i = strtoul(str, NULL, 10);
     if (i > UINT_MAX) {
         perror("Specified Attribute out of Range");
         exit(EXIT_FAILURE);
     }
-    return (int)i;
+    printf("Test: %lu %u\n", i, (unsigned int)i);
+    return (unsigned int)i;
 }
 
 double safe_atod (char *str)

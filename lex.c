@@ -90,6 +90,7 @@ struct match_s
 
 struct regex_ann_s
 {
+    int *count;
     mach_s *mach;
     llist_s *matchlist;
 };
@@ -135,6 +136,26 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf);
 static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
+
+/*
+ rule1:
+    rule2 | rule3 | rule4 
+ 
+ rule2:
+    nonterm1
+ 
+ rule3:
+    nonterm2
+ 
+ rule4: 
+    nonterm4
+    |
+    rule5
+ 
+ rule5:
+    nonterm5
+ 
+ */
 
 lex_s *buildlex (const char *file)
 {
@@ -586,6 +607,7 @@ regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
             perror("Memory Allocation Error");
             exit(EXIT_FAILURE);
         }
+        reg->count = count;
         reg->mach = lex->machs;
         reg->matchlist = NULL;
         prxa_annotation(curr, reg, (void (*)(token_s **, void *))prxa_regexdef);
@@ -824,7 +846,7 @@ void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback)
 void prxa_regexdef(token_s **curr, regex_ann_s *reg)
 {
     mach_s *mach = reg->mach;
-    
+
     while (ISANNOTATE(curr) && (*curr)->type.attribute != LEXATTR_FAKEEOF) {
         if (!strcasecmp((*curr)->lexeme, "typecount"))
             mach->typecount = true;
@@ -833,6 +855,7 @@ void prxa_regexdef(token_s **curr, regex_ann_s *reg)
             mach->composite = false;
         }
         else if (!strcasecmp((*curr)->lexeme, "definition")) {
+            --*reg->count;
             mach->composite = true;
             mach->attr_id = false;
         }

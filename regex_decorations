@@ -24,8 +24,17 @@ not
 
 <nonterm>-> < (<letter> | _)(<letter> | _ | <digit> | ' )* >
 
-<num>-> <digit> <digit>* (. {1} <digit>+)?
-    
+<numint>{definition}->
+    <digit>+
+
+<numreal>{definition}->
+    <digit>+ . <digit>+
+
+<num>->
+    <numint> {attribute = 0}
+    |
+    <numreal> {attribute = 1}
+
 <relop>->
     = {0} | <> {1} | < {2} | <= {3} | >= {4} | > {5}
 
