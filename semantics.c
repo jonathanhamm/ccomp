@@ -328,11 +328,11 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL) {
                 result.type = ATTYPE_NUMREAL;
-                result.real_ = (double)v1.int_ * v2.real_;
+                result.real_ = v1.int_ * v2.real_;
             }
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT) {
                 result.type = ATTYPE_NUMREAL;
-                result.real_ = v1.real_ * (double)v2.int_;
+                result.real_ = v1.real_ * v2.int_;
             }
             else {
                 result.type = ATTYPE_NUMREAL;
@@ -348,15 +348,15 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 printf("Type Error: String type incompatible with division.\n");
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT) {
                 result.type = ATTYPE_NUMREAL;
-                result.real_ = (double)v1.int_ / (double)v2.int_;
+                result.real_ = v1.int_ / v2.int_;
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL) {
                 result.type = ATTYPE_NUMREAL;
-                result.real_ = (double)v1.int_ / v2.real_;
+                result.real_ = v1.int_ / v2.real_;
             }
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT) {
                 result.type = ATTYPE_NUMREAL;
-                result.real_ = v1.real_ / (double)v2.int_;
+                result.real_ = v1.real_ / v2.int_;
             }
             else {
                 result.type = ATTYPE_NUMREAL;
@@ -376,11 +376,11 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL) {
                 result.type = ATTYPE_NUMREAL;
-                result.real_ = (double)v1.int_ + v2.real_;
+                result.real_ = v1.int_ + v2.real_;
             }
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT) {
                 result.type = ATTYPE_NUMREAL;
-                result.real_ = v1.real_ + (double)v2.int_;
+                result.real_ = v1.real_ + v2.int_;
             }
             else {
                 result.type = ATTYPE_NUMREAL;
@@ -400,11 +400,11 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL) {
                 result.type = ATTYPE_NUMREAL;
-                result.real_ = (double)v1.int_ - v2.real_;
+                result.real_ = v1.int_ - v2.real_;
             }
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT) {
                 result.type = ATTYPE_NUMREAL;
-                result.real_ = v1.real_ - (double)v2.int_;
+                result.real_ = v1.real_ - v2.int_;
             }
             else {
                 result.type = ATTYPE_NUMREAL;
@@ -418,9 +418,9 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ < v2.int_;
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
-                result.int_ = (double)v1.int_ < v2.real_;
+                result.int_ = v1.int_ < v2.real_;
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
-                result.int_ = v1.real_ < (double)v2.int_;
+                result.int_ = v1.real_ < v2.int_;
             else
                 result.int_ = v1.real_ < v2.real_;
             break;
@@ -431,9 +431,9 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ > v2.int_;
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
-                result.int_ = (double)v1.int_ > v2.real_;
+                result.int_ = v1.int_ > v2.real_;
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
-                result.int_ = v1.real_ > (double)v2.int_;
+                result.int_ = v1.real_ > v2.int_;
             else
                 result.int_ = v1.real_ > v2.real_;
             break;
@@ -444,9 +444,9 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ <= v2.int_;
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
-                result.int_ = (double)v1.int_ <= v2.real_;
+                result.int_ = v1.int_ <= v2.real_;
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
-                result.int_ = v1.real_ <= (double)v2.int_;
+                result.int_ = v1.real_ <= v2.int_;
             else
                 result.int_ = v1.real_ <= v2.real_;
             break;
@@ -457,9 +457,9 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ >= v2.int_;
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
-                result.int_ = (double)v1.int_ >= v2.real_;
+                result.int_ = v1.int_ >= v2.real_;
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
-                result.int_ = v1.real_ >= (double)v2.int_;
+                result.int_ = v1.real_ >= v2.int_;
             else
                 result.int_ = v1.real_ >= v2.real_;
             break;
@@ -470,9 +470,9 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ == v2.int_;
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
-                result.int_ = (double)v1.int_ == v2.real_;
+                result.int_ = v1.int_ == v2.real_;
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
-                result.int_ = v1.real_ == (double)v2.int_;
+                result.int_ = v1.real_ == v2.int_;
             else
                 result.int_ = v1.real_ == v2.real_;
             break;
@@ -483,9 +483,9 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ == v2.int_;
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
-                result.int_ = (double)v1.int_ == v2.real_;
+                result.int_ = v1.int_ == v2.real_;
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
-                result.int_ = v1.real_ == (double)v2.int_;
+                result.int_ = v1.real_ == v2.int_;
             else
                 result.int_ = v1.real_ == v2.real_;
             break;
