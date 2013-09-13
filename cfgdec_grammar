@@ -59,9 +59,19 @@
 
 <idsuffix> ->
     <factor'> <dot>
+    |
+    \( <paramlist> \)
 
 <dot> ->
     . id 
+    |
+    ε
+
+<paramlist> ->
+    <expression> <paramlist'>
+
+<paramlist'> ->
+    , <expression>
     |
     ε
 

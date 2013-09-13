@@ -167,7 +167,7 @@ token_s *nexttoken(token_s **curr, pda_s *pda)
         }
         else {
             *curr = (*curr)->next->next;
-            sem_start(curr, &pda->s);
+            sem_start(curr, pda);
             next = *curr;
         }
         assert(next->type.val != LEXTYPE_ANNOTATE);

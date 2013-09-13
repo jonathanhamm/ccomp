@@ -8,6 +8,7 @@
 */
 
 #include "lex.h"
+#include "parse.h"
 #include "semantics.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,6 +75,7 @@ enum semantic_types_ {
 typedef struct att_s att_s;
 
 /* Return Structures */
+typedef struct access_s access_s;
 typedef struct sem_type_s sem_type_s;
 typedef struct sem_statements_s sem_statements_s;
 typedef struct sem_statement_s sem_statement_s;
@@ -89,6 +91,13 @@ typedef struct sem_factor__s sem_factor__s;
 typedef struct sem_idsuffix_s sem_idsuffix_s;
 typedef struct sem_dot_s sem_dot_s;
 typedef struct sem_sign_s sem_sign_s;
+
+struct access_s
+{
+    char *base;
+    unsigned offset;
+    char *attribute;
+};
 
 struct sem_type_s
 {
@@ -151,6 +160,7 @@ struct sem_term__s
 struct sem_factor_s
 {
     sem_type_s value;
+    access_s access;
 };
 
 struct sem_factor__s
@@ -171,7 +181,7 @@ struct sem_idsuffix_s
 
 struct sem_sign_s
 {
-    unsigned value;
+    int value;
 };
 
 struct att_s
@@ -187,6 +197,7 @@ static void print_semtype(sem_type_s value);
 static inline unsigned toaddop(unsigned val);
 static inline unsigned tomulop(unsigned val);
 static inline unsigned torelop(unsigned val);
+static bool check_scope(pda_s *pda, char *lexeme);
 static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
 static sem_statements_s sem_statements (token_s **curr, semantics_s *s);
 static sem_statement_s sem_statement (token_s **curr, semantics_s *s);
@@ -224,7 +235,7 @@ void print_semtype(sem_type_s value)
     }
 }
 
-semantics_s *semantics_s_(char *id)
+semantics_s *semantics_s_(pda_s *pda)
 {
     semantics_s *s;
     
@@ -233,9 +244,8 @@ semantics_s *semantics_s_(char *id)
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
-    s->id = id;
+    s->pda = pda;
     s->table = hash_(pjw_hashf, str_isequalf);
-    s->child = NULL;
     return s;
 }
 
@@ -305,6 +315,22 @@ unsigned torelop(unsigned val)
             assert(false);
             break;
     }
+}
+
+bool check_scope(pda_s *pda, char *lexeme)
+{
+    unsigned i;
+    pnode_s *iter;
+    
+    for (i = 0; i < pda->nproductions; i++) {
+        for (iter = pda->productions[i].start; iter; iter = iter->next) {
+            if (!strcmp(iter->token->lexeme, lexeme))
+                return true;
+        }
+    }
+    for (i = 0; i < pda->s->nchildren; i++)
+        return check_scope(pda->s->children[i]->pda, lexeme);
+    return false;
 }
 
 /* performs basic arithmetic operations with implicit type coercion */
@@ -507,10 +533,10 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     return result;
 }
 
-void sem_start (token_s **curr, semantics_s **s)
+void sem_start (token_s **curr, pda_s *pda)
 {
-    *s = semantics_s_((*curr)->lexeme);
-    sem_statements(curr, *s);
+    pda->s = semantics_s_(pda);
+    sem_statements(curr, pda->s);
     sem_match(curr, LEXTYPE_EOF);
 }
 
@@ -748,8 +774,11 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
         case SEMTYPE_NONTERM:
             factor.value.type = ATTYPE_STR;
             factor.value.str = (*curr)->lexeme;
+            factor.access.base = (*curr)->lexeme;
             *curr = (*curr)->next;
-            sem_idsuffix(curr, s);
+            idsuffix = sem_idsuffix(curr, s);
+            factor.access.offset = idsuffix.factor_.index;
+            factor.access.attribute = idsuffix.dot.id;
             break;
         case SEMTYPE_NUM:
             if (!(*curr)->type.attribute) {
