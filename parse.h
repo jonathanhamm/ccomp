@@ -38,6 +38,7 @@ struct pda_s
     production_s *productions;
     llist_s *firsts;
     llist_s *follows;
+    struct semantics_s *s;
 };
 
 struct production_s

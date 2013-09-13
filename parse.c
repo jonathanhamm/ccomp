@@ -19,6 +19,7 @@
 
 #define INIT_SYNERRSIZE 64
 #define SYNERR_PREFIX "      --Syntax Error at line %u: Expected "
+#define PANIC_NOANNOTATION (void *)curr
 
 #define LLFF(node) ((ffnode_s *)node->ptr)
 #define LLTOKEN(node) (LLFF(node)->token)
@@ -56,7 +57,7 @@ struct tfind_s
     token_s *token;
 };
 
-static token_s *nexttoken(token_s **curr);
+static token_s *nexttoken(token_s **curr, pda_s *pda);
 static void match_phase (lextok_s regex, token_s *cfg);
 static tfind_s findtok(mach_s *mlist, char *lexeme);
 static parse_s *parse_(void);
@@ -69,7 +70,7 @@ static void pp_nonterminal (parse_s *parse, token_s **curr);
 static void pp_nonterminals (parse_s *parse, token_s **curr);
 static void pp_production (parse_s *parse, token_s **curr, pda_s *pda);
 static void pp_productions (parse_s *parse, token_s **curr, pda_s *pda);
-static pnode_s *pp_tokens (parse_s *parse, token_s **curr);
+static pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda);
 static void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda);
 
 static ffnode_s *makeffnode (token_s *token, uint16_t prod);
@@ -149,14 +150,26 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     return parse;
 }
 
-token_s *nexttoken(token_s **curr)
+token_s *nexttoken(token_s **curr, pda_s *pda)
 {
     token_s *next = (*curr)->next;
 
-    if (next->type.val == LEXTYPE_ANNOTATE) {    
-        *curr = (*curr)->next->next;
-        sem_start(curr);
-        next = *curr;
+    if (next->type.val == LEXTYPE_ANNOTATE) {
+        if (!pda) {
+            printf("Error: Misplaced Annotation line %u\n", (*curr)->lineno);
+            assert(false);
+        }
+        else if (pda == PANIC_NOANNOTATION) {
+            do {
+                *curr = (*curr)->next;
+            }
+            while ((*curr)->type.val != LEXTYPE_ANNOTATE);
+        }
+        else {
+            *curr = (*curr)->next->next;
+            sem_start(curr, &pda->s);
+            next = *curr;
+        }
         assert(next->type.val != LEXTYPE_ANNOTATE);
     }
     return next;
@@ -281,16 +294,16 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
     pda_s *pda = NULL;
     
     if ((*curr)->type.val == LEXTYPE_EOL)
-        *curr = nexttoken(curr);
+        *curr = nexttoken(curr, NULL);
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         pda = pda_(*curr);
         if (!hash_pda(parse, (*curr)->lexeme, pda)) {
             printf("Error: Redefinition of production: %s\n", (*curr)->lexeme);
             exit(EXIT_FAILURE);
         }
-        *curr = nexttoken(curr);
+        *curr = nexttoken(curr, pda);
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
-            *curr = nexttoken(curr);
+            *curr = nexttoken(curr, pda);
             pp_production(parse, curr, pda);
             pp_productions(parse, curr, pda);
             pp_decoration(parse, curr, pda);
@@ -310,7 +323,7 @@ void pp_nonterminals (parse_s *parse, token_s **curr)
 {    
     switch ((*curr)->type.val) {
         case LEXTYPE_EOL:
-            *curr = nexttoken(curr);
+            *curr = nexttoken(curr, NULL);
             pp_nonterminal(parse, curr);
             pp_nonterminals(parse, curr);
             break;
@@ -334,8 +347,8 @@ void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
         case LEXTYPE_EPSILON:
             production = addproduction(pda);
             production->start = pnode_(*curr);
-            *curr = nexttoken(curr);
-            token = pp_tokens(parse, curr);
+            *curr = nexttoken(curr, pda);
+            token = pp_tokens(parse, curr, pda);
             production->start->next = token;
             break;
         default:
@@ -349,7 +362,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
 {    
     switch ((*curr)->type.val) {
         case LEXTYPE_UNION:
-            *curr = nexttoken(curr);
+            *curr = nexttoken(curr, pda);
             pp_production(parse, curr, pda);
             pp_productions(parse, curr, pda);
             break;
@@ -365,7 +378,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
     }
 }
 
-pnode_s *pp_tokens (parse_s *parse, token_s **curr)
+pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda)
 {
     pnode_s *pnode = NULL, *token;
     
@@ -374,8 +387,8 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr)
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
             pnode = pnode_(*curr);
-            *curr = nexttoken(curr);
-            token = pp_tokens(parse, curr);
+            *curr = nexttoken(curr, pda);
+            token = pp_tokens(parse, curr, pda);
             if (token) {
                 pnode->next = token;
                 token->prev = pnode;
@@ -399,7 +412,7 @@ void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda)
     switch ((*curr)->type.val) {
         case LEXTYPE_ANNOTATE:
             while ((*curr)->type.val == LEXTYPE_ANNOTATE)
-                *curr = nexttoken(curr);
+                *curr = nexttoken(curr, pda);
             break;
         case LEXTYPE_NONTERM:
         case LEXTYPE_EOL:
@@ -898,7 +911,7 @@ int match(token_s **curr, token_s *tok)
 {
     if ((*curr)->type.val == tok->type.val) {
         if ((*curr)->type.val != LEXTYPE_EOF) {
-            *curr = nexttoken(curr);
+            *curr = nexttoken(curr, NULL);
             return 1;
         }
         return 2;
@@ -930,7 +943,7 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
                     success = false;
                     if ((*curr)->type.val == LEXTYPE_EOF)
                         return false;
-                    *curr = nexttoken(curr);
+                    *curr = nexttoken(curr, pda);
                 }
                 else
                     nonterm(parse, curr, nterm, result);
@@ -951,7 +964,7 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
                     success = false;
                     if ((*curr)->type.val == LEXTYPE_EOF)
                         return false;
-                    *curr = nexttoken(curr);
+                    *curr = nexttoken(curr, pda);
                 }
             }
         }
@@ -1042,7 +1055,7 @@ void panic_recovery (llist_s *follow, token_s **curr)
             if (LLTOKEN(iter)->type.val == (*curr)->type.val)
                 return;
         }
-        *curr = nexttoken(curr);
+        *curr = nexttoken(curr, PANIC_NOANNOTATION);
     }
 }
 

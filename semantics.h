@@ -26,6 +26,6 @@ extern semantics_s *semantics_s_(char *id);
 
 extern lex_s *semant_init(void);
 extern uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data);
-extern void sem_start (token_s **curr);
+extern void sem_start (token_s **curr, semantics_s **s);
 
 #endif
