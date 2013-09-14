@@ -10,7 +10,6 @@
 <program'> ->
 	<declarations> <dec>
 	{
-        <program'>.type := (a.num - b)
     }
 	|
 	<subprogram_declarations>
@@ -180,18 +179,25 @@
 
 <factor> ->
 	id <factor'>
-    { <factor>.type := <omg>.z}
+    { 
+    }
 	|
 	num
-    { <factor>.type := <derp>.x}
+    { 
+        <factor>.value := num.val
+    }
 	|
 	\( <expression> \)
     { 
         <factor>.type := <expression>.type 
+        <factor>.type := bob(1,3,4.23+3)
+        <factor>.value := <expression>.value
     }
 	|
 	not <factor>
-    { <factor__________>.type := <factor1>.type }
+    {
+        <factor>.value := not <factor>.value
+    }
 <factor'> ->
 	[ <expression> ]
     { <factor'>.type := <expression>.type }

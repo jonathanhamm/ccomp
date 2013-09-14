@@ -864,7 +864,7 @@ void prxa_regexdef(token_s **curr, regex_ann_s *reg)
             if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_EQU) {
                 *curr = (*curr)->next;
                 if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_NUM)
-                    mach->lexlen = safe_atoui((*curr)->lexeme);
+                    mach->lexlen = safe_atol((*curr)->lexeme);
                 else {
                     printf("Syntax Error at line %d: Expected number but got %s\n", (*curr)->lineno, (*curr)->lexeme);
                     exit(EXIT_FAILURE);
@@ -885,7 +885,7 @@ void prxa_regexdef(token_s **curr, regex_ann_s *reg)
                             llpush(&reg->matchlist, (*curr)->lexeme);
                             break;
                         case LEXATTR_NUM:
-                            mach->nterm->type.val = safe_atoui((*curr)->lexeme);
+                            mach->nterm->type.val = safe_atol((*curr)->lexeme);
                             break;
                         default:
                             printf("Error: Expected word or number but got %s\n", (*curr)->lexeme);
@@ -967,7 +967,7 @@ void prxa_edgestart(token_s **curr, nfa_edge_s *edge)
                     printf("Error at line %d: Edge attribute value %s assigned more than once.", (*curr)->lineno, (*curr)->lexeme);
                     exit(EXIT_FAILURE);
                 }
-                edge->annotation.attribute = safe_atoui((*curr)->lexeme);
+                edge->annotation.attribute = safe_atol((*curr)->lexeme);
                 *curr = (*curr)->next;
                 break;
         }
@@ -988,7 +988,7 @@ int prxa_expression(token_s **curr, nfa_edge_s *edge)
                 *curr = (*curr)->next;
                 if (ISANNOTATE(curr)) {
                     if ((*curr)->type.attribute == LEXATTR_NUM)
-                        ret = safe_atoui((*curr)->lexeme);
+                        ret = safe_atol((*curr)->lexeme);
                     *curr = (*curr)->next;
                     prxa_expression_(curr, edge);
                 }

@@ -49,6 +49,7 @@ struct production_s
 struct pnode_s
 {
     token_s *token;
+    token_s *matched;
     pnode_s *next;
     pnode_s *prev;
 };

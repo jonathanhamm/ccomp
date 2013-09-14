@@ -77,7 +77,7 @@ struct linetable_s
     ltablerec_s table[];
 };
 
-extern unsigned int safe_atoui (char *str);
+extern long safe_atol (char *str);
 extern double safe_atod (char *str);
 extern char *readfile (const char *file);
 

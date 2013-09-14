@@ -22,17 +22,18 @@
 
 static void printline(char *buf, FILE *stream);
 
-unsigned int safe_atoui (char *str)
+long safe_atol (char *str)
 {
-    unsigned long i;
+    long i;
     
-    i = strtoul(str, NULL, 10);
-    if (i > UINT_MAX) {
+    i = strtol(str, NULL, 10);
+    if (i > INT_MAX) {
         perror("Specified Attribute out of Range");
         exit(EXIT_FAILURE);
     }
-    printf("Test: %lu %u\n", i, (unsigned int)i);
-    return (unsigned int)i;
+    printf("Atoui Test: %lu %u\n", i, (unsigned int)i);
+
+    return i;
 }
 
 double safe_atod (char *str)

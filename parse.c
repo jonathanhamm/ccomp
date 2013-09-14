@@ -93,7 +93,7 @@ static void build_parse_table (parse_s *parse, token_s *tokens);
 static void print_parse_table (parsetable_s *ptable, FILE *stream);
 static void print_firfol (parse_s *parse, FILE *stream);
 
-static int match (token_s **curr, token_s *tok);
+static int match (token_s **curr, pnode_s *p);
 static bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index);
 static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
 static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
@@ -907,9 +907,10 @@ void parse (parse_s *parse, lextok_s lex)
     }
 }
 
-int match(token_s **curr, token_s *tok)
+int match(token_s **curr, pnode_s *p)
 {
-    if ((*curr)->type.val == tok->type.val) {
+    if ((*curr)->type.val == p->token->type.val) {
+        p->matched = *curr;
         if ((*curr)->type.val != LEXTYPE_EOF) {
             *curr = nexttoken(curr, NULL);
             return 1;
@@ -949,7 +950,7 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
                     nonterm(parse, curr, nterm, result);
             }
             else {
-                result = match(curr, pnode->token);
+                result = match(curr, pnode);
                 if (!result) {
                     errsize = sizeof(SYNERR_PREFIX)+FS_INTWIDTH_DEC((*curr)->lineno)+
                                 +strlen(pnode->token->lexeme)+sizeof(" but got ")+strlen((*curr)->lexeme)-3;

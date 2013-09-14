@@ -156,7 +156,7 @@ struct mach_s
     bool    attr_id;
     bool    composite;
     bool    typecount;
-    unsigned lexlen;
+    long    lexlen;
     token_s *nterm;
     nfa_s   *nfa;
     nfa_s   *follow;
