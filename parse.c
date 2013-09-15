@@ -166,9 +166,11 @@ token_s *nexttoken(token_s **curr, pda_s *pda)
             while ((*curr)->type.val != LEXTYPE_ANNOTATE);
         }
         else {
-            *curr = (*curr)->next->next;
-            sem_start(curr, pda);
-            next = *curr;
+            next = next->next;
+            pda->annstart = next;
+            for(; next->type.val != LEXTYPE_EOF; next = next->next);
+            next = next->next;
+            *curr = next;
         }
         assert(next->type.val != LEXTYPE_ANNOTATE);
     }
@@ -188,9 +190,10 @@ void match_phase (lextok_s regex, token_s *cfg)
     }
     for (; cfg; cfg = cfg->next) {
         if (cfg->type.val == LEXTYPE_ANNOTATE) {
-            while (cfg->type.val != LEXTYPE_EOF)
+            do {
                 cfg = cfg->next;
-            cfg = cfg->next;
+            }
+            while (cfg->type.val != LEXTYPE_EOF);
         }
         if (cfg->type.val == LEXTYPE_EPSILON) {
             continue;
@@ -199,12 +202,11 @@ void match_phase (lextok_s regex, token_s *cfg)
         if (tfind.found) 
             cfg->type = tfind.token->type;
         else {
-            
             type = gettype(regex.lex, cfg->lexeme);
             if (type.val != LEXTYPE_ERROR)
                 cfg->type = type;
         }
-        assert(cfg->type.val < 100);
+        //assert(cfg->type.val < 100);
     }
 }
 
@@ -250,6 +252,7 @@ pda_s *pda_(token_s *token)
     pda->nterm = token;
     pda->nproductions = 0;
     pda->productions = NULL;
+    pda->annstart = NULL;
     return pda;
 }
 
@@ -401,7 +404,7 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda)
             break;
         default:
             printf("Syntax Error at line %d: Expected token, annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
             break;
     }
     return pnode;
@@ -420,7 +423,7 @@ void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda)
             break;
         default:
             printf("Syntax Error at line %d: Expected annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
             break;
     }
 }
@@ -912,7 +915,7 @@ int match(token_s **curr, pnode_s *p)
     if ((*curr)->type.val == p->token->type.val) {
         p->matched = *curr;
         if ((*curr)->type.val != LEXTYPE_EOF) {
-            *curr = nexttoken(curr, NULL);
+            *curr = (*curr)->next;
             return 1;
         }
         return 2;
@@ -944,7 +947,7 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
                     success = false;
                     if ((*curr)->type.val == LEXTYPE_EOF)
                         return false;
-                    *curr = nexttoken(curr, pda);
+                    *curr = (*curr)->next;
                 }
                 else
                     nonterm(parse, curr, nterm, result);
@@ -965,12 +968,13 @@ bool nonterm (parse_s *parse, token_s **curr, pda_s *pda, int index)
                     success = false;
                     if ((*curr)->type.val == LEXTYPE_EOF)
                         return false;
-                    *curr = nexttoken(curr, pda);
+                    *curr = (*curr)->next;
                 }
             }
         }
         while (!success);
     }
+    sem_start(&pda->annstart, pda);
     return true;
 }
 
@@ -1056,7 +1060,7 @@ void panic_recovery (llist_s *follow, token_s **curr)
             if (LLTOKEN(iter)->type.val == (*curr)->type.val)
                 return;
         }
-        *curr = nexttoken(curr, PANIC_NOANNOTATION);
+        *curr = (*curr)->next;
     }
 }
 

@@ -219,9 +219,9 @@ static sem_else_s sem_else (token_s **curr, semantics_s *s);
 static sem_expression_s sem_expression (token_s **curr, semantics_s *s);
 static sem_expression__s sem_expression_ (token_s **curr, semantics_s *s);
 static sem_simple_expression_s sem_simple_expression (token_s **curr, semantics_s *s);
-static sem_simple_expression__s sem_simple_expression_ (token_s **curr, semantics_s *s);
+static sem_simple_expression__s sem_simple_expression_ (token_s **curr, semantics_s *s, sem_type_s *accum);
 static sem_term_s sem_term (token_s **curr, semantics_s *s);
-static sem_term__s sem_term_ (token_s **curr, semantics_s *s);
+static sem_term__s sem_term_ (token_s **curr, semantics_s *s, sem_type_s *accum);
 static sem_factor_s sem_factor (token_s **curr, semantics_s *s);
 static sem_factor__s sem_factor_ (token_s **curr, semantics_s *s);
 static sem_idsuffix_s sem_idsuffix (token_s **curr, semantics_s *s);
@@ -569,9 +569,10 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
 
 void sem_start (token_s **curr, pda_s *pda)
 {
+    if(!*curr)
+        return;
     pda->s = semantics_s_(pda);
     sem_statements(curr, pda->s);
-    sem_match(curr, LEXTYPE_EOF);
 }
 
 sem_statements_s sem_statements (token_s **curr, semantics_s *s)
@@ -587,7 +588,8 @@ sem_statements_s sem_statements (token_s **curr, semantics_s *s)
             break;
         default:
             printf("Syntax Error at line %d: Expected if nonterm fi else or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
+            break;
     }
 
 }
@@ -703,8 +705,8 @@ sem_simple_expression_s sem_simple_expression (token_s **curr, semantics_s *s)
         case SEMTYPE_NONTERM:
         case SEMTYPE_OPENPAREN:
             term = sem_term(curr, s);
-            simple_expression_ = sem_simple_expression_(curr, s);
-            simple_expression.value = sem_op(term.value, simple_expression_.value, simple_expression_.op);
+            simple_expression_ = sem_simple_expression_(curr, s, &term.value);
+            simple_expression.value = term.value;
             break;
         default:
             printf("Syntax Error at line %d: Expected + - not number or identifier but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -713,18 +715,19 @@ sem_simple_expression_s sem_simple_expression (token_s **curr, semantics_s *s)
     return simple_expression;
 }
 
-sem_simple_expression__s sem_simple_expression_ (token_s **curr, semantics_s *s)
+sem_simple_expression__s sem_simple_expression_ (token_s **curr, semantics_s *s, sem_type_s *accum)
 {
+    unsigned op;
     sem_term_s term;
     sem_simple_expression__s simple_expression_, simple_expression__;
     
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
-            simple_expression_.op = toaddop((*curr)->type.attribute);
+            op = toaddop((*curr)->type.attribute);
             *curr = (*curr)->next;
             term = sem_term(curr, s);
-            simple_expression__ = sem_simple_expression_(curr, s);
-            simple_expression_.value = sem_op(term.value, simple_expression__.value, simple_expression__.op);
+            *accum = sem_op(*accum, term.value, op);
+            simple_expression__ = sem_simple_expression_(curr, s, accum);
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_CLOSEBRACKET:
@@ -754,23 +757,25 @@ sem_term_s sem_term (token_s **curr, semantics_s *s)
     sem_term__s term_;
     
     factor = sem_factor(curr, s);
-    term_ = sem_term_(curr, s);
-    term.value = sem_op(factor.value, term_.value, term_.op);
+    term_ = sem_term_(curr, s, &factor.value);
+    term.value = factor.value;
+    //term.value = sem_op(factor.value, term_.value, term_.op);
     return term;
 }
 
-sem_term__s sem_term_ (token_s **curr, semantics_s *s)
+sem_term__s sem_term_ (token_s **curr, semantics_s *s, sem_type_s *accum)
 {
+    unsigned op;
     sem_factor_s factor;
-    sem_term__s term_, term_x;
+    sem_term__s term_, term__;
     
     switch((*curr)->type.val) {
         case SEMTYPE_MULOP:
-            term_.op = tomulop((*curr)->type.attribute);
+            op = tomulop((*curr)->type.attribute);
             *curr = (*curr)->next;
             factor = sem_factor(curr, s);
-            term_x = sem_term_(curr, s);
-            term_.value = sem_op(factor.value, term_x.value, term_x.op);
+            *accum = sem_op(*accum, factor.value, op);
+            term__ = sem_term_(curr, s, accum);
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_CLOSEBRACKET:
@@ -808,8 +813,8 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
             factor.value.str = id->lexeme;
             printf("consumed %s\n", (*curr)->lexeme);
             *curr = (*curr)->next;
+            
             idsuffix = sem_idsuffix(curr, s);
-
             if (!idsuffix.dot.id && idsuffix.factor_.index < 0) {
                 factor.value.type = ATTYPE_STR;
                 factor.value.str = id->lexeme;
@@ -872,7 +877,8 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
             break;
         default:
             printf("Syntax Error at line %d: Expected identifier nonterm number or not but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
+            break;
     }
     return factor;
 }
@@ -907,7 +913,8 @@ sem_factor__s sem_factor_ (token_s **curr, semantics_s *s)
             break;
         default:
             printf("Syntax Error at line %d: Expected [ ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
+            break;
     }
     return factor_;
 }

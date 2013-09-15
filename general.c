@@ -27,12 +27,6 @@ long safe_atol (char *str)
     long i;
     
     i = strtol(str, NULL, 10);
-    if (i > INT_MAX) {
-        perror("Specified Attribute out of Range");
-        exit(EXIT_FAILURE);
-    }
-    printf("Atoui Test: %lu %u\n", i, (unsigned int)i);
-
     return i;
 }
 
