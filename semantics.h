@@ -18,15 +18,18 @@ typedef struct semantics_s semantics_s;
 struct semantics_s
 {
     pda_s *pda;
+    production_s *prod;
+    pnode_s *pnode;
+    mach_s *machs;
     hash_s *table;
     unsigned nchildren;
     semantics_s *children[];
 };
 
-extern semantics_s *semantics_s_(pda_s *pda);
+extern semantics_s *semantics_s_(mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode);
 
 extern lex_s *semant_init(void);
 extern uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data);
-extern void sem_start (token_s **curr, pda_s *pda);
+extern void sem_start (token_s *curr, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode);
 
 #endif

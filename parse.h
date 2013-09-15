@@ -38,7 +38,6 @@ struct pda_s
     production_s *productions;
     llist_s *firsts;
     llist_s *follows;
-    token_s *annstart;
     struct semantics_s *s;
 };
 
@@ -51,6 +50,7 @@ struct pnode_s
 {
     token_s *token;
     token_s *matched;
+    token_s *annotation;
     pnode_s *next;
     pnode_s *prev;
 };

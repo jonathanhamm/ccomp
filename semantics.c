@@ -211,7 +211,7 @@ static inline unsigned toaddop(unsigned val);
 static inline unsigned tomulop(unsigned val);
 static inline unsigned torelop(unsigned val);
 static bool check_scope(pda_s *pda, char *lexeme);
-static pnode_s *getpnode(production_s *prod, unsigned type, unsigned index);
+static pnode_s *getpnode(semantics_s *s, char *lexeme, unsigned index);
 static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
 static sem_statements_s sem_statements (token_s **curr, semantics_s *s);
 static sem_statement_s sem_statement (token_s **curr, semantics_s *s);
@@ -252,7 +252,7 @@ void print_semtype(sem_type_s value)
     }
 }
 
-semantics_s *semantics_s_(pda_s *pda)
+semantics_s *semantics_s_(mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
 {
     semantics_s *s;
     
@@ -261,7 +261,10 @@ semantics_s *semantics_s_(pda_s *pda)
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
+    s->machs = machs;
     s->pda = pda;
+    s->prod = prod;
+    s->pnode = pnode;
     s->table = hash_(pjw_hashf, str_isequalf);
     return s;
 }
@@ -350,14 +353,25 @@ bool check_scope(pda_s *pda, char *lexeme)
     return false;
 }
 
-static pnode_s *getpnode(production_s *prod, unsigned type, unsigned index)
+static pnode_s *getpnode(semantics_s *s, char *lexeme, unsigned index)
 {
     unsigned i;
+    long ltype = -1;
     pnode_s *iter;
+    mach_s *miter;
     
-    for (iter = prod->start, i = 0; iter; iter = iter->next) {
-        printf("Attempting to fetch: %s\n", iter->token->lexeme);
-        if (iter->token->type.val == type) {
+    for (miter = s->machs; miter; miter = miter->next) {
+        if (!ntstrcmp (miter->nterm->lexeme, lexeme)) {
+            ltype = miter->nterm->type.val;
+        }
+    }
+    if (ltype < 0) {
+        printf("Error: Type %s not a token type.\n", lexeme);
+        assert(false);
+    }
+    for (iter = s->prod->start, i = 0; iter; iter = iter->next) {
+        printf("Attempting to fetch: %s %u %ld\n", lexeme, iter->token->type.val, ltype);
+        if (iter->token->type.val == ltype) {
             if (i == index)
                 return iter;
             i++;
@@ -567,12 +581,12 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     return result;
 }
 
-void sem_start (token_s **curr, pda_s *pda)
-{
-    if(!*curr)
+void sem_start (token_s *curr, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
+{    
+    if(!curr)
         return;
-    pda->s = semantics_s_(pda);
-    sem_statements(curr, pda->s);
+    pda->s = semantics_s_(machs, pda, prod, pnode);
+    sem_statements(&curr, pda->s);
 }
 
 sem_statements_s sem_statements (token_s **curr, semantics_s *s)
@@ -811,21 +825,11 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
             id = *curr;
             factor.value.type = ATTYPE_STR;
             factor.value.str = id->lexeme;
-            printf("consumed %s\n", (*curr)->lexeme);
             *curr = (*curr)->next;
-            
             idsuffix = sem_idsuffix(curr, s);
-            if (!idsuffix.dot.id && idsuffix.factor_.index < 0) {
-                factor.value.type = ATTYPE_STR;
-                factor.value.str = id->lexeme;
-            }
-            else {
-    
-                if (!strcmp(idsuffix.dot.id, "val")) {
-                    pnode = getpnode(&s->pda->productions[0], id->type.val, 0);
-                    //if (pnode)
-                    for(;;)printf("%s\n", pnode->matched->lexeme);
-                }
+            if (idsuffix.dot.id) {
+                pnode = getpnode(s, id->lexeme, 0);
+                printf("got: %s\n", pnode->matched->lexeme);
             }
             break;
         case SEMTYPE_NONTERM:
@@ -940,7 +944,6 @@ sem_idsuffix_s sem_idsuffix (token_s **curr, semantics_s *s)
         case LEXTYPE_EOF:
             idsuffix.factor_ = sem_factor_(curr, s);
             idsuffix.dot = sem_dot(curr, s);
-
             break;
         case SEMTYPE_OPENPAREN:
             sem_paramlist(curr, s);
@@ -964,7 +967,6 @@ sem_dot_s sem_dot (token_s **curr, semantics_s *s)
         case SEMTYPE_DOT:
             *curr = (*curr)->next;
             dot.id = (*curr)->lexeme;
-           // for(;;)printf("%s\n", dot.id);
             sem_match(curr, SEMTYPE_ID);
             break;
         case SEMTYPE_CLOSEBRACKET:
