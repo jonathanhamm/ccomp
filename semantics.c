@@ -234,6 +234,7 @@ static bool sem_match (token_s **curr, int type);
 static sem_type_s *alloc_semt(sem_type_s value);
 static att_s *att_s_ (void *data, unsigned tid);
 static void attadd (semantics_s *s, char *id, sem_type_s *data);
+static sem_type_s getatt (semantics_s *s, char *id);
 
 void print_semtype(sem_type_s value)
 {
@@ -379,7 +380,6 @@ static pnode_s *getpnode(semantics_s *s, char *lexeme, unsigned index)
     }
     return NULL;
 }
-
 
 /* performs basic arithmetic operations with implicit type coercion */
 sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
@@ -655,8 +655,8 @@ sem_expression_s sem_expression (token_s **curr, semantics_s *s)
 {
     sem_expression_s expression;
     sem_expression__s expression_;
-    
     sem_simple_expression_s simple_expression;
+    
     simple_expression = sem_simple_expression(curr, s);
     expression_ = sem_expression_(curr, s);
     expression.value = sem_op(simple_expression.value, expression_.value, expression_.op);
@@ -708,7 +708,7 @@ sem_simple_expression_s sem_simple_expression (token_s **curr, semantics_s *s)
                 if (simple_expression.value.type == ATTYPE_NUMINT)
                     simple_expression.value.int_ = -simple_expression.value.int_;
                 else if (simple_expression.value.type == ATTYPE_NUMREAL)
-                    simple_expression.value.real_ = - simple_expression.value.real_;
+                    simple_expression.value.real_ = -simple_expression.value.real_;
                 else
                     printf("Type Error: Cannot negate id types\n");
             }
@@ -816,6 +816,7 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
 {
     token_s *id;
     pnode_s *pnode;
+    sem_type_s value;
     sem_factor_s factor = {0};
     sem_idsuffix_s idsuffix;
     sem_expression_s expression;
@@ -827,9 +828,12 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
             factor.value.str = id->lexeme;
             *curr = (*curr)->next;
             idsuffix = sem_idsuffix(curr, s);
+            //attadd (semantics_s *s, char *id, sem_type_s *data)
             if (idsuffix.dot.id) {
-                pnode = getpnode(s, id->lexeme, 0);
-                printf("got: %s\n", pnode->matched->lexeme);
+                if (!strcmp(idsuffix.dot.id, "val")) {
+                    pnode = getpnode(s, id->lexeme, 0);
+                }
+                //attadd(s, //id->lexeme, pnode-);
             }
             break;
         case SEMTYPE_NONTERM:
@@ -1078,4 +1082,12 @@ att_s *att_s_ (void *data, unsigned tid)
 void attadd (semantics_s *s, char *id, sem_type_s *data)
 {
     hashinsert_(s->table, id, data);
+}
+
+sem_type_s getatt (semantics_s *s, char *id)
+{
+    sem_type_s *data;
+    
+    data = hashlookup(s->table, id);
+    return *data;
 }

@@ -201,11 +201,11 @@ void match_phase (lextok_s regex, token_s *cfg)
         }
         tfind = findtok(regex.lex->machs, cfg->lexeme);
         if (tfind.found) 
-            cfg->type = tfind.token->type;
+            cfg->type.val = tfind.token->type.val;
         else {
             type = gettype(regex.lex, cfg->lexeme);
             if (type.val != LEXTYPE_ERROR)
-                cfg->type = type;
+                cfg->type.val = type.val;
         }
         //assert(cfg->type.val < 100);
     }

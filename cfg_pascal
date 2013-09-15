@@ -30,7 +30,6 @@
         <factor>.type := <expression>.type 
         <factor>.type := bob(1,3,4.23+3)
         <factor>.value := <expression>.value
-
     }
 	|
 	ε
@@ -164,7 +163,10 @@
 	ε
 	
 <simple_expression> ->
-	<sign> <term> <simple_expression'>
+	<sign> <term> <simple_expression'> 
+    {
+        
+    }
 	|
 	<term> <simple_expression'>
 <simple_expression'> ->
