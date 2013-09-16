@@ -51,11 +51,11 @@ real
     <numreal> <exponent>
 
 <num>->
-    <numint> {attribute = 0, length = 10} 
+    <numint> {attribute = 0, length = 10, type = integer } 
     |
-    <numreal> {attribute = 1}
+    <numreal> {attribute = 1, type = real}
     |
-    <numlreal> {attribute = 2}
+    <numlreal> {attribute = 2, type = real}
 
 <relop>->
     = {0} | <> {1} | < {2} | <= {3} | >= {4} | > {5}

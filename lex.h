@@ -21,6 +21,12 @@ enum lex_attr_ {
     LEXATTR_FAKEEOF
 };
 
+enum lex_attr__ {
+    LEXATTR_INT,
+    LEXATTR_REAL,
+    LEXATTR_LREAL
+};
+
 enum lex_types_ {
     LEXTYPE_ERROR,
     LEXTYPE_TERM,
@@ -88,6 +94,7 @@ struct type_s
 struct token_s
 {
     type_s type;
+    char *stype;
     unsigned lineno;
     char lexeme[MAX_LEXLEN + 1];
     token_s *prev;
@@ -109,6 +116,7 @@ struct annotation_s
     int attribute;
     int length;
     bool attcount;
+    char *type;
 };
 
 struct tlookup_s

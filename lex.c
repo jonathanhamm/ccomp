@@ -4,7 +4,7 @@
  
  Description:
     Implementation for a lexical analyzer generator. This reads in a regular
-    expression and source file specified by the user. It then tokenizes the source 
+    expression and source file specified by the user. It then tokenizes the source
     file in conformance to the specified regular expression.
  */
 
@@ -49,6 +49,7 @@ typedef struct pnonterm_s pnonterm_s;
 typedef struct overflow_s overflow_s;
 typedef struct match_s match_s;
 typedef struct regex_ann_s regex_ann_s;
+typedef struct prxa_expression_s prxa_expression_s;
 
 typedef void (*ann_callback_f) (token_s **, void *);
 typedef void (*regex_callback_f) (token_s **, void *);
@@ -84,6 +85,7 @@ struct match_s
 {
     size_t n;
     int attribute;
+    char *stype;
     bool success;
     overflow_s overflow;
 };
@@ -93,6 +95,13 @@ struct regex_ann_s
     int *count;
     mach_s *mach;
     llist_s *matchlist;
+};
+
+struct prxa_expression_s
+{
+    bool isint;
+    int ival;
+    char *strval;
 };
 
 static void printlist (token_s *list);
@@ -119,7 +128,7 @@ static void prxa_regexdef(token_s **curr, regex_ann_s *reg);
 static void setann_val(int *location, int value);
 static void prxa_edgestart(token_s **curr, nfa_edge_s *edge);
 static void prxa_assigment(token_s **curr, nfa_edge_s *edge);
-static int prxa_expression(token_s **curr, nfa_edge_s *edge);
+static prxa_expression_s prxa_expression(token_s **curr, nfa_edge_s *edge);
 static void prxa_expression_(token_s **curr, nfa_edge_s *edge);
 
 static void regexdef_callback (token_s **curr, mach_s *mach);
@@ -364,6 +373,8 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *dat
                 ++*lineno;
             i++;
         }
+        if (buf[i] == '}')
+            continue;
         bpos = 0;
         if (isalpha(buf[i]) || buf[i] == '<') {
             tmpbuf[bpos] = buf[i];
@@ -399,7 +410,7 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *dat
             addtok(tlist, ",", *lineno, LEXTYPE_ANNOTATE, LEXATTR_COMMA);
         }
         else {
-            printf("Illegal character sequence in annotation at line %u\n", *lineno);
+            printf("Illegal character sequence in annotation at line %u: %c\n", *lineno, buf[i]);
             exit(EXIT_FAILURE);
         }
     }
@@ -911,7 +922,7 @@ void prxa_regexdef(token_s **curr, regex_ann_s *reg)
 
 void prxa_assignment(token_s **curr, nfa_edge_s *edge)
 {
-    int val;
+    prxa_expression_s val;
     char *str;
     
     if (ISANNOTATE(curr)) {
@@ -935,10 +946,18 @@ void prxa_assignment(token_s **curr, nfa_edge_s *edge)
     }
     *curr = (*curr)->next;
     val = prxa_expression(curr, edge);
-    if (!strcasecmp(str, "attribute"))
-        setann_val(&edge->annotation.attribute, val);
-    else if (!strcasecmp(str, "length"))
-        setann_val(&edge->annotation.length, val);
+    if (!strcasecmp(str, "attribute")) {
+        assert(val.isint);
+        setann_val(&edge->annotation.attribute, val.ival);
+    }
+    else if (!strcasecmp(str, "length")) {
+        assert(val.isint);
+        setann_val(&edge->annotation.length, val.ival);
+    }
+    else if (!strcasecmp(str, "type")) {
+        assert(!val.isint);
+        edge->annotation.type = val.strval;
+    }
     else {
         printf("Error at line %d: Unknown attribute type: %s\n", (*curr)->lineno, str);
         exit(EXIT_FAILURE);
@@ -978,17 +997,23 @@ void prxa_edgestart(token_s **curr, nfa_edge_s *edge)
     }
 }
 
-int prxa_expression(token_s **curr, nfa_edge_s *edge)
+prxa_expression_s prxa_expression(token_s **curr, nfa_edge_s *edge)
 {
-    int ret = 0;
+    prxa_expression_s ret = {0};
     
     if (ISANNOTATE(curr)) {
         switch ((*curr)->type.attribute) {
             case LEXATTR_EQU:
                 *curr = (*curr)->next;
                 if (ISANNOTATE(curr)) {
-                    if ((*curr)->type.attribute == LEXATTR_NUM)
-                        ret = safe_atol((*curr)->lexeme);
+                    if ((*curr)->type.attribute == LEXATTR_NUM) {
+                        ret.isint = true;
+                        ret.ival = safe_atol((*curr)->lexeme);
+                    }
+                    else if ((*curr)->type.attribute == LEXATTR_WORD) {
+                        ret.isint = false;
+                        ret.strval = (*curr)->lexeme;
+                    }
                     *curr = (*curr)->next;
                     prxa_expression_(curr, edge);
                 }
@@ -998,7 +1023,7 @@ int prxa_expression(token_s **curr, nfa_edge_s *edge)
                 }
                 break;
             case LEXATTR_FAKEEOF:
-                return -1;
+                return (prxa_expression_s){.isint = true, .ival = -1, .strval = NULL};
             default:
                 printf("Syntax error at line %d: Expected = or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
                 exit(EXIT_FAILURE);
@@ -1215,6 +1240,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
     match_s curr, result;
 
     curr.n = 0;
+    curr.stype = NULL;
     curr.attribute = 0;
     curr.success = false;
     curr.overflow.str = NULL;
@@ -1227,6 +1253,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                 result = nfa_match(lex, nfa, state->edges[i]->state, buf);
                 if (result.success) {
                     curr.success = true;
+                    curr.stype = (state->edges[i]->annotation.type) ? state->edges[i]->annotation.type : result.stype;
                     curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
                     if (result.n > curr.n)
                         curr.n = result.n;
@@ -1248,6 +1275,8 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                             curr.attribute = result.attribute;
                         else if (tmpmatch > 0 && state->edges[i]->annotation.attribute > 0)
                             curr.attribute = state->edges[i]->annotation.attribute;
+                        if (state->edges[i]->annotation.type)
+                            curr.stype = state->edges[i]->annotation.type;
                         if (result.n + tmpmatch > curr.n)
                             curr.n = result.n + tmpmatch;
                     }
@@ -1260,6 +1289,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                     if (result.success) {
                         curr.success = true;
                         curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
+                        curr.stype = (state->edges[i]->annotation.type) ? state->edges[i]->annotation.type : result.stype;
                         if (result.n + tmatch > curr.n)
                             curr.n = result.n + tmatch;
                     }

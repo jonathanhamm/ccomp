@@ -94,6 +94,7 @@ typedef struct sem_dot_s sem_dot_s;
 typedef struct sem_paramlist_s sem_paramlist_s;
 typedef struct sem_paramlist__s sem_paramlist__s;
 typedef struct sem_sign_s sem_sign_s;
+typedef struct val_s val_s;
 
 struct access_s
 {
@@ -206,6 +207,17 @@ struct att_s
     };
 };
 
+struct val_s
+{
+    char *type;
+    char *lexeme;
+    union {
+        long int_;
+        double real_;
+        char *str;
+    };
+};
+
 static void print_semtype(sem_type_s value);
 static inline unsigned toaddop(unsigned val);
 static inline unsigned tomulop(unsigned val);
@@ -235,6 +247,7 @@ static sem_type_s *alloc_semt(sem_type_s value);
 static att_s *att_s_ (void *data, unsigned tid);
 static void attadd (semantics_s *s, char *id, sem_type_s *data);
 static sem_type_s getatt (semantics_s *s, char *id);
+static val_s *val_s_(token_s *token);
 
 void print_semtype(sem_type_s value)
 {
@@ -832,6 +845,9 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
             if (idsuffix.dot.id) {
                 if (!strcmp(idsuffix.dot.id, "val")) {
                     pnode = getpnode(s, id->lexeme, 0);
+                    switch (pnode->matched->type.attribute) {
+                        
+                    }
                 }
                 //attadd(s, //id->lexeme, pnode-);
             }
@@ -1090,4 +1106,22 @@ sem_type_s getatt (semantics_s *s, char *id)
     
     data = hashlookup(s->table, id);
     return *data;
+}
+
+val_s *val_s_(token_s *token)
+{
+    val_s *val;
+    
+    val = malloc(sizeof(*val));
+    if (!val) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    val->type = token->stype;
+    val->lexeme = token->lexeme;
+    if (!strcasecmp(val->type, "integer"))
+        val->real_ = safe_atod(val->lexeme);
+    else if (!strcasecmp(val->type, "real"))
+        val->int_ = safe_atol(val->lexeme);
+    return val;
 }
