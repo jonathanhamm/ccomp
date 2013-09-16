@@ -246,6 +246,7 @@ semantics_s *addchild(semantics_s *parent, semantics_s *child)
     }
     child->parent = parent;
     parent->children[parent->nchildren] = child;
+    parent->nchildren++;
     return parent;
 }
 
@@ -297,7 +298,7 @@ int test_semtype(sem_type_s value)
     return (value.int_ || value.real_ || value.str_);
 }
 
-semantics_s *semantics_s_(semantics_s *parent, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
+semantics_s *semantics_s_(semantics_s **parent, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
 {
     semantics_s *s;
     
@@ -306,12 +307,12 @@ semantics_s *semantics_s_(semantics_s *parent, mach_s *machs, pda_s *pda, produc
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
-    s->parent = parent;
     s->machs = machs;
     s->pda = pda;
     s->prod = prod;
     s->pnode = pnode;
     s->table = hash_(pjw_hashf, str_isequalf);
+    *parent = addchild(*parent, pda->s);
     return s;
 }
 
@@ -626,7 +627,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     return result;
 }
 
-semantics_s *sem_start (semantics_s *parent, token_s *curr, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
+semantics_s *sem_start (semantics_s **parent, token_s *curr, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
 {    
     if(!curr)
         return NULL;

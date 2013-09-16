@@ -936,7 +936,7 @@ bool nonterm (semantics_s *parent, parse_s *parse, mach_s *machs, token_s **curr
     
     pnode = pda->productions[index].start;
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
-        s = sem_start(parent, pnode->annotation, machs, pda, &pda->productions[index], pnode);
+        s = sem_start(&parent, pnode->annotation, machs, pda, &pda->productions[index], pnode);
         return true;
     }
     if (pnode->token->type.val != LEXTYPE_EPSILON) {
@@ -979,7 +979,7 @@ bool nonterm (semantics_s *parent, parse_s *parse, mach_s *machs, token_s **curr
                 }
             }
             while (!success);
-            s = sem_start(parent, pnode->annotation, machs, pda, &pda->productions[index], pnode);
+            s = sem_start(&parent, pnode->annotation, machs, pda, &pda->productions[index], pnode);
         }
     }
     
