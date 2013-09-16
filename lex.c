@@ -191,37 +191,37 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
     for (i = 0, j = 0, lineno = 1, bpos = 0; buf[i] != EOF; i++) {
         switch (buf[i]) {
             case '|':
-                addtok(&list, "|", lineno, LEXTYPE_UNION, LEXATTR_DEFAULT);
+                addtok(&list, "|", lineno, LEXTYPE_UNION, LEXATTR_DEFAULT, NULL);
                 break;
             case '(':
-                addtok(&list, "(", lineno, LEXTYPE_OPENPAREN, LEXATTR_DEFAULT);
+                addtok(&list, "(", lineno, LEXTYPE_OPENPAREN, LEXATTR_DEFAULT, NULL);
                 break;
             case ')':
-                addtok(&list, ")", lineno, LEXTYPE_CLOSEPAREN, LEXATTR_DEFAULT);
+                addtok(&list, ")", lineno, LEXTYPE_CLOSEPAREN, LEXATTR_DEFAULT, NULL);
                 break;
             case '*':
-                addtok(&list, "*", lineno, LEXTYPE_KLEENE, LEXATTR_DEFAULT);
+                addtok(&list, "*", lineno, LEXTYPE_KLEENE, LEXATTR_DEFAULT, NULL);
                 break;
             case '+':
-                addtok(&list, "+", lineno, LEXTYPE_POSITIVE, LEXATTR_DEFAULT);
+                addtok(&list, "+", lineno, LEXTYPE_POSITIVE, LEXATTR_DEFAULT, NULL);
                 break;
             case '?':
-                addtok(&list, "?", lineno, LEXTYPE_ORNULL, LEXATTR_DEFAULT);
+                addtok(&list, "?", lineno, LEXTYPE_ORNULL, LEXATTR_DEFAULT, NULL);
                 break;
             case '\n':
                 lineno++;
-                addtok (&list, "EOL", lineno, LEXTYPE_EOL, LEXATTR_DEFAULT);
+                addtok (&list, "EOL", lineno, LEXTYPE_EOL, LEXATTR_DEFAULT, NULL);
                 break;
             case (char)0xCE:
                 if (buf[i+1] == (char)0xB5)
-                    addtok(&list, "EPSILON", lineno, LEXTYPE_EPSILON, LEXATTR_DEFAULT);
+                    addtok(&list, "EPSILON", lineno, LEXTYPE_EPSILON, LEXATTR_DEFAULT, NULL);
                 i++;
                 break;
             case (char)0xE2:
                 if (buf[i+1] == (char)0xA8) {
                     if (buf[i+2] == (char)0xAF) {
                         strcpy(lbuf, "\xE2\xA8\xAF");
-                        addtok(&list, lbuf, lineno, LEXTYPE_TERM, LEXATTR_DEFAULT);
+                        addtok(&list, lbuf, lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                         i += 2;
                     }
                 }
@@ -237,7 +237,7 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 break;
             case '-':
                 if (buf[i+1] == '>') {
-                    addtok (&list, "->", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT);
+                    addtok (&list, "->", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT, NULL);
                     for (p = list->prev; p && p->type.val != LEXTYPE_EOL; p = p->prev) {
                         if (!p->prev)
                             pp = p;
@@ -267,7 +267,7 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 for (bpos = 1, i++, j = i; isalnum(buf[i]) || buf[i] == '_' || buf[i] == '\''; bpos++, i++)
                 {
                     if (bpos == MAX_LEXLEN) {
-                        addtok (&list, lbuf, lineno, LEXTYPE_ERROR, LEXATTR_ERRTOOLONG);
+                        addtok (&list, lbuf, lineno, LEXTYPE_ERROR, LEXATTR_ERRTOOLONG, NULL);
                         goto doublebreak_;
                     }
                     lbuf[bpos] = buf[i];
@@ -279,11 +279,11 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 else if (buf[i] == '>' && bpos != MAX_LEXLEN) {
                     lbuf[bpos] = '>';
                     lbuf[bpos + 1] = '\0';
-                    addtok (&list, lbuf, lineno, LEXTYPE_NONTERM, LEXATTR_DEFAULT);
+                    addtok (&list, lbuf, lineno, LEXTYPE_NONTERM, LEXATTR_DEFAULT, NULL);
                 }
                 else {
                     lbuf[bpos] = '\0';
-                    addtok (&list, &lbuf[0], lineno, LEXTYPE_TERM, LEXATTR_DEFAULT);
+                    addtok (&list, &lbuf[0], lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                     i--;
                 }
                 break;
@@ -295,7 +295,7 @@ default_:
                 {
                     if (bpos == MAX_LEXLEN) {
                         lbuf[bpos] = '\0';
-                        addtok (&list, lbuf, lineno, LEXTYPE_ERROR, LEXATTR_ERRTOOLONG);
+                        addtok (&list, lbuf, lineno, LEXTYPE_ERROR, LEXATTR_ERRTOOLONG, NULL);
                         break;
                     }
                     switch(buf[i]) {
@@ -309,7 +309,7 @@ default_:
                         case '/':
                             if (bpos > 0) {
                                 lbuf[bpos] = '\0';
-                                addtok (&list, lbuf, lineno, LEXTYPE_TERM, j);
+                                addtok (&list, lbuf, lineno, LEXTYPE_TERM, j, NULL);
                             }
                             i--;
                             goto doublebreak_;
@@ -323,14 +323,14 @@ default_:
                 if (!bpos) {
                     lbuf[0] = buf[i];
                     lbuf[1] = '\0';
-                    addtok (&list, lbuf, lineno, LEXTYPE_TERM, j);
+                    addtok (&list, lbuf, lineno, LEXTYPE_TERM, j, NULL);
                 }
                 else {
                     lbuf[bpos] = '\0';
                     if (isdigit(buf[i]))
-                        addtok (&list, lbuf, lineno, LEXTYPE_TERM, j);
+                        addtok (&list, lbuf, lineno, LEXTYPE_TERM, j, NULL);
                     else 
-                        addtok (&list, lbuf, lineno, LEXTYPE_TERM, LEXATTR_BEGINDIG);
+                        addtok (&list, lbuf, lineno, LEXTYPE_TERM, LEXATTR_BEGINDIG, NULL);
                     i--;
                 }
                 break;
@@ -338,7 +338,7 @@ default_:
 doublebreak_:
         ;
     }
-    addtok(&list, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT);
+    addtok(&list, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT, NULL);
     while (list->prev) {
         if (list->type.val == LEXTYPE_EOL && list->type.attribute == LEXATTR_DEFAULT) {
             backup = list;
@@ -389,7 +389,7 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *dat
                 }
             }
             tmpbuf[bpos] = '\0';
-            addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_WORD);
+            addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_WORD, NULL);
         }
         else if (isdigit(buf[i])) {
             tmpbuf[bpos] = buf[i];
@@ -399,26 +399,26 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *dat
                 tmpbuf[bpos] = buf[i];
             }
             tmpbuf[bpos] = '\0';
-            addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_NUM);
+            addtok(tlist, tmpbuf, *lineno, LEXTYPE_ANNOTATE, LEXATTR_NUM, NULL);
         }
         else if (buf[i] == '=') {
             i++;
-            addtok(tlist, "=", *lineno, LEXTYPE_ANNOTATE, LEXATTR_EQU);
+            addtok(tlist, "=", *lineno, LEXTYPE_ANNOTATE, LEXATTR_EQU, NULL);
         }
         else if (buf[i] == ',') {
             i++;
-            addtok(tlist, ",", *lineno, LEXTYPE_ANNOTATE, LEXATTR_COMMA);
+            addtok(tlist, ",", *lineno, LEXTYPE_ANNOTATE, LEXATTR_COMMA, NULL);
         }
         else {
             printf("Illegal character sequence in annotation at line %u: %c\n", *lineno, buf[i]);
             exit(EXIT_FAILURE);
         }
     }
-    addtok(tlist, "$", *lineno, LEXTYPE_ANNOTATE, LEXATTR_FAKEEOF);
+    addtok(tlist, "$", *lineno, LEXTYPE_ANNOTATE, LEXATTR_FAKEEOF, NULL);
     return i+1;
 }
 
-int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute)
+int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype)
 {
     token_s *ntok;
     
@@ -430,6 +430,7 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
     ntok->type.val = type;
     ntok->type.attribute = attribute;
     ntok->lineno = lineno;
+    ntok->stype = stype;
     strcpy(ntok->lexeme, lexeme);
     if (!*tlist)
         *tlist = ntok;
@@ -1321,6 +1322,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
         best.attribute = 0;
         best.n = 0;
         best.success = false;
+        best.stype = NULL;
         overflow.str = NULL;
         overflow.len = 0;
         
@@ -1362,23 +1364,23 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
             if (best.n <= bmach->lexlen) {
                 lookup = idtable_lookup(lex->kwtable, buf);
                 if (lookup.is_found) {
-                    addtok(&tlist, buf, lineno, lookup.tdat.itype, res.attribute);
+                    addtok(&tlist, buf, lineno, lookup.tdat.itype, best.attribute, best.stype);
                     hashname(lex, lookup.tdat.itype, buf);
                 }
                 else {
                     lookup = idtable_lookup(lex->idtable, buf);
                     if (lookup.is_found) {
-                        addtok(&tlist, buf, lineno, lookup.tdat.itype, lookup.tdat.att);
+                        addtok(&tlist, buf, lineno, lookup.tdat.itype, lookup.tdat.att, best.stype);
                         hashname(lex, lookup.tdat.itype, buf);
                     }
                     else if (bmach->attr_id) {
                         idatt++;
-                        addtok(&tlist, buf, lineno, bmach->nterm->type.val, idatt);
+                        addtok(&tlist, buf, lineno, bmach->nterm->type.val, idatt, best.stype);
                         idtable_insert(lex->idtable, buf, (tdat_s){.is_string = false, .itype = bmach->nterm->type.val, .att = idatt});
                         hashname(lex, lex->typestart, bmach->nterm->lexeme);
                     }
                     else {
-                        addtok(&tlist, buf, lineno, bmach->nterm->type.val, best.attribute);
+                        addtok(&tlist, buf, lineno, bmach->nterm->type.val, best.attribute, best.stype);
                         hashname(lex, lex->typestart, bmach->nterm->lexeme);
                     }
                 }
@@ -1386,7 +1388,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                     head = tlist;
             }
             else {
-                addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
+                addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT, best.stype);
                 if (listing) {
                     error = make_lexerr(LERR_TOOLONG, lineno, buf);
                     adderror(lex->listing, error, lineno);
@@ -1399,7 +1401,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
             buf[overflow.len] = '\0';
             memset(tmpbuf, 0, sizeof(tmpbuf));
             snprintf(tmpbuf, MAX_LEXLEN, "%s", buf);
-            addtok(&tlist, tmpbuf, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
+            addtok(&tlist, tmpbuf, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT, best.stype);
             if (listing)
                 adderror(lex->listing, make_lexerr (LERR_TOOLONG, lineno, buf), lineno);
             best.n = overflow.len;
@@ -1407,14 +1409,14 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
         else {
             lookup = idtable_lookup(lex->kwtable, c);
             if (lookup.is_found) {
-                addtok(&tlist, c, lineno, lookup.tdat.itype, LEXATTR_DEFAULT);
+                addtok(&tlist, c, lineno, lookup.tdat.itype, LEXATTR_DEFAULT, best.stype);
                 hashname(lex, lookup.tdat.itype, NULL);
                 if (!head)
                     head = tlist;
             }
             else {
                 if (best.n) {
-                    addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
+                    addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT, best.stype);
                     if (listing) {
                         assert(*buf != EOF);
                         error = make_lexerr(LERR_UNKNOWNSYM, lineno, buf);
@@ -1422,7 +1424,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                     }
                 }
                 else {
-                    addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT);
+                    addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT, best.stype);
                     if (listing) {
                         assert(c[0] != EOF);
                         error = make_lexerr(LERR_UNKNOWNSYM, lineno, c);
@@ -1437,7 +1439,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
         else 
             buf++;
     }
-    addtok(&tlist, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT);
+    addtok(&tlist, "$", lineno, LEXTYPE_EOF, LEXATTR_DEFAULT, best.stype);
     if (!head)
         head = tlist;
     hashname(lex, LEXTYPE_EOF, "$");

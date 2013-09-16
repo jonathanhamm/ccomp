@@ -94,7 +94,7 @@ static void print_parse_table (parsetable_s *ptable, FILE *stream);
 static void print_firfol (parse_s *parse, FILE *stream);
 
 static int match (token_s **curr, pnode_s *p);
-static bool nonterm (parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int index);
+static bool nonterm (semantics_s *parent, parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int index);
 static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
 static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
 static char *make_synerr (pda_s *pda, token_s **curr);
@@ -897,7 +897,7 @@ void parse (parse_s *parse, lextok_s lex)
         adderror(parse->listing, synerr, lex.tokens->lineno);
         panic_recovery(parse->start->follows, &lex.tokens);
     }
-    nonterm(parse, lex.lex->machs, &lex.tokens, parse->start, index);
+    nonterm(NULL, parse, lex.lex->machs, &lex.tokens, parse->start, index);
     if (lex.tokens->type.val != LEXTYPE_EOF) {
         errsize = (sizeof(SYNERR_PREFIX)-1)+FS_INTWIDTH_DEC(lex.tokens->lineno)+sizeof("EOF but got: ")+strlen(lex.tokens->lexeme);
         synerr = malloc(errsize);
@@ -924,7 +924,7 @@ int match(token_s **curr, pnode_s *p)
     return 0;
 }
 
-bool nonterm (parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int index)
+bool nonterm (semantics_s *parent, parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int index)
 {
     int result;
     pda_s *nterm;
@@ -932,10 +932,11 @@ bool nonterm (parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int ind
     bool success;
     char *synerr;
     size_t errsize;
+    semantics_s *s = parent;
     
     pnode = pda->productions[index].start;
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
-        sem_start(pnode->annotation, machs, pda, &pda->productions[index], pnode);
+        s = sem_start(parent, pnode->annotation, machs, pda, &pda->productions[index], pnode);
         return true;
     }
     if (pnode->token->type.val != LEXTYPE_EPSILON) {
@@ -954,7 +955,7 @@ bool nonterm (parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int ind
                         *curr = (*curr)->next;
                     }
                     else
-                        nonterm(parse, machs, curr, nterm, result);
+                        nonterm(s, parse, machs, curr, nterm, result);
                 }
                 else {
                     pnode->matched = *curr;
@@ -978,7 +979,7 @@ bool nonterm (parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int ind
                 }
             }
             while (!success);
-            sem_start(pnode->annotation, machs, pda, &pda->productions[index], pnode);
+            s = sem_start(parent, pnode->annotation, machs, pda, &pda->productions[index], pnode);
         }
     }
     

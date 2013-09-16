@@ -49,6 +49,9 @@
 	num
 	|
 	not <factor>
+    {
+        <factor>.value := not <factor>[1].value;
+    }
     |
     \( <expression> \)
 

@@ -94,7 +94,6 @@ typedef struct sem_dot_s sem_dot_s;
 typedef struct sem_paramlist_s sem_paramlist_s;
 typedef struct sem_paramlist__s sem_paramlist__s;
 typedef struct sem_sign_s sem_sign_s;
-typedef struct val_s val_s;
 
 struct access_s
 {
@@ -106,10 +105,11 @@ struct access_s
 struct sem_type_s
 {
     unsigned type;
+    char *lexeme;
     union {
         long int_;
         double real_;
-        char *str;
+        char *str_;
     };
 };
 
@@ -169,7 +169,7 @@ struct sem_factor_s
 
 struct sem_factor__s
 {
-    long index;
+    unsigned index;
 };
 
 struct sem_dot_s
@@ -201,33 +201,22 @@ struct sem_sign_s
 struct att_s
 {
     unsigned tid;
-    union {
-        void *pdata;
-        intptr_t idata;
-    };
-};
-
-struct val_s
-{
-    char *type;
     char *lexeme;
-    union {
-        long int_;
-        double real_;
-        char *str;
-    };
 };
 
+static semantics_s *addchild(semantics_s *parent, semantics_s *child);
+static sem_type_s sem_type_s_(token_s *token);
 static void print_semtype(sem_type_s value);
+static int test_semtype(sem_type_s value);
 static inline unsigned toaddop(unsigned val);
 static inline unsigned tomulop(unsigned val);
 static inline unsigned torelop(unsigned val);
 static bool check_scope(pda_s *pda, char *lexeme);
 static pnode_s *getpnode(semantics_s *s, char *lexeme, unsigned index);
 static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
-static sem_statements_s sem_statements (token_s **curr, semantics_s *s);
-static sem_statement_s sem_statement (token_s **curr, semantics_s *s);
-static sem_else_s sem_else (token_s **curr, semantics_s *s);
+static sem_statements_s sem_statements (token_s **curr, semantics_s *s, bool evaluate);
+static sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate);
+static sem_else_s sem_else (token_s **curr, semantics_s *s, bool evaluate);
 static sem_expression_s sem_expression (token_s **curr, semantics_s *s);
 static sem_expression__s sem_expression_ (token_s **curr, semantics_s *s);
 static sem_simple_expression_s sem_simple_expression (token_s **curr, semantics_s *s);
@@ -247,7 +236,40 @@ static sem_type_s *alloc_semt(sem_type_s value);
 static att_s *att_s_ (void *data, unsigned tid);
 static void attadd (semantics_s *s, char *id, sem_type_s *data);
 static sem_type_s getatt (semantics_s *s, char *id);
-static val_s *val_s_(token_s *token);
+
+semantics_s *addchild(semantics_s *parent, semantics_s *child)
+{
+    parent = realloc(parent, sizeof(*parent)+(parent->nchildren + 1)*sizeof(child));
+    if (!parent) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    child->parent = parent;
+    parent->children[parent->nchildren] = child;
+    return parent;
+}
+
+sem_type_s sem_type_s_(token_s *token)
+{
+    sem_type_s s;
+    
+    s.lexeme = token->lexeme;
+    if (token->stype) {
+        if (!strcmp(token->stype, "integer")) {
+            s.type = ATTYPE_NUMINT;
+            s.int_ = safe_atol(token->lexeme);
+            return s;
+        }
+        else if (!strcmp(token->stype, "real")) {
+            s.type = ATTYPE_NUMREAL;
+            s.real_ = safe_atod(token->lexeme);
+            return s;
+        }
+    }
+    s.type = ATTYPE_STR;
+    s.str_ = token->lexeme;
+    return s;
+}
 
 void print_semtype(sem_type_s value)
 {
@@ -259,14 +281,23 @@ void print_semtype(sem_type_s value)
             printf("value: %f\n", value.real_);
             break;
         case ATTYPE_STR:
-            printf("value: %s\n", value.str);
+            printf("value: %s\n", value.str_);
+            break;
+        case ATTYPE_NULL:
+            printf("value: null\n");
+            break;
         default:
             /*illegal*/
             break;
     }
 }
 
-semantics_s *semantics_s_(mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
+int test_semtype(sem_type_s value)
+{
+    return (value.int_ || value.real_ || value.str_);
+}
+
+semantics_s *semantics_s_(semantics_s *parent, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
 {
     semantics_s *s;
     
@@ -275,6 +306,7 @@ semantics_s *semantics_s_(mach_s *machs, pda_s *pda, production_s *prod, pnode_s
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
+    s->parent = parent;
     s->machs = machs;
     s->pda = pda;
     s->prod = prod;
@@ -298,7 +330,7 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
     for (i = 1; buf[i] != '}'; i++);
     buf[i] = EOF;
         
-    addtok(tlist, "generated {", *lineno, LEXTYPE_ANNOTATE, LEXATTR_DEFAULT);
+    addtok(tlist, "generated {", *lineno, LEXTYPE_ANNOTATE, LEXATTR_DEFAULT, NULL);
     ltok = lexf(data, &buf[1], anlineno, true);
     anlineno = ltok.lines;
     *lineno += ltok.lines;
@@ -594,21 +626,22 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     return result;
 }
 
-void sem_start (token_s *curr, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
+semantics_s *sem_start (semantics_s *parent, token_s *curr, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
 {    
     if(!curr)
-        return;
-    pda->s = semantics_s_(machs, pda, prod, pnode);
-    sem_statements(&curr, pda->s);
+        return NULL;
+    pda->s = semantics_s_(parent, machs, pda, prod, pnode);
+    sem_statements(&curr, pda->s, true);
+    return pda->s;
 }
 
-sem_statements_s sem_statements (token_s **curr, semantics_s *s)
+sem_statements_s sem_statements (token_s **curr, semantics_s *s, bool evaluate)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
-            sem_statement(curr, s);
-            sem_statements(curr, s);
+            sem_statement(curr, s, evaluate);
+            sem_statements(curr, s, evaluate);
         case SEMTYPE_FI:
         case SEMTYPE_ELSE:
         case LEXTYPE_EOF:
@@ -621,25 +654,31 @@ sem_statements_s sem_statements (token_s **curr, semantics_s *s)
 
 }
 
-sem_statement_s sem_statement (token_s **curr, semantics_s *s)
+sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate)
 {
+    char *att;
+    sem_expression_s expression;
+    
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
             *curr = (*curr)->next;
             printf("matching dot type\n");
             sem_match(curr, SEMTYPE_DOT);
             printf("matching id type %d %d\n", SEMTYPE_ID, (*curr)->type.val);
+            att = (*curr)->lexeme;
             sem_match(curr, SEMTYPE_ID);
             printf("matching assignop type\n");
             sem_match(curr, SEMTYPE_ASSIGNOP);
-            sem_expression(curr, s);
+            expression = sem_expression(curr, s);
+            if (evaluate)
+                attadd(s, att, alloc_semt(expression.value));
             break;
         case SEMTYPE_IF:
             *curr = (*curr)->next;
-            sem_expression(curr, s);
+            expression = sem_expression(curr, s);
             sem_match(curr, SEMTYPE_THEN);
-            sem_statements(curr, s);
-            sem_else(curr, s);
+            sem_statements(curr, s, evaluate);
+            sem_else(curr, s, test_semtype(expression.value) && evaluate);
             break;
         default:
             printf("Syntax Error at line %d: Expected nonterm or if but got %s", (*curr)->lineno, (*curr)->lexeme);
@@ -647,12 +686,12 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s)
     }
 }
 
-sem_else_s sem_else (token_s **curr, semantics_s *s)
+sem_else_s sem_else (token_s **curr, semantics_s *s, bool evaluate)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_statements(curr, s);
+            sem_statements(curr, s, evaluate);
             sem_match(curr, SEMTYPE_FI);
             break;
         case SEMTYPE_FI:
@@ -838,28 +877,30 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
         case SEMTYPE_ID:
             id = *curr;
             factor.value.type = ATTYPE_STR;
-            factor.value.str = id->lexeme;
+            factor.value.str_ = id->lexeme;
             *curr = (*curr)->next;
             idsuffix = sem_idsuffix(curr, s);
             //attadd (semantics_s *s, char *id, sem_type_s *data)
             if (idsuffix.dot.id) {
                 if (!strcmp(idsuffix.dot.id, "val")) {
-                    pnode = getpnode(s, id->lexeme, 0);
-                    switch (pnode->matched->type.attribute) {
-                        
-                    }
+                    pnode = getpnode(s, id->lexeme, idsuffix.factor_.index);
+                    
+                    factor.value = sem_type_s_(pnode->matched);
+                    
                 }
                 //attadd(s, //id->lexeme, pnode-);
             }
             break;
         case SEMTYPE_NONTERM:
             factor.value.type = ATTYPE_STR;
-            factor.value.str = (*curr)->lexeme;
+            factor.value.str_ = (*curr)->lexeme;
             factor.access.base = (*curr)->lexeme;
             *curr = (*curr)->next;
             idsuffix = sem_idsuffix(curr, s);
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
+            if (idsuffix.dot.id)
+                factor.value = getatt(s, idsuffix.dot.id);
             break;
         case SEMTYPE_NUM:
             if (!(*curr)->type.attribute) {
@@ -886,6 +927,11 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
                     break;
                 case ATTYPE_NUMREAL:
                     factor.value.real_ = !factor.value.real_;
+                    factor.value.int_ = (long)factor.value.real_;
+                    factor.value.type = ATTYPE_NUMINT;
+                    break;
+                case ATTYPE_NULL:
+                    printf("null value\n");
                     break;
                 default:
                     perror("Illegal State");
@@ -918,7 +964,7 @@ sem_factor__s sem_factor_ (token_s **curr, semantics_s *s)
             expression = sem_expression(curr, s);
             if (expression.value.type != ATTYPE_NUMINT)
                 printf("Type Error: Index value must be an integer");
-            factor_.index = expression.value.int_;
+            factor_.index = (unsigned)expression.value.int_;
             sem_match(curr, SEMTYPE_CLOSEBRACKET);
             break;
         case SEMTYPE_CLOSEBRACKET:
@@ -933,7 +979,7 @@ sem_factor__s sem_factor_ (token_s **curr, semantics_s *s)
         case SEMTYPE_DOT:
         case SEMTYPE_CLOSEPAREN:
         case LEXTYPE_EOF:
-            factor_.index = -1;
+            factor_.index = 0;
             break;
         default:
             printf("Syntax Error at line %d: Expected [ ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -1091,37 +1137,26 @@ att_s *att_s_ (void *data, unsigned tid)
         exit(EXIT_FAILURE);
     }
     att->tid = tid;
-    att->pdata = data;
+    att->lexeme = data;
     return att;
 }
 
 void attadd (semantics_s *s, char *id, sem_type_s *data)
 {
+    printf("Inserting %s with value:\n", id);
+    print_semtype(*data);
     hashinsert_(s->table, id, data);
 }
 
 sem_type_s getatt (semantics_s *s, char *id)
 {
+    sem_type_s dummy = {0};
     sem_type_s *data;
     
     data = hashlookup(s->table, id);
-    return *data;
-}
-
-val_s *val_s_(token_s *token)
-{
-    val_s *val;
-    
-    val = malloc(sizeof(*val));
-    if (!val) {
-        perror("Memory Allocation Error");
-        exit(EXIT_FAILURE);
+    if (!data) {
+        perror("Access to unitialized attribute.\n");
+        return dummy;
     }
-    val->type = token->stype;
-    val->lexeme = token->lexeme;
-    if (!strcasecmp(val->type, "integer"))
-        val->real_ = safe_atod(val->lexeme);
-    else if (!strcasecmp(val->type, "real"))
-        val->int_ = safe_atol(val->lexeme);
-    return val;
+    return *data;
 }
