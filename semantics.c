@@ -239,6 +239,8 @@ static sem_type_s getatt (semantics_s *s, char *id);
 
 semantics_s *addchild(semantics_s *parent, semantics_s *child)
 {
+    if (!parent)
+        return NULL;
     parent = realloc(parent, sizeof(*parent)+(parent->nchildren + 1)*sizeof(child));
     if (!parent) {
         perror("Memory Allocation Error");
@@ -312,7 +314,9 @@ semantics_s *semantics_s_(semantics_s **parent, mach_s *machs, pda_s *pda, produ
     s->prod = prod;
     s->pnode = pnode;
     s->table = hash_(pjw_hashf, str_isequalf);
-    *parent = addchild(*parent, pda->s);
+    *parent = addchild(*parent, s);
+    if (!*parent)
+        *parent = s;
     return s;
 }
 
