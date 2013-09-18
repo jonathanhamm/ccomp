@@ -297,7 +297,7 @@ void print_semtype(sem_type_s value)
 
 int test_semtype(sem_type_s value)
 {
-    return (value.int_ || value.real_ || value.str_);
+    return value.int_ || value.real_ || value.str_;
 }
 
 semantics_s *semantics_s_(semantics_s **parent, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
@@ -652,7 +652,7 @@ sem_statements_s sem_statements (token_s **curr, semantics_s *s, bool evaluate)
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error at line %d: Expected if nonterm fi else or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected if nonterm fi else or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -686,7 +686,8 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate)
             sem_else(curr, s, test_semtype(expression.value) && evaluate);
             break;
         default:
-            printf("Syntax Error at line %d: Expected nonterm or if but got %s", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected nonterm or if but got %s", (*curr)->lineno, (*curr)->lexeme);
+            assert(false);
             break;
     }
 }
@@ -703,7 +704,8 @@ sem_else_s sem_else (token_s **curr, semantics_s *s, bool evaluate)
             *curr = (*curr)->next;
             break;
         default:
-            printf("Syntax Error at line %d: Expected else or fi but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected else or fi but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            assert(false);
             break;
     }
 }
@@ -742,7 +744,7 @@ sem_expression__s sem_expression_ (token_s **curr, semantics_s *s)
             expression_.op = OPTYPE_NOP;
             break;
         default:
-            printf("Syntax Error at line %d: Expected relop ] fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected relop ] fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
             
@@ -767,7 +769,7 @@ sem_simple_expression_s sem_simple_expression (token_s **curr, semantics_s *s)
                 else if (simple_expression.value.type == ATTYPE_NUMREAL)
                     simple_expression.value.real_ = -simple_expression.value.real_;
                 else
-                    printf("Type Error: Cannot negate id types\n");
+                    perror("Type Error: Cannot negate id types\n");
             }
             break;
         case SEMTYPE_NOT:
@@ -780,8 +782,9 @@ sem_simple_expression_s sem_simple_expression (token_s **curr, semantics_s *s)
             simple_expression.value = term.value;
             break;
         default:
-            printf("Syntax Error at line %d: Expected + - not number or identifier but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Syntax Error at line %d: Expected + - not number or identifier but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            assert(false);
+            break;
     }
     return simple_expression;
 }
@@ -814,7 +817,7 @@ sem_simple_expression__s sem_simple_expression_ (token_s **curr, semantics_s *s,
             simple_expression_.value.type = ATTYPE_NULL;
             break;
         default:
-            printf("Syntax Error at line %d: Expected + - ] = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected + - ] = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -862,7 +865,7 @@ sem_term__s sem_term_ (token_s **curr, semantics_s *s, sem_type_s *accum)
             term_.op = OPTYPE_NOP;
             break;
         default:
-            printf("Syntax Error at line %d: Expected * / ] + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected * / ] + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -951,7 +954,7 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
             factor.value = expression.value;
             break;
         default:
-            printf("Syntax Error at line %d: Expected identifier nonterm number or not but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected identifier nonterm number or not but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -987,7 +990,7 @@ sem_factor__s sem_factor_ (token_s **curr, semantics_s *s)
             factor_.index = 0;
             break;
         default:
-            printf("Syntax Error at line %d: Expected [ ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected [ ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -1022,7 +1025,7 @@ sem_idsuffix_s sem_idsuffix (token_s **curr, semantics_s *s)
             idsuffix.dot.id = NULL;
             break;
         default:
-            printf("Syntax Error at line %d: Expected , ] [ * / + - = < > <> <= >= fi else then if . nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected , ] [ * / + - = < > <> <= >= fi else then if . nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -1054,7 +1057,7 @@ sem_dot_s sem_dot (token_s **curr, semantics_s *s)
             dot.id = NULL;
             break;
         default:
-            printf("Syntax Error at line %d: Expected . ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected . ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -1087,7 +1090,7 @@ sem_paramlist__s sem_paramlist_ (token_s **curr, semantics_s *s)
         case SEMTYPE_CLOSEPAREN:
             break;
         default:
-            printf("Syntax Error at line %d: Expected , or ( but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected , or ( but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -1104,8 +1107,8 @@ sem_sign_s sem_sign (token_s **curr)
         return sign;
     }
     else {
-        printf("Syntax Error at line %d: Expected + or - but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Syntax Error at line %d: Expected + or - but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+        assert(false);
     }
 }
 
@@ -1115,7 +1118,7 @@ bool sem_match (token_s **curr, int type)
         *curr = (*curr)->next;
         return true;
     }
-    printf("Syntax Error at line %d: Got %s\n", (*curr)->lineno, (*curr)->lexeme);
+    fprintf(stderr, "Syntax Error at line %d: Got %s\n", (*curr)->lineno, (*curr)->lexeme);
     return false;
 }
 
@@ -1160,7 +1163,7 @@ sem_type_s getatt (semantics_s *s, char *id)
     
     data = hashlookup(s->table, id);
     if (!data) {
-        perror("Access to unitialized attribute.\n");
+        perror("Access to unitialized attribute.");
         return dummy;
     }
     return *data;
