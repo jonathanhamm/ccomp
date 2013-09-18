@@ -46,6 +46,7 @@ enum lex_types_ {
     LEXTYPE_START,
     LEXTYPE_CROSS,
     LEXTYPE_CODE,
+    LEXTYPE_DOT,
     /* 
      Add lexical types here, then increment the
      value of the macro MACHID_START in semantics.c 
@@ -102,6 +103,7 @@ struct token_s
     char *stype;
     unsigned lineno;
     char lexeme[MAX_LEXLEN + 1];
+    char *lexeme_;
     token_s *prev;
     token_s *next;
 };

@@ -2,7 +2,7 @@
 	program id \( <identifier_list> \) ;
 	<program'>
 	<compound_statement>
-	.
+	\.
 	{
         <bob>.derp := derp
 	}        
@@ -55,7 +55,7 @@
 <type> ->
 	<standard_type>
 	|
-	array [ num . . num ] of <standard_type>
+	array [ num \. \. num ] of <standard_type>
     {
     }
 

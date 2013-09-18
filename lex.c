@@ -308,6 +308,10 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                     addtok(&list, lbuf, lineno, LEXTYPE_CODE, LEXATTR_DEFAULT, "code");
                 }
                 break;
+            case '.':
+                addtok(&list, ".", lineno, LEXTYPE_DOT, LEXATTR_DEFAULT, NULL);
+                break;
+
 default_:
             default:
                 if (isspace(buf[i]))

@@ -19,7 +19,7 @@ real
 ;
 \(
 \)
-.
+\.
 ,
 [
 ]
@@ -38,7 +38,7 @@ real
     <digit> +
 
 <fraction>{definition}->
-    . <digits>
+    \. <digits>
         
 <exponent>{definition}->
     E ( \+ | - | ε ) <digits> {length = 2}

@@ -7,7 +7,7 @@ or
 not
 \(
 \)
-.
+\.
 ,
 ;
 [
@@ -28,7 +28,7 @@ not
     <digit>+
 
 <numreal>{definition}->
-    <digit>+ . <digit>+
+    <digit>+ \. <digit>+
 
 <num>->
     <numint> {attribute = 0}
@@ -47,3 +47,4 @@ not
 
 <mulop>->
     \* {0} | \/ {1}
+
