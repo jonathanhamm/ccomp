@@ -287,6 +287,23 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                     i--;
                 }
                 break;
+                case '"':
+                    bpos = 0;
+                    while(buf[++i] != '"') {
+                        if(buf[i] == EOF) {
+                            fprintf(stderr, "Lexical Error: Failed to match \" at line %d", lineno);
+                            exit(EXIT_FAILURE);
+                        }
+                        if (buf[i] == '\n')
+                            lineno++;
+                        lbuf[bpos++] = buf[i];
+                        if (bpos == MAX_LEXLEN) {
+                            lbuf[bpos] = '\0';
+                            addtok(&list, lbuf, lineno, LEXTYPE_CODE, LEXATTR_DEFAULT, "code");
+                            bpos = 0;
+                        }
+                    }
+                    break;
 default_:
             default:
                 if (isspace(buf[i]))

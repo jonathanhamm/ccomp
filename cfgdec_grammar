@@ -54,6 +54,8 @@
     }
     |
     \( <expression> \)
+    |
+    code <code>
 
 <factor'> ->
 	[ <expression> ]
@@ -67,6 +69,11 @@
 
 <dot> ->
     . id 
+    |
+    ε
+
+<code>
+    code <code>
     |
     ε
 

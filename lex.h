@@ -45,6 +45,11 @@ enum lex_types_ {
     LEXTYPE_NULLSET,
     LEXTYPE_START,
     LEXTYPE_CROSS,
+    LEXTYPE_CODE,
+    /* 
+     Add lexical types here, then increment the
+     value of the macro MACHID_START in semantics.c 
+     */
     LEXTYPE_ANNOTATE
 };
 
