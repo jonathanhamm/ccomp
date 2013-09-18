@@ -907,8 +907,12 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
             idsuffix = sem_idsuffix(curr, s);
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
-            if (idsuffix.dot.id)
-                factor.value = getatt(s, idsuffix.dot.id);
+            if (idsuffix.dot.id) {
+                if (!strcmp(idsuffix.dot.id, "in"))
+                    factor.value = getatt(s->parent, idsuffix.dot.id);
+                else
+                    factor.value = getatt(s, idsuffix.dot.id);
+            }
             break;
         case SEMTYPE_NUM:
             if (!(*curr)->type.attribute) {
