@@ -8,7 +8,7 @@
     ε
 
 <statement>->
-    nonterm . id assignop <expression>
+    nonterm \. id assignop <expression>
     |
     if <expression> then <statements> <else>
 <else>->
@@ -68,7 +68,7 @@
     \( <paramlist> \)
 
 <dot> ->
-    . id 
+    \. id 
     |
     ε
 

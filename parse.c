@@ -346,6 +346,7 @@ void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
     production_s *production = NULL;
     
     switch ((*curr)->type.val) {
+        case LEXTYPE_DOT:
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
@@ -387,6 +388,7 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda)
     pnode_s *pnode = NULL, *token;
     
     switch ((*curr)->type.val) {
+        case LEXTYPE_DOT:
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
@@ -453,9 +455,10 @@ bool hasepsilon (parse_s *parser, pnode_s *nonterm)
     pda_s *pda;
     uint16_t i;
     
-    if (!nonterm || nonterm->token->type.val == LEXTYPE_TERM)
+    if (!nonterm || nonterm->token->type.val == LEXTYPE_TERM || nonterm->token->type.val == LEXTYPE_DOT || nonterm->token->type.val == LEXTYPE_EPSILON)
         return false;
     pda = get_pda(parser, nonterm->token->lexeme);
+    assert(pda);
     for (i = 0; i < pda->nproductions; i++) {
         if (isespsilon(&pda->productions[i]))
             return true;
@@ -500,7 +503,7 @@ llist_s *getfirsts (parse_s *parser, pda_s *pda)
             if (!iter)
                 return NULL;
             do {
-                if (iter->token->type.val == LEXTYPE_TERM)
+                if (iter->token->type.val == LEXTYPE_TERM || iter->token->type.val == LEXTYPE_DOT || iter->token->type.val == LEXTYPE_EPSILON)
                     llpush(&list, makeffnode(iter->token, i));
                 else {
                     tmp = get_pda(parser, iter->token->lexeme);
@@ -547,7 +550,7 @@ void getfollows (follow_s *fparams)
                         else {
                             iter = iter->next;
                             has_epsilon = hasepsilon(fparams->parser, iter);
-                            if (iter->token->type.val == LEXTYPE_TERM) {
+                            if (iter->token->type.val == LEXTYPE_TERM || iter->token->type.val == LEXTYPE_DOT || iter->token->type.val == LEXTYPE_EPSILON) {
                                 if (!llpnode_contains(fparams->follows, iter->token))
                                     llpush(&fparams->follows, makeffnode(iter->token, 0));
                             }
@@ -759,7 +762,7 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     
     llpush(&terminals, tmakeEOF());
     while (tokens) {
-        if (tokens->type.val == LEXTYPE_TERM) {
+        if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_DOT || tokens->type.val == LEXTYPE_EPSILON) {
             if (!lllex_contains(terminals, tokens->lexeme)) {
                 llpush(&terminals, tokens);
                 n_terminals++;

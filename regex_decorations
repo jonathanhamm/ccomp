@@ -48,3 +48,6 @@ not
 <mulop>->
     \* {0} | \/ {1}
 
+<code>{length=unlimited}->
+    " .* "
+

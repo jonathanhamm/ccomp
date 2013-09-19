@@ -168,6 +168,7 @@ struct nfa_edge_s
 
 struct mach_s
 {
+    bool    unlimited;
     bool    attr_id;
     bool    composite;
     bool    typecount;

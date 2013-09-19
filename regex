@@ -156,6 +156,8 @@
         return { <term> }
     }
     |
+    dot <annotation> <expression'>
+    |
     ε <annotation>
 
 <follow> ->

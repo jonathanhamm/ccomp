@@ -68,3 +68,7 @@ real
 
 <assignop>->
     :=
+
+<derp>->
+    ~.*
+    

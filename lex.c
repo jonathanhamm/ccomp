@@ -141,7 +141,8 @@ static void prxann_equals (nfa_edge_s *edge, token_s **curr, void *ptr, ann_call
 
 static int prx_tokenid (lex_s *lex, token_s **curr);
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
-match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf);
+static int tokmatch(char *buf, token_s *tok, unsigned *lineno);
+match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigned *lineno);
 static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
@@ -189,6 +190,7 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
     if (!buf)
         return NULL;
     for (i = 0, j = 0, lineno = 1, bpos = 0; buf[i] != EOF; i++) {
+        printf("%c\n", buf[i]);
         switch (buf[i]) {
             case '|':
                 addtok(&list, "|", lineno, LEXTYPE_UNION, LEXATTR_DEFAULT, NULL);
@@ -236,7 +238,9 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 }
                 break;
             case '-':
+                puts("baha\n");
                 if (buf[i+1] == '>') {
+                    puts("nuuuuuuuu");
                     addtok (&list, "->", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT, NULL);
                     for (p = list->prev; p && p->type.val != LEXTYPE_EOL; p = p->prev) {
                         if (!p->prev)
@@ -287,36 +291,19 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                     i--;
                 }
                 break;
-            case '"':
-                bpos = 0;
-                while(buf[++i] != '"') {
-                    if(buf[i] == EOF) {
-                        fprintf(stderr, "Lexical Error: Failed to match \" at line %d", lineno);
-                        exit(EXIT_FAILURE);
-                    }
-                    if (buf[i] == '\n')
-                        lineno++;
-                    lbuf[bpos++] = buf[i];
-                    if (bpos == MAX_LEXLEN) {
-                        lbuf[bpos] = '\0';
-                        addtok(&list, lbuf, lineno, LEXTYPE_CODE, LEXATTR_DEFAULT, "code");
-                        bpos = 0;
-                    }
-                }
-                if (bpos) {
-                    buf[i] = '\0';
-                    addtok(&list, lbuf, lineno, LEXTYPE_CODE, LEXATTR_DEFAULT, "code");
-                }
-                break;
             case '.':
-                addtok(&list, ".", lineno, LEXTYPE_DOT, LEXATTR_DEFAULT, NULL);
+                addtok(&list, ". (metachar)", lineno, LEXTYPE_DOT, LEXATTR_DEFAULT, NULL);
                 break;
-
+            case '\\':
+                lbuf[0] = buf[++i];
+                lbuf[1] = '\0';
+                addtok(&list, lbuf, lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
+                break;
 default_:
             default:
                 if (isspace(buf[i]))
                     break;
-                for (bpos = 0, j = LEXATTR_CHARDIG; buf[i] > ' ' && buf[i] != EOF; bpos++, i++)
+                for (bpos = 0, j = LEXATTR_CHARDIG; !isspace(buf[i]) && buf[i] != EOF; bpos++, i++)
                 {
                     if (bpos == MAX_LEXLEN) {
                         lbuf[bpos] = '\0';
@@ -324,6 +311,15 @@ default_:
                         break;
                     }
                     switch(buf[i]) {
+                        case '-':
+                            if (buf[i+1] != '>')
+                                break;
+                            goto dot_;
+                        case '<':
+                            if (!(isalnum(buf[i+1]) || buf[i+1] == '_' || buf[i+1] == '\''))
+                                break;
+dot_:
+                        case '.':
                         case '(':
                         case ')':
                         case '*':
@@ -383,6 +379,10 @@ doublebreak_:
             list->prev = NULL;
         free(backup);
     }
+    for(backup = list; backup; backup = backup->next) {
+        printf("%s\n", backup->lexeme);
+    }
+    //exit(1);
     return list;
 }
 
@@ -489,7 +489,7 @@ int parseregex (lex_s *lex, token_s **list)
     prx_tokens(lex, list, &types);
     if ((*list)->type.val != LEXTYPE_EOF) {
         printf("Syntax Error at line %u: Expected $ but got %s\n", (*list)->lineno, (*list)->lexeme);
-        exit(EXIT_FAILURE);
+        assert(false);
     }
     lex->idtable = idtable_s_();
     return types;
@@ -741,6 +741,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
         *curr = (*curr)->next;
         switch ((*curr)->type.val) {
             case LEXTYPE_OPENPAREN:
+            case LEXTYPE_DOT:
             case LEXTYPE_TERM:
             case LEXTYPE_NONTERM:
             case LEXTYPE_EPSILON:
@@ -755,6 +756,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
     }
     switch ((*curr)->type.val) {
         case LEXTYPE_OPENPAREN:
+        case LEXTYPE_DOT:
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
@@ -790,6 +792,7 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
                 *concat = nfa;
                 return nfa;
             }
+        case LEXTYPE_DOT:
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
@@ -902,14 +905,22 @@ void prxa_regexdef(token_s **curr, regex_ann_s *reg)
                 *curr = (*curr)->next;
                 if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_NUM)
                     mach->lexlen = safe_atol((*curr)->lexeme);
+                else if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_WORD) {
+                    if (!strcasecmp((*curr)->lexeme, "unlimited"))
+                        mach->unlimited = true;
+                    else {
+                        fprintf(stderr, "Error at line %d: Unknown length specifier: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                        assert(false);
+                    }
+                }
                 else {
-                    printf("Syntax Error at line %d: Expected number but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-                    exit(EXIT_FAILURE);
+                    fprintf(stderr, "Syntax Error at line %d: Expected number but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                    assert(false);
                 }
             }
             else {
-                printf("Syntax Error at line %d: Expected = but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-                exit(EXIT_FAILURE);
+                fprintf(stderr, "Syntax Error at line %d: Expected = but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                assert(false);
             }
         }
         else if (!strcasecmp((*curr)->lexeme, "type")) {
@@ -925,20 +936,20 @@ void prxa_regexdef(token_s **curr, regex_ann_s *reg)
                             mach->nterm->type.val = safe_atol((*curr)->lexeme);
                             break;
                         default:
-                            printf("Error: Expected word or number but got %s\n", (*curr)->lexeme);
-                            exit(EXIT_FAILURE);
+                            fprintf(stderr, "Error: Expected word or number but got %s\n", (*curr)->lexeme);
+                            assert(false);
                             break;
                     }
                 }
             }
             else {
-                printf("Syntax Error at line %d: Expected = but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-                exit(EXIT_FAILURE);
+                fprintf(stderr, "Syntax Error at line %d: Expected = but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                assert(false);
             }
         }
         else {
-            printf("Error at line %d: Unknown regex definition mode %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Error at line %d: Unknown regex definition mode %s\n", (*curr)->lineno, (*curr)->lexeme);
+            assert(false);
         }
         *curr = (*curr)->next;
         if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_COMMA)
@@ -985,8 +996,8 @@ void prxa_assignment(token_s **curr, nfa_edge_s *edge)
         edge->annotation.type = val.strval;
     }
     else {
-        printf("Error at line %d: Unknown attribute type: %s\n", (*curr)->lineno, str);
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error at line %d: Unknown attribute type: %s\n", (*curr)->lineno, str);
+        assert(false);
     }
 }
 
@@ -1242,23 +1253,30 @@ void addmachine (lex_s *lex, token_s *tok)
     lex->nmachs++;
 }
 
-int tokmatch(char *buf, token_s *tok)
+int tokmatch(char *buf, token_s *tok, unsigned *lineno)
 {
     uint16_t i, len;
     
     if (*buf == EOF)
         return EOF;
+    if(tok->type.val == LEXTYPE_DOT) {
+        if (*buf == '\n')
+            ++*lineno;
+        return 1;
+    }
     len = strlen(tok->lexeme);
     for (i = 0; i < len; i++) {
         if (buf[i] == EOF)
             return EOF;
+        if (buf[i] == '\n')
+            ++*lineno;
         if (buf[i] != tok->lexeme[i])
             return 0;
     }
     return len;
 }
 
-match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
+match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigned *lineno)
 {
     size_t tmatch, tmpmatch;
     uint16_t i;
@@ -1276,7 +1294,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
     for (i = 0; i < state->nedges; i++) {
         switch (state->edges[i]->token->type.val) {
             case LEXTYPE_EPSILON:
-                result = nfa_match(lex, nfa, state->edges[i]->state, buf);
+                result = nfa_match(lex, nfa, state->edges[i]->state, buf, lineno);
                 if (result.success) {
                     curr.success = true;
                     curr.stype = (state->edges[i]->annotation.type) ? state->edges[i]->annotation.type : result.stype;
@@ -1287,14 +1305,14 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                 break;
             case LEXTYPE_NONTERM:
                 tmp = getmach(lex, state->edges[i]->token->lexeme);
-                result = nfa_match(lex, tmp->nfa, tmp->nfa->start, buf);
+                result = nfa_match(lex, tmp->nfa, tmp->nfa->start, buf, lineno);
                 if (state->edges[i]->annotation.length > -1 && result.n > state->edges[i]->annotation.length) {
                     result.overflow.str = state->edges[i]->token->lexeme;
                     result.overflow.len = result.n;
                 }
                 else if (result.success) {
                     tmpmatch = result.n;
-                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n]);
+                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[result.n], lineno);
                     if (result.success) {
                         curr.success = true;
                         if (result.n > 0 && result.attribute > 0)
@@ -1308,10 +1326,11 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                     }
                 }
                 break;
-            default: /* case LEXTYPE_TERM */
-                tmatch = tokmatch(buf, state->edges[i]->token);
+            case LEXTYPE_TERM: /* case LEXTYPE_TERM */
+            case LEXTYPE_DOT:
+                tmatch = tokmatch(buf, state->edges[i]->token, lineno);
                 if (tmatch && tmatch != EOF) {
-                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch]);
+                    result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch], lineno);
                     if (result.success) {
                         curr.success = true;
                         curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
@@ -1320,6 +1339,10 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf)
                             curr.n = result.n + tmatch;
                     }
                 }
+                break;
+            default:
+                perror("Illegal State in nfa");
+                assert(false);
                 break;
         }
     }
@@ -1331,7 +1354,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
     int idatt = 0;
     mach_s *mach, *bmach;
     match_s res, best;
-    uint16_t lineno = linestart;
+    unsigned lineno = linestart;
     char c[2], *backup, *error, tmpbuf[MAX_LEXLEN];
     tlookup_s lookup;
     token_s *head = NULL, *tlist = NULL;
@@ -1366,7 +1389,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
         for (mach = lex->machs; mach; mach = mach->next) {
             if (*buf == EOF)
                 break;
-            res = nfa_match(lex, mach->nfa, mach->nfa->start, buf);
+            res = nfa_match(lex, mach->nfa, mach->nfa->start, buf, &lineno);
             if (!res.overflow.str &&  res.n <= mach->lexlen) {
                 if (res.success && !mach->composite && res.n > best.n) {
                     best = res;

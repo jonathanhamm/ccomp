@@ -41,6 +41,7 @@
 <identifier_list'> ->
 	, id <identifier_list'>
 	{
+        <identifier_list>.code := derp
 	}
 	|
 	ε
