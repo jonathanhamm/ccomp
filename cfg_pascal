@@ -194,7 +194,15 @@
         <factor>.type := <expression>.type 
         <factor>.type := bob(1,3,4.23+3)
         <factor>.value := <expression>.value
- 
+        <factor>.code := 
+        "
+                        if (x == 3) goto label_1;
+                            fork();
+                            goto label_2;
+                label_1:
+                        exit(1);
+                label_2:
+        "
     }
 	|
 	num
@@ -212,7 +220,7 @@
     }
 <factor'> ->
 	[ <expression> ]
-    { <factor'>.type := <expression>.type }
+    { <factor'>1.type := <expression>.type }
 	|
 	ε
     

@@ -51,3 +51,5 @@ not
 <code>{length=unlimited}->
     " .* "
 
+<concat>->
+    \|\|

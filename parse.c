@@ -762,6 +762,8 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     
     llpush(&terminals, tmakeEOF());
     while (tokens) {
+        
+        
         if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_DOT || tokens->type.val == LEXTYPE_EPSILON) {
             if (!lllex_contains(terminals, tokens->lexeme)) {
                 llpush(&terminals, tokens);

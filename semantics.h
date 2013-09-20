@@ -24,7 +24,6 @@ struct semantics_s
     hash_s *table;
     unsigned nchildren;
     semantics_s *parent;
-    semantics_s *children[];
 };
 
 extern semantics_s *semantics_s_(semantics_s **parent, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode);

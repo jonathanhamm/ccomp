@@ -50,6 +50,7 @@ typedef struct overflow_s overflow_s;
 typedef struct match_s match_s;
 typedef struct regex_ann_s regex_ann_s;
 typedef struct prxa_expression_s prxa_expression_s;
+typedef struct nolimit_s nolimit_s;
 
 typedef void (*ann_callback_f) (token_s **, void *);
 typedef void (*regex_callback_f) (token_s **, void *);
@@ -146,7 +147,8 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigne
 static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
-
+ 
+static int addtok_(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype, bool unlimited);
 /*
  rule1:
     rule2 | rule3 | rule4 
@@ -240,7 +242,6 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
             case '-':
                 puts("baha\n");
                 if (buf[i+1] == '>') {
-                    puts("nuuuuuuuu");
                     addtok (&list, "->", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT, NULL);
                     for (p = list->prev; p && p->type.val != LEXTYPE_EOL; p = p->prev) {
                         if (!p->prev)
@@ -1351,6 +1352,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigne
 
 lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
 {
+    bool unlimited;
     int idatt = 0;
     mach_s *mach, *bmach;
     match_s res, best;
@@ -1390,14 +1392,14 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
             if (*buf == EOF)
                 break;
             res = nfa_match(lex, mach->nfa, mach->nfa->start, buf, &lineno);
-            if (!res.overflow.str &&  res.n <= mach->lexlen) {
+            if (mach->unlimited || (!res.overflow.str &&  res.n <= mach->lexlen)) {
                 if (res.success && !mach->composite && res.n > best.n) {
                     best = res;
                     bmach = mach;
                 }
             }
             else {
-                if (!res.overflow.str) {
+                if (mach->unlimited || !res.overflow.str) {
                     overflow.str = buf;
                     overflow.len = res.n;
                     best.success = false;
@@ -1406,29 +1408,30 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                     overflow = res.overflow;
             }
         }
+        unlimited = bmach->unlimited;
         c[0] = buf[best.n];
         buf[best.n] = '\0';
         if (best.success) {
-            if (best.n <= bmach->lexlen) {
+            if (unlimited || best.n <= bmach->lexlen) {
                 lookup = idtable_lookup(lex->kwtable, buf);
                 if (lookup.is_found) {
-                    addtok(&tlist, buf, lineno, lookup.tdat.itype, best.attribute, best.stype);
+                    addtok_(&tlist, buf, lineno, lookup.tdat.itype, best.attribute, best.stype, unlimited);
                     hashname(lex, lookup.tdat.itype, buf);
                 }
                 else {
                     lookup = idtable_lookup(lex->idtable, buf);
                     if (lookup.is_found) {
-                        addtok(&tlist, buf, lineno, lookup.tdat.itype, lookup.tdat.att, best.stype);
+                        addtok_(&tlist, buf, lineno, lookup.tdat.itype, lookup.tdat.att, best.stype, unlimited);
                         hashname(lex, lookup.tdat.itype, buf);
                     }
                     else if (bmach->attr_id) {
                         idatt++;
-                        addtok(&tlist, buf, lineno, bmach->nterm->type.val, idatt, best.stype);
+                        addtok_(&tlist, buf, lineno, bmach->nterm->type.val, idatt, best.stype, unlimited);
                         idtable_insert(lex->idtable, buf, (tdat_s){.is_string = false, .itype = bmach->nterm->type.val, .att = idatt});
                         hashname(lex, lex->typestart, bmach->nterm->lexeme);
                     }
                     else {
-                        addtok(&tlist, buf, lineno, bmach->nterm->type.val, best.attribute, best.stype);
+                        addtok_(&tlist, buf, lineno, bmach->nterm->type.val, best.attribute, best.stype, unlimited);
                         hashname(lex, lex->typestart, bmach->nterm->lexeme);
                     }
                 }
@@ -1436,7 +1439,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                     head = tlist;
             }
             else {
-                addtok(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT, best.stype);
+                addtok_(&tlist, c, lineno, LEXTYPE_ERROR, LEXATTR_DEFAULT, best.stype, unlimited);
                 if (listing) {
                     error = make_lexerr(LERR_TOOLONG, lineno, buf);
                     adderror(lex->listing, error, lineno);
@@ -1457,7 +1460,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
         else {
             lookup = idtable_lookup(lex->kwtable, c);
             if (lookup.is_found) {
-                addtok(&tlist, c, lineno, lookup.tdat.itype, LEXATTR_DEFAULT, best.stype);
+                addtok_(&tlist, c, lineno, lookup.tdat.itype, LEXATTR_DEFAULT, best.stype, unlimited);
                 hashname(lex, lookup.tdat.itype, NULL);
                 if (!head)
                     head = tlist;
@@ -1552,4 +1555,27 @@ inline bool hashname(lex_s *lex, unsigned long token_val, char *name)
 inline char *getname(lex_s *lex, unsigned long token_val)
 {
     return hashlookup(lex->tok_hash, (void *)token_val);
+}
+
+int addtok_(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype, bool unlimited)
+{
+    int ret;
+    char buf[MAX_LEXLEN+1], *backup = lexeme;
+    
+    if (unlimited) {
+        if(strlen(lexeme) >= MAX_LEXLEN) {
+            snprintf(buf, MAX_LEXLEN, "%s", lexeme);
+            lexeme = buf;
+        }
+        ret = addtok(tlist, lexeme, lineno, type, attribute, stype);
+        (*tlist)->lexeme_ = malloc(strlen(backup)+1);
+        if (!(*tlist)->lexeme_) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        snprintf((*tlist)->lexeme_, strlen(backup)+1, "%s", backup);
+    }
+    else
+        ret = addtok(tlist, lexeme, lineno, type, attribute, stype);
+    return ret;
 }

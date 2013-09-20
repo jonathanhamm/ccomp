@@ -8,7 +8,7 @@
     ε
 
 <statement>->
-    nonterm \. id assignop <expression>
+    nonterm <idsuffix> assignop <expression>
     |
     if <expression> then <statements> <else>
 <else>->
@@ -58,7 +58,7 @@
     code <code>
 
 <factor'> ->
-	[ <expression> ]
+	num
 	|
 	ε
 
