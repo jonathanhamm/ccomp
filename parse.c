@@ -57,7 +57,6 @@ struct tfind_s
     token_s *token;
 };
 
-static token_s *nexttoken(token_s **curr, pnode_s *pnode);
 static void match_phase (lextok_s regex, token_s *cfg);
 static tfind_s findtok(mach_s *mlist, char *lexeme);
 static parse_s *parse_(void);
@@ -71,7 +70,7 @@ static void pp_nonterminals (parse_s *parse, token_s **curr);
 static void pp_production (parse_s *parse, token_s **curr, pda_s *pda);
 static void pp_productions (parse_s *parse, token_s **curr, pda_s *pda);
 static pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda);
-static void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda);
+static void pp_decoration (parse_s *parse, token_s **curr, production_s *prod);
 
 static ffnode_s *makeffnode (token_s *token, uint16_t prod);
 static bool isespsilon (production_s *production);
@@ -94,7 +93,7 @@ static void print_parse_table (parsetable_s *ptable, FILE *stream);
 static void print_firfol (parse_s *parse, FILE *stream);
 
 static int match (token_s **curr, pnode_s *p);
-static bool nonterm (semantics_s *parent, parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int index);
+static bool nonterm (parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int index);
 static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
 static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
 static char *make_synerr (pda_s *pda, token_s **curr);
@@ -148,34 +147,6 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     match_phase(lextok, head);
     print_listing(semantics->listing, stdout);
     return parse;
-}
-
-token_s *nexttoken(token_s **curr, pnode_s *pnode)
-{
-    token_s *next = (*curr)->next;
-
-    if (next->type.val == LEXTYPE_ANNOTATE) {
-        if (!pnode) {
-            printf("Error: Misplaced Annotation line %u\n", (*curr)->lineno);
-            assert(false);
-        }
-        else if (pnode == PANIC_NOANNOTATION) {
-            do {
-                *curr = (*curr)->next;
-            }
-            while ((*curr)->type.val != LEXTYPE_ANNOTATE);
-        }
-        else {
-            next = next->next;
-            pnode->annotation = next;
-            printf("Added Annotation To: %s\n", pnode->token->lexeme);
-            for(; next->type.val != LEXTYPE_EOF; next = next->next);
-            next = next->next;
-            *curr = next;
-        }
-        assert(next->type.val != LEXTYPE_ANNOTATE);
-    }
-    return next;
 }
 
 void match_phase (lextok_s regex, token_s *cfg)
@@ -266,9 +237,10 @@ production_s *addproduction (pda_s *pda)
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
+    pda->productions[pda->nproductions].annot = NULL;
+    pda->productions[pda->nproductions].s = NULL;
     pda->productions[pda->nproductions].start = NULL;
-    pda->nproductions++;
-    return &pda->productions[pda->nproductions-1];
+    return &pda->productions[pda->nproductions++];
 }
 
 pnode_s *pnode_(token_s *token)
@@ -298,28 +270,27 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
     pda_s *pda = NULL;
     
     if ((*curr)->type.val == LEXTYPE_EOL)
-        *curr = nexttoken(curr, NULL);
+        *curr = (*curr)->next;
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         pda = pda_(*curr);
         if (!hash_pda(parse, (*curr)->lexeme, pda)) {
             printf("Error: Redefinition of production: %s\n", (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
         }
-        *curr = nexttoken(curr, NULL);
+        *curr = (*curr)->next;
         if ((*curr)->type.val == LEXTYPE_PRODSYM) {
-            *curr = nexttoken(curr, NULL);
+            *curr = (*curr)->next;
             pp_production(parse, curr, pda);
             pp_productions(parse, curr, pda);
-            pp_decoration(parse, curr, pda);
         }
         else {
             printf("Syntax Error at line %d: Expected '->' but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
         }
     }
     else {
         printf("Syntax Error at line %d: Expected nonterminal but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-        exit(EXIT_FAILURE);
+        assert(false);
     }
 }
 
@@ -327,7 +298,7 @@ void pp_nonterminals (parse_s *parse, token_s **curr)
 {    
     switch ((*curr)->type.val) {
         case LEXTYPE_EOL:
-            *curr = nexttoken(curr, NULL);
+            *curr = (*curr)->next;
             pp_nonterminal(parse, curr);
             pp_nonterminals(parse, curr);
             break;
@@ -335,7 +306,7 @@ void pp_nonterminals (parse_s *parse, token_s **curr)
             break;
         default:
             printf("Syntax Error at line %d: Expected EOL or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
             break;
     }
 }
@@ -352,13 +323,14 @@ void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
         case LEXTYPE_EPSILON:
             production = addproduction(pda);
             production->start = pnode_(*curr);
-            *curr = nexttoken(curr, production->start);
+            *curr = (*curr)->next;
             token = pp_tokens(parse, curr, pda);
             production->start->next = token;
+            pp_decoration(parse, curr, production);
             break;
         default:
             printf("Syntax Error at line %d: Expected token but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
             break;
     }
 }
@@ -367,7 +339,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
 {    
     switch ((*curr)->type.val) {
         case LEXTYPE_UNION:
-            *curr = nexttoken(curr, NULL);
+            *curr = (*curr)->next;
             pp_production(parse, curr, pda);
             pp_productions(parse, curr, pda);
             break;
@@ -378,7 +350,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
             break;
         default:
             printf("Syntax Error at line %d: Expected '|', annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
             break;
     }
 }
@@ -393,7 +365,7 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda)
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
             pnode = pnode_(*curr);
-            *curr = nexttoken(curr, pnode);
+            *curr = (*curr)->next;
             token = pp_tokens(parse, curr, pda);
             if (token) {
                 pnode->next = token;
@@ -413,13 +385,18 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda)
     return pnode;
 }
 
-void pp_decoration (parse_s *parse, token_s **curr, pda_s *pda)
+void pp_decoration (parse_s *parse, token_s **curr, production_s *prod)
 {
     switch ((*curr)->type.val) {
         case LEXTYPE_ANNOTATE:
-            while ((*curr)->type.val == LEXTYPE_ANNOTATE)
-                *curr = nexttoken(curr, NULL);
+            *curr = (*curr)->next;
+            prod->annot = *curr;
+            assert(prod->annot->prev->type.val == LEXTYPE_ANNOTATE);
+            while ((*curr)->type.val != LEXTYPE_EOF)
+                *curr = (*curr)->next;
+            *curr = (*curr)->next;
             break;
+        case LEXTYPE_UNION:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EOL:
         case LEXTYPE_EOF:
@@ -902,7 +879,7 @@ void parse (parse_s *parse, lextok_s lex)
         adderror(parse->listing, synerr, lex.tokens->lineno);
         panic_recovery(parse->start->follows, &lex.tokens);
     }
-    nonterm(NULL, parse, lex.lex->machs, &lex.tokens, parse->start, index);
+    nonterm(parse, lex.lex->machs, &lex.tokens, parse->start, index);
     if (lex.tokens->type.val != LEXTYPE_EOF) {
         errsize = (sizeof(SYNERR_PREFIX)-1)+FS_INTWIDTH_DEC(lex.tokens->lineno)+sizeof("EOF but got: ")+strlen(lex.tokens->lexeme);
         synerr = malloc(errsize);
@@ -929,7 +906,7 @@ int match(token_s **curr, pnode_s *p)
     return 0;
 }
 
-bool nonterm (semantics_s *parent, parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int index)
+bool nonterm (parse_s *parse, mach_s *machs, token_s **curr, pda_s *pda, int index)
 {
     int result;
     pda_s *nterm;
@@ -937,14 +914,14 @@ bool nonterm (semantics_s *parent, parse_s *parse, mach_s *machs, token_s **curr
     bool success;
     char *synerr;
     size_t errsize;
-    semantics_s *s = parent;
     
     pnode = pda->productions[index].start;
+    assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
-        s = sem_start(&parent, pnode->annotation, machs, pda, &pda->productions[index], pnode);
+        sem_start(machs, pda, &pda->productions[index], pnode);
         return true;
     }
-    if (pnode->token->type.val != LEXTYPE_EPSILON) {
+    else {
         for (; pnode; pnode = pnode->next) {
             do {
                 if (!*curr)
@@ -960,7 +937,7 @@ bool nonterm (semantics_s *parent, parse_s *parse, mach_s *machs, token_s **curr
                         *curr = (*curr)->next;
                     }
                     else
-                        nonterm(s, parse, machs, curr, nterm, result);
+                        nonterm(parse, machs, curr, nterm, result);
                 }
                 else {
                     pnode->matched = *curr;
@@ -984,8 +961,9 @@ bool nonterm (semantics_s *parent, parse_s *parse, mach_s *machs, token_s **curr
                 }
             }
             while (!success);
-            s = sem_start(&parent, pnode->annotation, machs, pda, &pda->productions[index], pnode);
         }
+        assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
+        sem_start(machs, pda, &pda->productions[index], pnode);
     }
     
     return true;

@@ -235,8 +235,8 @@ static bool sem_match (token_s **curr, int type);
 
 static sem_type_s *alloc_semt(sem_type_s value);
 static att_s *att_s_ (void *data, unsigned tid);
-static void attadd (semantics_s *s, char *id, sem_type_s *data);
-static sem_type_s getatt (semantics_s *s, char *id);
+static void setatt(semantics_s *s, char *id, sem_type_s *data);
+static sem_type_s getatt(semantics_s *s, char *id);
 
 sem_type_s sem_type_s_(token_s *token)
 {
@@ -286,7 +286,7 @@ int test_semtype(sem_type_s value)
     return value.int_ || value.real_ || value.str_;
 }
 
-semantics_s *semantics_s_(semantics_s **parent, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
+semantics_s *semantics_s_(mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
 {
     semantics_s *s;
     
@@ -300,8 +300,6 @@ semantics_s *semantics_s_(semantics_s **parent, mach_s *machs, pda_s *pda, produ
     s->prod = prod;
     s->pnode = pnode;
     s->table = hash_(pjw_hashf, str_isequalf);
-    if (!*parent)
-        *parent = s;
     return s;
 }
 
@@ -379,7 +377,7 @@ static pnode_s *getpnode(semantics_s *s, char *lexeme, unsigned index)
     long ltype = -1;
     pnode_s *iter;
     mach_s *miter;
-
+    
     for (miter = s->machs; miter; miter = miter->next) {
         if (!ntstrcmp (miter->nterm->lexeme, lexeme)) {
             ltype = miter->nterm->type.val;
@@ -600,13 +598,17 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     return result;
 }
 
-semantics_s *sem_start (semantics_s **parent, token_s *curr, mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
-{    
-    if(!curr)
+semantics_s *sem_start (mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
+{
+    token_s *iter;
+    semantics_s *s;
+    
+    iter = prod->annot;
+    if(!iter)
         return NULL;
-    pda->s = semantics_s_(parent, machs, pda, prod, pnode);
-    sem_statements(&curr, pda->s, true);
-    return pda->s;
+    s = semantics_s_(machs, pda, prod, pnode);
+    sem_statements(&iter, s, true);
+    return s;
 }
 
 sem_statements_s sem_statements (token_s **curr, semantics_s *s, bool evaluate)
@@ -630,13 +632,14 @@ sem_statements_s sem_statements (token_s **curr, semantics_s *s, bool evaluate)
 
 sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate)
 {
-    char *att;
+    char *att, *nterm;
     unsigned index;
     sem_expression_s expression;
     sem_idsuffix_s idsuffix;
     
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
+            nterm = (*curr)->lexeme;
             *curr = (*curr)->next;
             
             idsuffix = sem_idsuffix(curr, s);
@@ -645,8 +648,13 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate)
             printf("matching assignop type\n");
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(curr, s);
-            if (evaluate)
-                attadd(s, att, alloc_semt(expression.value));
+            if (evaluate) {
+                if(!strcmp(s->pda->nterm->lexeme, nterm))
+                    ;//setatt(s, att, alloc_semt(expression.value));
+                else {
+                    
+                }
+            }
             break;
         case SEMTYPE_IF:
             *curr = (*curr)->next;
@@ -993,7 +1001,7 @@ sem_idsuffix_s sem_idsuffix (token_s **curr, semantics_s *s)
             break;
         case SEMTYPE_OPENPAREN:
             sem_paramlist(curr, s);
-            idsuffix.factor_.index = -1;
+            idsuffix.factor_.index = 0;
             idsuffix.dot.id = NULL;
             break;
         default:
@@ -1121,10 +1129,8 @@ att_s *att_s_ (void *data, unsigned tid)
     return att;
 }
 
-void attadd (semantics_s *s, char *id, sem_type_s *data)
+void setadd (semantics_s *s, char *id, sem_type_s *data)
 {
-    printf("Inserting %s with value:\n", id);
-    print_semtype(*data);
     hashinsert_(s->table, id, data);
 }
 

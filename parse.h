@@ -38,12 +38,13 @@ struct pda_s
     production_s *productions;
     llist_s *firsts;
     llist_s *follows;
-    struct semantics_s *s;
 };
 
 struct production_s
 {
     pnode_s *start;
+    token_s *annot;
+    struct semantics_s *s;
 };
 
 struct pnode_s
@@ -53,6 +54,7 @@ struct pnode_s
     token_s *annotation;
     pnode_s *next;
     pnode_s *prev;
+    struct semantics_s *s;
 };
 
 struct parsetable_s

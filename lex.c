@@ -1375,6 +1375,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
         best.stype = NULL;
         overflow.str = NULL;
         overflow.len = 0;
+        bmach = NULL;
         
         while (isspace(*buf)) {
             if (*buf == '\n') {
@@ -1408,7 +1409,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                     overflow = res.overflow;
             }
         }
-        unlimited = bmach->unlimited;
+        unlimited = bmach ? bmach->unlimited : false;
         c[0] = buf[best.n];
         buf[best.n] = '\0';
         if (best.success) {
