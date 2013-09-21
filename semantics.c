@@ -286,7 +286,7 @@ int test_semtype(sem_type_s value)
     return value.int_ || value.real_ || value.str_;
 }
 
-semantics_s *semantics_s_(mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
+semantics_s *semantics_s_(parse_s *parse, mach_s *machs, pda_s *pda, pnode_s *pnode)
 {
     semantics_s *s;
     
@@ -295,9 +295,10 @@ semantics_s *semantics_s_(mach_s *machs, pda_s *pda, production_s *prod, pnode_s
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
+    s->pass = false;
+    s->parse = parse;
     s->machs = machs;
     s->pda = pda;
-    s->prod = prod;
     s->pnode = pnode;
     s->table = hash_(pjw_hashf, str_isequalf);
     return s;
@@ -378,6 +379,7 @@ static pnode_s *getpnode(semantics_s *s, char *lexeme, unsigned index)
     pnode_s *iter;
     mach_s *miter;
     
+    assert(s->prod);
     for (miter = s->machs; miter; miter = miter->next) {
         if (!ntstrcmp (miter->nterm->lexeme, lexeme)) {
             ltype = miter->nterm->type.val;
@@ -598,17 +600,19 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     return result;
 }
 
-semantics_s *sem_start (mach_s *machs, pda_s *pda, production_s *prod, pnode_s *pnode)
+semantics_s *sem_start (semantics_s *inherit, parse_s *parse, production_s *prod, mach_s *machs, pda_s *pda, pnode_s *pnode)
 {
     token_s *iter;
-    semantics_s *s;
     
-    iter = prod->annot;
-    if(!iter)
+    if(!prod || !(iter = prod->annot))
         return NULL;
-    s = semantics_s_(machs, pda, prod, pnode);
-    sem_statements(&iter, s, true);
-    return s;
+    if(!inherit)
+        inherit = semantics_s_(parse, machs, pda, pnode);
+    else
+        inherit->prod = prod;
+    sem_statements(&iter, inherit, true);
+    inherit->pass = true;
+    return inherit;
 }
 
 sem_statements_s sem_statements (token_s **curr, semantics_s *s, bool evaluate)
@@ -632,6 +636,8 @@ sem_statements_s sem_statements (token_s **curr, semantics_s *s, bool evaluate)
 
 sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate)
 {
+    pda_s *pda;
+    pnode_s *p;
     char *att, *nterm;
     unsigned index;
     sem_expression_s expression;
@@ -650,9 +656,22 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate)
             expression = sem_expression(curr, s);
             if (evaluate) {
                 if(!strcmp(s->pda->nterm->lexeme, nterm))
-                    ;//setatt(s, att, alloc_semt(expression.value));
+                    setatt(s, att, alloc_semt(expression.value));
                 else {
-                    
+                    if (s->pass) {
+                    p = getpnode(s, nterm, idsuffix.factor_.index);
+                    if (p->token->type.val == LEXTYPE_NONTERM) {
+                        pda = get_pda(s->parse, p->token->lexeme);
+                        p->s = semantics_s_(s->parse, s->machs, pda, p);
+                    }
+                    else if (p->token->type.val == LEXTYPE_TERM) {
+                        
+                    }
+                    else {
+                        assert(false);
+                    }
+                    }
+                //p->s = semantics_s_(s->machs, , <#production_s *prod#>, <#pnode_s *pnode#>)
                 }
             }
             break;
@@ -866,7 +885,7 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
             idsuffix = sem_idsuffix(curr, s);
             //attadd (semantics_s *s, char *id, sem_type_s *data)
             if (idsuffix.dot.id) {
-                if (!strcmp(idsuffix.dot.id, "val")) {
+                if (!strcmp(idsuffix.dot.id, "val") && s->pass) {
                     pnode = getpnode(s, id->lexeme, idsuffix.factor_.index);
                     
                     factor.value = sem_type_s_(pnode->matched);
@@ -1129,7 +1148,7 @@ att_s *att_s_ (void *data, unsigned tid)
     return att;
 }
 
-void setadd (semantics_s *s, char *id, sem_type_s *data)
+void setatt (semantics_s *s, char *id, sem_type_s *data)
 {
     hashinsert_(s->table, id, data);
 }
