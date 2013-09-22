@@ -213,7 +213,8 @@ static int test_semtype(sem_type_s value);
 static inline unsigned toaddop(unsigned val);
 static inline unsigned tomulop(unsigned val);
 static inline unsigned torelop(unsigned val);
-static pnode_s *getpnode(semantics_s *s, char *lexeme, unsigned index);
+static pnode_s *getpnode_token(semantics_s *s, char *lexeme, unsigned index);
+static pnode_s *getpnode_nterm(semantics_s *s, char *lexeme, unsigned index);
 static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
 static sem_statements_s sem_statements (token_s **curr, semantics_s *s, bool evaluate);
 static sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate);
@@ -262,6 +263,7 @@ sem_type_s sem_type_s_(token_s *token)
 
 void print_semtype(sem_type_s value)
 {
+    return;
     switch (value.type) {
         case ATTYPE_NUMINT:
             printf("value: %ld\n", value.int_);
@@ -372,7 +374,7 @@ unsigned torelop(unsigned val)
     }
 }
 
-static pnode_s *getpnode(semantics_s *s, char *lexeme, unsigned index)
+pnode_s *getpnode_token(semantics_s *s, char *lexeme, unsigned index)
 {
     unsigned i;
     long ltype = -1;
@@ -392,6 +394,24 @@ static pnode_s *getpnode(semantics_s *s, char *lexeme, unsigned index)
     for (iter = s->prod->start, i = 0; iter; iter = iter->next) {
         printf("Attempting to fetch: %s %u %ld\n", lexeme, iter->token->type.val, ltype);
         if (iter->token->type.val == ltype) {
+            if (i == index)
+                return iter;
+            i++;
+        }
+    }
+    return NULL;
+}
+
+pnode_s *getpnode_nterm(semantics_s *s, char *lexeme, unsigned index)
+{
+    unsigned i;
+    pnode_s *iter;
+    
+    assert(s->prod);
+    for (iter = s->prod->start, i = 0; iter; iter = iter->next) {
+        printf("%s %s\n", iter->token->lexeme, lexeme);
+        if (!strcmp(iter->token->lexeme, lexeme)) {
+            printf("passed: %u %u\n", i, index);
             if (i == index)
                 return iter;
             i++;
@@ -604,14 +624,19 @@ semantics_s *sem_start (semantics_s *inherit, parse_s *parse, production_s *prod
 {
     token_s *iter;
     
+    assert(pnode);
     if(!prod || !(iter = prod->annot))
         return NULL;
-    if(!inherit)
+    if(!inherit) {
         inherit = semantics_s_(parse, machs, pda, pnode);
+    }
     else
         inherit->prod = prod;
+    if (pnode)
+        pnode->s = inherit;
     sem_statements(&iter, inherit, true);
     inherit->pass = true;
+    assert(inherit);
     return inherit;
 }
 
@@ -647,7 +672,6 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate)
         case SEMTYPE_NONTERM:
             nterm = (*curr)->lexeme;
             *curr = (*curr)->next;
-            
             idsuffix = sem_idsuffix(curr, s);
             index = idsuffix.factor_.index;
             att = idsuffix.dot.id;
@@ -659,19 +683,14 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, bool evaluate)
                     setatt(s, att, alloc_semt(expression.value));
                 else {
                     if (s->pass) {
-                    p = getpnode(s, nterm, idsuffix.factor_.index);
-                    if (p->token->type.val == LEXTYPE_NONTERM) {
-                        pda = get_pda(s->parse, p->token->lexeme);
-                        p->s = semantics_s_(s->parse, s->machs, pda, p);
+                        /* Time to set inherited attributes */
+                        p = getpnode_nterm(s, nterm, idsuffix.factor_.index);
+                        if(!p) {
+                            fprintf(stderr, "Error: Nonterminal %s cannot be matched in this scope.", nterm);
+                            assert(false);
+                        }
+                        setatt(p->s, att, alloc_semt(expression.value));
                     }
-                    else if (p->token->type.val == LEXTYPE_TERM) {
-                        
-                    }
-                    else {
-                        assert(false);
-                    }
-                    }
-                //p->s = semantics_s_(s->machs, , <#production_s *prod#>, <#pnode_s *pnode#>)
                 }
             }
             break;
@@ -886,10 +905,9 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s)
             //attadd (semantics_s *s, char *id, sem_type_s *data)
             if (idsuffix.dot.id) {
                 if (!strcmp(idsuffix.dot.id, "val") && s->pass) {
-                    pnode = getpnode(s, id->lexeme, idsuffix.factor_.index);
+                    pnode = getpnode_token(s, id->lexeme, idsuffix.factor_.index);
                     
                     factor.value = sem_type_s_(pnode->matched);
-                    
                 }
                 //attadd(s, //id->lexeme, pnode-);
             }

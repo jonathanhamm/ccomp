@@ -883,6 +883,7 @@ void parse (parse_s *parse, lextok_s lex)
         panic_recovery(parse->start->follows, &lex.tokens);
     }
     root->s = semantics_s_(parse, lex.lex->machs, parse->start, root);
+    root->s->pass = true;
     nonterm(parse, root, lex.lex->machs, &lex.tokens, parse->start, index);
     if (lex.tokens->type.val != LEXTYPE_EOF) {
         errsize = (sizeof(SYNERR_PREFIX)-1)+FS_INTWIDTH_DEC(lex.tokens->lineno)+sizeof("EOF but got: ")+strlen(lex.tokens->lexeme);
@@ -941,7 +942,7 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
                         *curr = (*curr)->next;
                     }
                     else {
-                        pnode->s = sem_start(NULL, parse, NULL, machs, nterm, pnode);
+                        pnode->s = sem_start(NULL, parse, &pda->productions[index], machs, nterm, pnode);
                         nonterm(parse, pnode, machs, curr, nterm, result);
                     }
                 }
@@ -969,7 +970,7 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
             while (!success);
         }
         assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
-        sem_start(pnterm->s, parse, &pda->productions[index], machs, pda, pnode);
+        sem_start(pnterm->s, parse, &pda->productions[index], machs, pda, pnterm);
     }
     
     return true;
