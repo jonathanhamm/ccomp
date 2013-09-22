@@ -942,7 +942,7 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
                         *curr = (*curr)->next;
                     }
                     else {
-                        pnode->s = sem_start(NULL, parse, &pda->productions[index], machs, nterm, pnode);
+                        pnode->s = sem_start(NULL, parse, &pda->productions[index], machs, pda, pnode);
                         nonterm(parse, pnode, machs, curr, nterm, result);
                     }
                 }
@@ -969,7 +969,6 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
             }
             while (!success);
         }
-        assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
         sem_start(pnterm->s, parse, &pda->productions[index], machs, pda, pnterm);
     }
     

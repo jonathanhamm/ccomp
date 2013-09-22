@@ -4,7 +4,7 @@
 	<compound_statement>
 	\.
 	{
-        <bob>.derp := derp
+        <identifier_list>.derp := derp
 	}        
 
 <program'> ->
