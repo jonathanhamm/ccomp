@@ -20,6 +20,7 @@
 <dec> ->
 	<subprogram_declarations>
 	{
+        <subprogram_declarations>1.val := 10
         <dec>.value := (4*3*4)+40*(3*2*1)/(4-3.2)
         if <subprogram_declarations>.type = 4 then 
             <subprogram_declarations>.type := 32
@@ -34,6 +35,7 @@
 <identifier_list> ->
 	id <identifier_list'>
 	{
+        <identifier_list'>.bah := 10
 	}
 <identifier_list'> ->
 	, id <identifier_list'>

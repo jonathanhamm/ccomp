@@ -391,7 +391,7 @@ pnode_s *getpnode_token(semantics_s *s, char *lexeme, unsigned index)
         printf("Error: Type %s not a token type.\n", lexeme);
         assert(false);
     }
-    for (iter = s->prod->start, i = 0; iter; iter = iter->next) {
+    for (iter = s->prod->start, i = 1; iter; iter = iter->next) {
         printf("Attempting to fetch: %s %u %ld\n", lexeme, iter->token->type.val, ltype);
         if (iter->token->type.val == ltype) {
             if (i == index)
@@ -408,7 +408,7 @@ pnode_s *getpnode_nterm(semantics_s *s, char *lexeme, unsigned index)
     pnode_s *iter;
     
     assert(s->prod);
-    for (iter = s->prod->start, i = 0; iter; iter = iter->next) {
+    for (iter = s->prod->start, i = 1; iter; iter = iter->next) {
         printf("%s %s\n", iter->token->lexeme, lexeme);
         if (!strcmp(iter->token->lexeme, lexeme)) {
             printf("passed: %u %u\n", i, index);
@@ -904,6 +904,7 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s, pda_s *pda)
             //attadd (semantics_s *s, char *id, sem_type_s *data)
             if (idsuffix.dot.id) {
                 if (!strcmp(idsuffix.dot.id, "val") && s->pass) {
+                    printf("%s\n", id->lexeme);
                     pnode = getpnode_token(s, id->lexeme, idsuffix.factor_.index);
                     
                     factor.value = sem_type_s_(pnode->matched);
@@ -1004,7 +1005,7 @@ sem_factor__s sem_factor_ (token_s **curr, semantics_s *s)
         case SEMTYPE_DOT:
         case SEMTYPE_CLOSEPAREN:
         case LEXTYPE_EOF:
-            factor_.index = 0;
+            factor_.index = 1;
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected [ ] * / + - = < > <> <= >= fi else then if nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
