@@ -11,6 +11,9 @@
     nonterm <idsuffix> assignop <expression>
     |
     if <expression> then <statements> <else>
+    |
+    id \(<paramlist>\)
+    
 <else>->
     else <statements> fi
     |
@@ -79,9 +82,11 @@
 
 <paramlist> ->
     <expression> <paramlist'>
+    |
+    ε
 
 <paramlist'> ->
-    , <expression>
+    , <expression> <paramlist'>
     |
     ε
 

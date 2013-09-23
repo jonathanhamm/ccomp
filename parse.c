@@ -923,6 +923,8 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
     pnode = pda->productions[index].start;
     assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
+        pnterm->s = semantics_s_(parse, machs, pda, pnode);
+        pnterm->s->pass = true;
         sem_start(pnterm->s, parse, &pda->productions[index], machs, pda, pnode);
         return true;
     }

@@ -48,6 +48,8 @@
 #define ATTYPE_GE   4
 #define ATTYPE_G    5
 
+#define FTABLE_SIZE (sizeof(ftable) / sizeof(ftable[0]))
+
 enum semantic_types_ {
     SEMTYPE_IF = LEXID_START+1,
     SEMTYPE_THEN,
@@ -97,6 +99,9 @@ typedef struct sem_dot_s sem_dot_s;
 typedef struct sem_paramlist_s sem_paramlist_s;
 typedef struct sem_paramlist__s sem_paramlist__s;
 typedef struct sem_sign_s sem_sign_s;
+typedef struct ftable_s ftable_s;
+
+typedef void *(*sem_action_f)(sem_paramlist_s);
 
 struct access_s
 {
@@ -207,6 +212,13 @@ struct att_s
     char *lexeme;
 };
 
+struct ftable_s
+{
+    const char *key;
+    sem_action_f action;
+};
+
+
 static sem_type_s sem_type_s_(token_s *token);
 static void print_semtype(sem_type_s value);
 static int test_semtype(sem_type_s value);
@@ -238,6 +250,19 @@ static sem_type_s *alloc_semt(sem_type_s value);
 static att_s *att_s_ (void *data, unsigned tid);
 static void setatt(semantics_s *s, char *id, sem_type_s *data);
 static sem_type_s getatt(semantics_s *s, char *id);
+static void *sem_emit(sem_paramlist_s params);
+static void *sem_error(sem_paramlist_s params);
+static void *sem_halt(sem_paramlist_s params);
+static void *sem_print(sem_paramlist_s params);
+static int ftable_strcmp(char *key, ftable_s *b);
+static sem_action_f get_semaction(char *str);
+
+static ftable_s ftable[] = {
+    {"emit", sem_emit},
+    {"error", sem_error},
+    {"halt", sem_halt},
+    {"print", sem_print}
+};
 
 sem_type_s sem_type_s_(token_s *token)
 {
@@ -645,6 +670,7 @@ sem_statements_s sem_statements (token_s **curr, semantics_s *s, pda_s *pda, boo
     switch((*curr)->type.val) {
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
+        case SEMTYPE_ID:
             sem_statement(curr, s, pda, evaluate);
             sem_statements(curr, s, pda, evaluate);
         case SEMTYPE_FI:
@@ -662,10 +688,11 @@ sem_statements_s sem_statements (token_s **curr, semantics_s *s, pda_s *pda, boo
 sem_statement_s sem_statement (token_s **curr, semantics_s *s, pda_s *pda, bool evaluate)
 {
     pnode_s *p;
-    char *att, *nterm;
+    char *id, *nterm;
     unsigned index;
     sem_expression_s expression;
     sem_idsuffix_s idsuffix;
+    sem_paramlist_s params;
     
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
@@ -673,14 +700,14 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, pda_s *pda, bool 
             *curr = (*curr)->next;
             idsuffix = sem_idsuffix(curr, s, pda);
             index = idsuffix.factor_.index;
-            att = idsuffix.dot.id;
+            id = idsuffix.dot.id;
             printf("matching assignop type\n");
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(curr, s, pda);
             if (evaluate) {
                 if(!strcmp(pda->nterm->lexeme, nterm)) {
                     if (s->pass)
-                        setatt(s, att, alloc_semt(expression.value));
+                        setatt(s, id, alloc_semt(expression.value));
                 }
                 else {
                     /* Time to set inherited attributes */
@@ -689,7 +716,7 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, pda_s *pda, bool 
                         fprintf(stderr, "Error: Nonterminal %s cannot be matched in this scope.\n", nterm);
                         assert(false);
                     }
-                    setatt(p->s, att, alloc_semt(expression.value));
+                    setatt(p->s, id, alloc_semt(expression.value));
                 }
             }
             break;
@@ -699,6 +726,14 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, pda_s *pda, bool 
             sem_match(curr, SEMTYPE_THEN);
             sem_statements(curr, s, pda, evaluate);
             sem_else(curr, s, pda, test_semtype(expression.value) && evaluate);
+            break;
+        case SEMTYPE_ID:
+            id = (*curr)->lexeme;
+            *curr = (*curr)->next;
+            sem_match(curr, SEMTYPE_OPENPAREN);
+            params = sem_paramlist(curr, s, pda);
+            sem_match(curr, SEMTYPE_CLOSEPAREN);
+            get_semaction(id)(params);
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected nonterm or if but got %s", (*curr)->lineno, (*curr)->lexeme);
@@ -754,6 +789,7 @@ sem_expression__s sem_expression_ (token_s **curr, semantics_s *s, pda_s *pda)
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_ID:
         case LEXTYPE_EOF:
             expression_.op = OPTYPE_NOP;
             break;
@@ -826,6 +862,7 @@ sem_simple_expression__s sem_simple_expression_ (token_s **curr, semantics_s *s,
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_ID:
         case LEXTYPE_EOF:
             simple_expression_.op = OPTYPE_NOP;
             simple_expression_.value.type = ATTYPE_NULL;
@@ -874,6 +911,7 @@ sem_term__s sem_term_ (token_s **curr, semantics_s *s, sem_type_s *accum, pda_s 
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_ID:
         case LEXTYPE_EOF:
             term_.op = OPTYPE_NOP;
             break;
@@ -1004,6 +1042,7 @@ sem_factor__s sem_factor_ (token_s **curr, semantics_s *s)
         case SEMTYPE_NONTERM:
         case SEMTYPE_DOT:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_ID:
         case LEXTYPE_EOF:
             factor_.index = 1;
             break;
@@ -1032,6 +1071,7 @@ sem_idsuffix_s sem_idsuffix (token_s **curr, semantics_s *s, pda_s *pda)
         case SEMTYPE_DOT:
         case SEMTYPE_NONTERM:
         case SEMTYPE_NUM:
+        case SEMTYPE_ID:
         case LEXTYPE_EOF:
             idsuffix.factor_ = sem_factor_(curr, s);
             idsuffix.dot = sem_dot(curr, s);
@@ -1069,6 +1109,7 @@ sem_dot_s sem_dot (token_s **curr, semantics_s *s)
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_ID:
         case LEXTYPE_EOF:
             dot.id = NULL;
             break;
@@ -1085,12 +1126,30 @@ sem_paramlist_s sem_paramlist (token_s **curr, semantics_s *s, pda_s *pda)
     sem_paramlist_s paramlist;
     sem_expression_s expression;
 
-    paramlist.pstack = NULL;
-    sem_match(curr, SEMTYPE_OPENPAREN);
-    expression = sem_expression(curr, s, pda);
-    llpush(&paramlist.pstack, alloc_semt(expression.value));
-    sem_paramlist_(curr, s, &paramlist, pda);
-    sem_match(curr, SEMTYPE_CLOSEPAREN);
+    switch((*curr)->type.val) {
+        case SEMTYPE_ADDOP:
+        case SEMTYPE_CODE:
+        case SEMTYPE_NOT:
+        case SEMTYPE_NUM:
+        case SEMTYPE_OPENPAREN:
+        case SEMTYPE_ID:
+        case SEMTYPE_NONTERM:
+            paramlist.pstack = NULL;
+            sem_match(curr, SEMTYPE_OPENPAREN);
+            expression = sem_expression(curr, s, pda);
+            llpush(&paramlist.pstack, alloc_semt(expression.value));
+            sem_paramlist_(curr, s, &paramlist, pda);
+            sem_match(curr, SEMTYPE_CLOSEPAREN);
+            break;
+        case SEMTYPE_CLOSEPAREN:
+            paramlist.pstack = NULL;
+            break;
+        default:
+            fprintf(stderr, "Syntax Error at line %d: Expected + - code not number ( identifier or nonterm, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            assert(false);
+            break;
+            
+    }
     return paramlist;
 }
 
@@ -1182,4 +1241,43 @@ sem_type_s getatt (semantics_s *s, char *id)
         return dummy;
     }
     return *data;
+}
+
+void *sem_emit(sem_paramlist_s params)
+{
+    
+}
+
+void *sem_error(sem_paramlist_s params)
+{
+    
+}
+
+void *sem_halt(sem_paramlist_s params)
+{
+    
+}
+
+void *sem_print(sem_paramlist_s params)
+{
+    
+}
+
+int ftable_strcmp(char *key, ftable_s *b)
+{
+    printf("comparing %s %s\n", key, b->key);
+    return strcasecmp(key, b->key);
+}
+
+sem_action_f get_semaction(char *str)
+{
+    ftable_s *rec;
+    
+    printf("%lu, %lu\n", FTABLE_SIZE, sizeof(ftable[0]));
+    rec = bsearch(str, ftable, FTABLE_SIZE, sizeof(*ftable), (int (*)(const void *, const void *))ftable_strcmp);
+    if (!rec) {
+        fprintf(stderr, "Error: Undefined function: %s\n", str);
+        assert(false);
+    }
+    return rec->action;
 }
