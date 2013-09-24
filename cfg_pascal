@@ -20,7 +20,7 @@
 <dec> ->
 	<subprogram_declarations>
 	{
-    
+        <subprogram_declarations>.type := integer[10]
         emit(1,11,1,3)
         <subprogram_declarations>1.val := 10
         <dec>.value := (4*3*4)+40*(3*2*1)/(4-3.2)

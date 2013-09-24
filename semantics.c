@@ -75,7 +75,8 @@ enum semantic_types_ {
     SEMTYPE_ADDOP,
     SEMTYPE_MULOP,
     SEMTYPE_CODE,
-    SEMTYPE_CONCAT
+    SEMTYPE_CONCAT,
+    SEMTYPE_MAP
 };
 
 typedef struct att_s att_s;
@@ -101,7 +102,7 @@ typedef struct sem_paramlist__s sem_paramlist__s;
 typedef struct sem_sign_s sem_sign_s;
 typedef struct ftable_s ftable_s;
 
-typedef void *(*sem_action_f)(sem_paramlist_s);
+typedef void *(*sem_action_f)(token_s **, semantics_s *, pda_s *, sem_paramlist_s);
 
 struct access_s
 {
@@ -112,12 +113,14 @@ struct access_s
 
 struct sem_type_s
 {
+    bool iseval;
     unsigned type;
     char *lexeme;
     union {
         long int_;
         double real_;
         char *str_;
+        char *tuple;
     };
 };
 
@@ -250,10 +253,10 @@ static sem_type_s *alloc_semt(sem_type_s value);
 static att_s *att_s_ (void *data, unsigned tid);
 static void setatt(semantics_s *s, char *id, sem_type_s *data);
 static sem_type_s getatt(semantics_s *s, char *id);
-static void *sem_emit(sem_paramlist_s params);
-static void *sem_error(sem_paramlist_s params);
-static void *sem_halt(sem_paramlist_s params);
-static void *sem_print(sem_paramlist_s params);
+static void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params);
+static void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params);
+static void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params);
+static void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params);
 static int ftable_strcmp(char *key, ftable_s *b);
 static sem_action_f get_semaction(char *str);
 
@@ -733,7 +736,7 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, pda_s *pda, bool 
             sem_match(curr, SEMTYPE_OPENPAREN);
             params = sem_paramlist(curr, s, pda);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
-            get_semaction(id)(params);
+            get_semaction(id)(curr, s, pda, params);
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected nonterm or if but got %s", (*curr)->lineno, (*curr)->lexeme);
@@ -789,6 +792,7 @@ sem_expression__s sem_expression_ (token_s **curr, semantics_s *s, pda_s *pda)
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_CLOSEBRACKET:
         case SEMTYPE_ID:
         case LEXTYPE_EOF:
             expression_.op = OPTYPE_NOP;
@@ -862,6 +866,7 @@ sem_simple_expression__s sem_simple_expression_ (token_s **curr, semantics_s *s,
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_CLOSEBRACKET:
         case SEMTYPE_ID:
         case LEXTYPE_EOF:
             simple_expression_.op = OPTYPE_NOP;
@@ -911,6 +916,7 @@ sem_term__s sem_term_ (token_s **curr, semantics_s *s, sem_type_s *accum, pda_s 
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_CLOSEBRACKET:
         case SEMTYPE_ID:
         case LEXTYPE_EOF:
             term_.op = OPTYPE_NOP;
@@ -1042,6 +1048,7 @@ sem_factor__s sem_factor_ (token_s **curr, semantics_s *s)
         case SEMTYPE_NONTERM:
         case SEMTYPE_DOT:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_CLOSEBRACKET:
         case SEMTYPE_ID:
         case LEXTYPE_EOF:
             factor_.index = 1;
@@ -1056,11 +1063,13 @@ sem_factor__s sem_factor_ (token_s **curr, semantics_s *s)
 
 sem_idsuffix_s sem_idsuffix (token_s **curr, semantics_s *s, pda_s *pda)
 {
+    sem_expression_s expression;
     sem_idsuffix_s idsuffix;
     
     switch ((*curr)->type.val) {
         case SEMTYPE_COMMA:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_CLOSEBRACKET:
         case SEMTYPE_MULOP:
         case SEMTYPE_ADDOP:
         case SEMTYPE_RELOP:
@@ -1078,6 +1087,13 @@ sem_idsuffix_s sem_idsuffix (token_s **curr, semantics_s *s, pda_s *pda)
             break;
         case SEMTYPE_OPENPAREN:
             sem_paramlist(curr, s, pda);
+            idsuffix.factor_.index = 0;
+            idsuffix.dot.id = NULL;
+            break;
+        case SEMTYPE_OPENBRACKET:
+            *curr = (*curr)->next;
+            expression = sem_expression(curr, s, pda);
+            sem_match(curr, SEMTYPE_CLOSEBRACKET);
             idsuffix.factor_.index = 0;
             idsuffix.dot.id = NULL;
             break;
@@ -1109,6 +1125,7 @@ sem_dot_s sem_dot (token_s **curr, semantics_s *s)
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_CLOSEPAREN:
+        case SEMTYPE_CLOSEBRACKET:
         case SEMTYPE_ID:
         case LEXTYPE_EOF:
             dot.id = NULL;
@@ -1135,11 +1152,9 @@ sem_paramlist_s sem_paramlist (token_s **curr, semantics_s *s, pda_s *pda)
         case SEMTYPE_ID:
         case SEMTYPE_NONTERM:
             paramlist.pstack = NULL;
-            sem_match(curr, SEMTYPE_OPENPAREN);
             expression = sem_expression(curr, s, pda);
             llpush(&paramlist.pstack, alloc_semt(expression.value));
             sem_paramlist_(curr, s, &paramlist, pda);
-            sem_match(curr, SEMTYPE_CLOSEPAREN);
             break;
         case SEMTYPE_CLOSEPAREN:
             paramlist.pstack = NULL;
@@ -1195,6 +1210,7 @@ bool sem_match (token_s **curr, int type)
         return true;
     }
     fprintf(stderr, "Syntax Error at line %d: Got %s\n", (*curr)->lineno, (*curr)->lexeme);
+    assert(false);
     return false;
 }
 
@@ -1243,22 +1259,23 @@ sem_type_s getatt (semantics_s *s, char *id)
     return *data;
 }
 
-void *sem_emit(sem_paramlist_s params)
+void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params)
+{
+    printf("Emit Called\n");
+}
+
+void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params)
 {
     
 }
 
-void *sem_error(sem_paramlist_s params)
+void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params)
 {
-    
+    fputs("Halt Called\n", stderr);
+    assert(false);
 }
 
-void *sem_halt(sem_paramlist_s params)
-{
-    
-}
-
-void *sem_print(sem_paramlist_s params)
+void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params)
 {
     
 }

@@ -483,7 +483,7 @@ int parseregex (lex_s *lex, token_s **list)
     prx_keywords(lex, list, &types);
     if ((*list)->type.val != LEXTYPE_EOL) {
         printf("Syntax Error at line %u: Expected EOL but got %s\n", (*list)->lineno, (*list)->lexeme);
-        exit(EXIT_FAILURE);
+        assert(false);
     }
 
     *list = (*list)->next;
@@ -662,12 +662,12 @@ regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
         }
         else {
             printf("Syntax Error at line %u: Expected '->' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
         }
     }
     else {
         printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-        exit(EXIT_FAILURE);
+        assert(false);
     }
     return reg;
 }
@@ -750,7 +750,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
             default:
                 *curr = (*curr)->next;
                 printf("Syntax Error line %u: Expected '(' , terminal, or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-                exit(EXIT_FAILURE);
+                assert(false);
                 /* make compiler happy */
                 return (exp__s){.op = -1, .nfa = NULL};
         }
@@ -781,7 +781,7 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             nfa = prx_expression(lex, curr, &unfa_, &concat_);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN) {
                 printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-                exit(EXIT_FAILURE);
+                assert(false);
             }
             *curr = (*curr)->next;
             *unfa = backup1;
@@ -835,7 +835,8 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             break;
         default:
             printf("Syntax Error at line %u: Expected '(' , terminal , or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
+            break;
     }
     return nfa;
 }
@@ -879,7 +880,7 @@ void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback)
             *curr = (*curr)->next;
         else {
             printf("Syntax Error at line %d: Expected } but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-            exit(EXIT_FAILURE);
+            assert(false);
         }
     }
 }
@@ -1064,7 +1065,7 @@ prxa_expression_s prxa_expression(token_s **curr, nfa_edge_s *edge)
                 return (prxa_expression_s){.isint = true, .ival = -1, .strval = NULL};
             default:
                 printf("Syntax error at line %d: Expected = or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-                exit(EXIT_FAILURE);
+                assert(false);
         }
     }
     return ret;
@@ -1082,12 +1083,12 @@ void prxa_expression_(token_s **curr, nfa_edge_s *edge)
                 break;
             default:
                 printf("Syntax error at line %d: Expected , or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-                exit(EXIT_FAILURE);
+                assert(false);
         }
     }
     else {
         printf("Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
-        exit(EXIT_FAILURE);
+        assert(false);
     }
 }
 
