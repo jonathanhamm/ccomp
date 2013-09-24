@@ -12,6 +12,7 @@
 #include "semantics.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define REGEX_DECORATIONS_FILE "regex_decorations"
 #define MACHID_START            35
@@ -259,6 +260,8 @@ static void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_
 static void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params);
 static int ftable_strcmp(char *key, ftable_s *b);
 static sem_action_f get_semaction(char *str);
+static char *sem_tostring(sem_type_s type);
+static char *semstr_concat(char *base, sem_type_s val);
 
 static ftable_s ftable[] = {
     {"emit", sem_emit},
@@ -974,11 +977,13 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s, pda_s *pda)
         case SEMTYPE_NUM:
             if (!(*curr)->type.attribute) {
                 factor.value.type = ATTYPE_NUMINT;
+                factor.value.lexeme = (*curr)->lexeme;
                 factor.value.int_ = safe_atol((*curr)->lexeme);
                 printf("%s %ld\n", (*curr)->lexeme, factor.value.int_);
             }
             else {
                 factor.value.type = ATTYPE_NUMREAL;
+                factor.value.lexeme = (*curr)->lexeme;
                 factor.value.real_ = safe_atod((*curr)->lexeme);
             }
             *curr = (*curr)->next;
@@ -1297,4 +1302,44 @@ sem_action_f get_semaction(char *str)
         assert(false);
     }
     return rec->action;
+}
+
+char *sem_tostring(sem_type_s type)
+{
+    char *stralloc;
+    
+    switch(type.type) {
+        case ATTYPE_STR:
+        case ATTYPE_CODE:
+            return type.str_;
+        case ATTYPE_NUMINT:
+            stralloc = malloc(FS_INTWIDTH_DEC(type.int_)+1);
+            if (stralloc) {
+                perror("Memory Allocation Error");
+                exit(EXIT_FAILURE);
+            }
+            sprintf(stralloc, "%ld", type.int_);
+            break;
+        case ATTYPE_NUMREAL:
+            
+        default:
+            break;
+    }
+}
+
+char *semstr_concat(char *base, sem_type_s val)
+{
+    char *str = sem_tostring(val);
+    
+    if (!base) {
+        base = malloc(sizeof(*base) + strlen(str) + 1);
+        if (!base) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+        base = realloc(base, strlen(base) + strlen(str) + 1);
+    strcat(base, str);
+    return base;
 }
