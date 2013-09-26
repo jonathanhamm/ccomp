@@ -24,8 +24,8 @@
 <expression'> ->
 	relop <simple_expression>
 	|
-	ε
-	
+	ε	
+
 <simple_expression> ->
 	<sign> <simple_expression>
 	|

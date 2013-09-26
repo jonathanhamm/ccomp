@@ -521,7 +521,7 @@ void prx_tokens_ (lex_s *lex, token_s **curr, int *count)
 {
     regex_ann_s *reg;
     mach_s *mach;
-    llist_s *matches = NULL, *mcurr, *miter;
+    llist_s *matches = NULL, *mcurr, *miter;    
     
     if ((*curr)->type.val == LEXTYPE_EOL) {
         *curr = (*curr)->next;

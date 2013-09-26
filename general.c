@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <math.h>
 
 #if ((defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__))
@@ -27,6 +28,10 @@ long safe_atol (char *str)
     long i;
     
     i = strtol(str, NULL, 10);
+    if (errno) {
+        perror("Error parsing number");
+        exit(EXIT_FAILURE);
+    }
     return i;
 }
 
@@ -35,7 +40,7 @@ double safe_atod (char *str)
     double d;
     
     d = strtod(str, NULL);
-    if(d == HUGE_VAL || d == HUGE_VALF || d == HUGE_VALL ) {
+    if(d == HUGE_VAL || d == HUGE_VALF || d == HUGE_VALL || errno) {
         perror("Error parsing number");
         exit(EXIT_FAILURE);
     }

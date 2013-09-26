@@ -15,7 +15,7 @@
 #include <math.h>
 
 #define REGEX_DECORATIONS_FILE "regex_decorations"
-#define MACHID_START            35
+#define MACHID_START            33
 
 #define SEMSIGN_POS 0
 #define SEMSIGN_NEG 1
@@ -31,6 +31,8 @@
 #define OPTYPE_GE   7
 #define OPTYPE_EQ   8
 #define OPTYPE_NE   9
+#define OPTYPE_OR   10
+#define OPTYPE_AND  11
 
 #define ATTYPE_NULL     0
 #define ATTYPE_NUMREAL  1
@@ -40,8 +42,10 @@
 
 #define ATTYPE_MULT 0
 #define ATTYPE_DIV  1
+#define ATTYPE_AND  2
 #define ATTYPE_ADD  0
 #define ATTYPE_SUB  1
+#define ATTYPE_OR   2
 #define ATTYPE_EQ   0
 #define ATTYPE_NE   1
 #define ATTYPE_L    2
@@ -56,8 +60,6 @@ enum semantic_types_ {
     SEMTYPE_THEN,
     SEMTYPE_ELSE,
     SEMTYPE_FI,
-    SEMTYPE_AND,
-    SEMTYPE_OR,
     SEMTYPE_NOT,
     SEMTYPE_OPENPAREN,
     SEMTYPE_CLOSEPAREN,
@@ -66,6 +68,8 @@ enum semantic_types_ {
     SEMTYPE_SEMICOLON,
     SEMTYPE_OPENBRACKET,
     SEMTYPE_CLOSEBRACKET,
+    /*^ When removing one of these, subtract 1 from MACHID_START */
+    
     /*gap for id types*/
     SEMTYPE_ID = MACHID_START,
     SEMTYPE_NONTERM,
@@ -369,6 +373,8 @@ unsigned toaddop(unsigned val)
         return OPTYPE_ADD;
     if (val == ATTYPE_SUB)
         return OPTYPE_SUB;
+    if (val == ATTYPE_OR)
+        return OPTYPE_OR;
     perror("Op attribute mismatch");
     assert(false);
 }
@@ -379,6 +385,8 @@ unsigned tomulop(unsigned val)
         return OPTYPE_MULT;
     if (val == ATTYPE_DIV)
         return OPTYPE_DIV;
+    if (val == ATTYPE_AND)
+        return OPTYPE_AND;
     perror("Op attribute mismatch");
     assert(false);
 }
@@ -632,6 +640,32 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.real_ == v2.int_;
             else
                 result.int_ = v1.real_ == v2.real_;
+            break;
+        case OPTYPE_OR:
+            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+                printf("Type Error: String type incompatible with subtraction.\n");
+            result.type = ATTYPE_NUMINT;
+            if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
+                result.int_ = v1.int_ || v2.int_;
+            else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
+                result.int_ = v1.int_ || v2.real_;
+            else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
+                result.int_ = v1.real_ || v2.int_;
+            else
+                result.int_ = v1.real_ || v2.real_;
+            break;
+        case OPTYPE_AND:
+            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+                printf("Type Error: String type incompatible with subtraction.\n");
+            result.type = ATTYPE_NUMINT;
+            if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
+                result.int_ = v1.int_ && v2.int_;
+            else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
+                result.int_ = v1.int_ && v2.real_;
+            else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
+                result.int_ = v1.real_ && v2.int_;
+            else
+                result.int_ = v1.real_ && v2.real_;
             break;
         case OPTYPE_NOP:
             printf("nop'ing:\n");
