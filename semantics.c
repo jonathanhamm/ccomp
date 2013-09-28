@@ -298,7 +298,7 @@ sem_type_s sem_type_s_(token_s *token)
 
 void print_semtype(sem_type_s value)
 {
-    return;
+
     switch (value.type) {
         case ATTYPE_NUMINT:
             printf("value: %ld\n", value.int_);
@@ -746,11 +746,12 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, pda_s *pda, bool 
             expression = sem_expression(curr, s, pda);
             if (evaluate) {
                 if(!strcmp(pda->nterm->lexeme, nterm)) {
-                    if (s->pass)
+                    if (s->pass) {
                         setatt(s, id, alloc_semt(expression.value));
+                    }
                 }
                 else {
-                    /* Time to set inherited attributes */
+                    /* Setting inherited attributes */
                     p = getpnode_nterm(s, nterm, idsuffix.factor_.index);
                     if(!p) {
                         fprintf(stderr, "Error: Nonterminal %s cannot be matched in this scope.\n", nterm);
@@ -1001,11 +1002,11 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s, pda_s *pda)
             idsuffix = sem_idsuffix(curr, s, pda);
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
-            if (idsuffix.dot.id && s->pass) {
-                if (!strcmp(idsuffix.dot.id, "in"))
-                    factor.value = getatt(s->parent, idsuffix.dot.id);
-                else
+            if (idsuffix.dot.id) {
+                if (s->pass) {
                     factor.value = getatt(s, idsuffix.dot.id);
+                   // for(;;)print_semtype(factor.value);
+                }
             }
             break;
         case SEMTYPE_NUM:
@@ -1013,7 +1014,6 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s, pda_s *pda)
                 factor.value.type = ATTYPE_NUMINT;
                 factor.value.lexeme = (*curr)->lexeme;
                 factor.value.int_ = safe_atol((*curr)->lexeme);
-                printf("%s %ld\n", (*curr)->lexeme, factor.value.int_);
             }
             else {
                 factor.value.type = ATTYPE_NUMREAL;
@@ -1282,6 +1282,7 @@ att_s *att_s_ (void *data, unsigned tid)
 
 void setatt (semantics_s *s, char *id, sem_type_s *data)
 {
+    printf("\n------------------INSERTING %s INTO %s %p %p\n", id, s->pda->nterm->lexeme, s->pda, data);
     hashinsert_(s->table, id, data);
 }
 
@@ -1290,6 +1291,8 @@ sem_type_s getatt (semantics_s *s, char *id)
     sem_type_s dummy = {0};
     sem_type_s *data;
     
+    printf("\n------------------RETRIEVING %s FROM %s %p\n", id, s->pda->nterm->lexeme, s->pda);
+
     data = hashlookup(s->table, id);
     if (!data) {
         perror("Access to unitialized attribute.");
@@ -1316,7 +1319,16 @@ void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s param
 
 void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params)
 {
+    llist_s *node;
+    sem_type_s *val;
     
+    while (params.pstack) {
+        node = llpop(&params.pstack);
+        val = node->ptr;
+        free(node);
+        print_semtype(*val);
+        free(val);
+    }
 }
 
 int ftable_strcmp(char *key, ftable_s *b)

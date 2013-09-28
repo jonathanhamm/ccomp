@@ -56,9 +56,13 @@
 
 <type> ->
 	<standard_type>
+    {
+        <type>.type := <standard_type>.type
+    }
 	|
 	array [ num \. \. num ] of <standard_type>
     {
+        <type>.type := <standard_type>.type
     }
 
 <standard_type> ->
@@ -195,7 +199,8 @@
 	|
 	num
     { 
-        <factor>.value := num.val
+        <factor>.val := num.val
+        print(<factor>.val)
     }
 	|
 	\( <expression> \)

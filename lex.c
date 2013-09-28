@@ -192,7 +192,6 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
     if (!buf)
         return NULL;
     for (i = 0, j = 0, lineno = 1, bpos = 0; buf[i] != EOF; i++) {
-        printf("%c\n", buf[i]);
         switch (buf[i]) {
             case '|':
                 addtok(&list, "|", lineno, LEXTYPE_UNION, LEXATTR_DEFAULT, NULL);
@@ -240,7 +239,6 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 }
                 break;
             case '-':
-                puts("baha\n");
                 if (buf[i+1] == '>') {
                     addtok (&list, "->", lineno, LEXTYPE_PRODSYM, LEXATTR_DEFAULT, NULL);
                     for (p = list->prev; p && p->type.val != LEXTYPE_EOL; p = p->prev) {
@@ -379,9 +377,6 @@ doublebreak_:
         if (list)
             list->prev = NULL;
         free(backup);
-    }
-    for(backup = list; backup; backup = backup->next) {
-        printf("%s\n", backup->lexeme);
     }
     //exit(1);
     return list;

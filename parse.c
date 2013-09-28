@@ -1052,7 +1052,7 @@ char *make_synerr (pda_s *pda, token_s **curr)
 
 void panic_recovery (llist_s *follow, token_s **curr)
 {
-    llist_s *iter;
+    llist_s *iter;    
     
     while ((*curr)->type.val != LEXTYPE_EOF) {
         for (iter = follow; iter; iter = iter->next) {
