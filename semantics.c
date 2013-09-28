@@ -81,7 +81,8 @@ enum semantic_types_ {
     SEMTYPE_MULOP,
     SEMTYPE_CODE,
     SEMTYPE_CONCAT,
-    SEMTYPE_MAP
+    SEMTYPE_MAP,
+    SEMTYPE_RANGE
 };
 
 typedef struct att_s att_s;
@@ -127,6 +128,7 @@ struct sem_type_s
         char *str_;
         char *tuple;
     };
+    short low, high;
 };
 
 struct sem_statements_s
@@ -258,6 +260,7 @@ static sem_type_s *alloc_semt(sem_type_s value);
 static att_s *att_s_ (void *data, unsigned tid);
 static void setatt(semantics_s *s, char *id, sem_type_s *data);
 static sem_type_s getatt(semantics_s *s, char *id);
+static void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params);
 static void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params);
 static void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params);
 static void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params);
@@ -268,6 +271,7 @@ static char *sem_tostring(sem_type_s type);
 static char *semstr_concat(char *base, sem_type_s val);
 
 static ftable_s ftable[] = {
+    {"array", sem_array},
     {"emit", sem_emit},
     {"error", sem_error},
     {"halt", sem_halt},
@@ -1088,6 +1092,8 @@ sem_factor__s sem_factor_ (token_s **curr, semantics_s *s)
         case SEMTYPE_DOT:
         case SEMTYPE_CLOSEPAREN:
         case SEMTYPE_CLOSEBRACKET:
+        case SEMTYPE_COMMA:
+        case SEMTYPE_ASSIGNOP:
         case SEMTYPE_ID:
         case LEXTYPE_EOF:
             factor_.index = 1;
@@ -1125,16 +1131,18 @@ sem_idsuffix_s sem_idsuffix (token_s **curr, semantics_s *s, pda_s *pda)
             idsuffix.dot = sem_dot(curr, s);
             break;
         case SEMTYPE_OPENPAREN:
+            *curr = (*curr)->next;
             sem_paramlist(curr, s, pda);
             idsuffix.factor_.index = 0;
             idsuffix.dot.id = NULL;
+            sem_match(curr, SEMTYPE_CLOSEPAREN);
             break;
         case SEMTYPE_OPENBRACKET:
             *curr = (*curr)->next;
             expression = sem_expression(curr, s, pda);
             sem_match(curr, SEMTYPE_CLOSEBRACKET);
             idsuffix.factor_.index = 0;
-            idsuffix.dot.id = NULL;
+            idsuffix.dot = sem_dot(curr, s);
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected , ] [ * / + - = < > <> <= >= fi else then if . nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -1165,7 +1173,9 @@ sem_dot_s sem_dot (token_s **curr, semantics_s *s)
         case SEMTYPE_NONTERM:
         case SEMTYPE_CLOSEPAREN:
         case SEMTYPE_CLOSEBRACKET:
+        case SEMTYPE_COMMA:
         case SEMTYPE_ID:
+        case SEMTYPE_ASSIGNOP:
         case LEXTYPE_EOF:
             dot.id = NULL;
             break;
@@ -1299,6 +1309,11 @@ sem_type_s getatt (semantics_s *s, char *id)
         return dummy;
     }
     return *data;
+}
+
+void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params)
+{
+    
 }
 
 void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params)

@@ -70,7 +70,7 @@
     |
     \( <paramlist> \)
     |
-    [ <expression> ]
+    [ <expression> ] <dot>
 
 <dot> ->
     \. id 

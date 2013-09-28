@@ -62,15 +62,19 @@
 	|
 	array [ num \. \. num ] of <standard_type>
     {
-        <type>.type := <standard_type>.type
+        <type>.type := array(num[1].val, <standard_type>.type)
     }
 
 <standard_type> ->
 	integer
-    { <standard_type>.type := integer }
+    { 
+        <standard_type>.type := integer 
+    }
 	|
 	real
-    { <standard_type>.type := real }
+    { 
+        <standard_type>.type := real 
+    }
 	
 <subprogram_declarations> ->
 	<subprogram_declaration> ; <subprogram_declarations'>
@@ -199,7 +203,7 @@
 	|
 	num
     { 
-        <factor>.val := num.val
+        <factor>.val := num.va0
         print(<factor>.val)
     }
 	|
