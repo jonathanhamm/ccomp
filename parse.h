@@ -25,6 +25,7 @@ typedef struct parsetable_s parsetable_s;
 
 struct parse_s
 {
+    lex_s *lex;
     pda_s *start;
     hash_s *phash;
     linetable_s *listing;

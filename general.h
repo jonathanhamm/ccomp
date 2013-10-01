@@ -33,6 +33,7 @@ typedef struct hashiterator_s hashiterator_s;
 
 typedef struct ltablerec_s ltablerec_s;
 typedef struct linetable_s linetable_s;
+typedef struct sem_type_s sem_type_s;
 
 struct llist_s
 {
@@ -77,6 +78,30 @@ struct linetable_s
     ltablerec_s table[];
 };
 
+struct sem_type_s
+{
+    bool iseval;
+    unsigned type;
+    char *lexeme;
+    union {
+        long int_;
+        double real_;
+        char *str_;
+        char *tuple;
+    };
+    long low, high;
+};
+
+enum atypes {
+    ATTYPE_NULL,
+    ATTYPE_NUMREAL,
+    ATTYPE_NUMINT,
+    ATTYPE_STR,
+    ATTYPE_CODE,
+    ATTYPE_RANGE,
+    ATTYPE_ARRAY,
+};
+
 extern long safe_atol (char *str);
 extern double safe_atod (char *str);
 extern char *readfile (const char *file);
@@ -88,6 +113,7 @@ extern void println (unsigned no, char *buf, void *stream);
 
 extern void llpush (llist_s **list, void *ptr);
 extern llist_s *llpop (llist_s **list);
+extern void llreverse (llist_s **list);
 extern bool llcontains (llist_s *list, void *ptr);
 extern llist_s *llconcat (llist_s *first, llist_s *second);
 extern llist_s *llcopy (llist_s *node);

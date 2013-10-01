@@ -22,6 +22,7 @@
 #define INITFBUF_SIZE 128
 
 static void printline(char *buf, FILE *stream);
+static void llpush_(llist_s **list, llist_s *node);
 
 long safe_atol (char *str)
 {
@@ -93,9 +94,15 @@ void llpush (llist_s **list, void *ptr)
         exit(EXIT_FAILURE);
     }
     node->ptr = ptr;
+    llpush_(list, node);
+}
+
+void llpush_(llist_s **list, llist_s *node)
+{
     node->next = *list;
     *list = node;
 }
+
 
 llist_s *llpop (llist_s **list)
 {
@@ -104,6 +111,15 @@ llist_s *llpop (llist_s **list)
     backup = *list;
     *list = (*list)->next;
     return backup;
+}
+
+void llreverse(llist_s **list)
+{
+    llist_s *l = NULL;
+    
+    while (*list)
+        llpush_(&l, llpop(list));
+    *list = l;
 }
 
 bool llcontains (llist_s *list, void *ptr)

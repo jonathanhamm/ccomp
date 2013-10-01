@@ -146,6 +146,7 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     fclose(firfol);
     match_phase(lextok, head);
     print_listing(semantics->listing, stdout);
+    parse->lex = lextok.lex;
     return parse;
 }
 
@@ -970,6 +971,10 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
                 }
             }
             while (!success);
+        }
+        if (!pnterm->s) {
+            pnterm->s = semantics_s_(parse, machs, pda, pnterm);
+            pnterm->s->pass = true;
         }
         sem_start(pnterm->s, parse, &pda->productions[index], machs, pda, pnterm);
     }

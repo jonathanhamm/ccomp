@@ -495,12 +495,14 @@ void prx_keywords (lex_s *lex, token_s **curr, int *counter)
 {
     char *lexeme;
     idtnode_s *node;
-        
+    sem_type_s init_type;
+    
+    init_type.type = ATTYPE_NULL;
     while ((*curr)->type.val == LEXTYPE_TERM) {
         node = NULL;
         lexeme = (*curr)->lexeme;
         ++*counter;
-        idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = false, .itype = *counter, .att = 0});
+        idtable_insert(lex->kwtable, lexeme, (tdat_s){.is_string = false, .itype = *counter, .att = 0, .type = init_type});
         *curr = (*curr)->next;
     }
     ++*counter;
@@ -1136,6 +1138,14 @@ void *idtable_insert (idtable_s *table, char *str, tdat_s tdat)
     return trie_insert(table, table->root, str, tdat);
 }
 
+void idtable_set(idtable_s *table, char *str, tdat_s tdat)
+{
+    tlookup_s lookup;
+    
+    lookup = idtable_lookup(table, str);
+    lookup.node->tdat = tdat;
+}
+
 tlookup_s idtable_lookup (idtable_s *table, char *str)
 {
     return trie_lookup(table->root, str);
@@ -1197,7 +1207,7 @@ tlookup_s trie_lookup (idtnode_s *trie, char *str)
     if (search & 0x8000)
         return (tlookup_s){.is_found = false, .tdat = trie->tdat};
     if (!*str)
-        return (tlookup_s){.is_found = true, .tdat = trie->children[search]->tdat};
+        return (tlookup_s){.is_found = true, .tdat = trie->children[search]->tdat, .node = trie->children[search]};
     return trie_lookup(trie->children[search], str+1);
 }
 
@@ -1357,9 +1367,11 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
     tlookup_s lookup;
     token_s *head = NULL, *tlist = NULL;
     overflow_s overflow;
+    sem_type_s init_type;;
     
     c[1] = '\0';
     backup = buf;
+    init_type.type = ATTYPE_NULL;
     if (listing && *buf != EOF) {
         addline(&lex->listing, buf);
         lineno++;
@@ -1424,7 +1436,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                     else if (bmach->attr_id) {
                         idatt++;
                         addtok_(&tlist, buf, lineno, bmach->nterm->type.val, idatt, best.stype, unlimited);
-                        idtable_insert(lex->idtable, buf, (tdat_s){.is_string = false, .itype = bmach->nterm->type.val, .att = idatt});
+                        idtable_insert(lex->idtable, buf, (tdat_s){.is_string = false, .itype = bmach->nterm->type.val, .att = idatt, .type = init_type});
                         hashname(lex, lex->typestart, bmach->nterm->lexeme);
                     }
                     else {

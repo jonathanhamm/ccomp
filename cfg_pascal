@@ -48,9 +48,15 @@
 	ε
 
 <declarations> ->
-	var id : <type> ; <declarations'>
+	var id : <type> ; <declarations'> 
+    {
+        addtype(id.entry, <type>.type)
+    }
 <declarations'> ->
 	var id : <type> ; <declarations'>
+    {
+        addtype(id.entry, <type>.type)
+    }
 	|
 	ε
 
@@ -62,7 +68,7 @@
 	|
 	array [ num \. \. num ] of <standard_type>
     {
-        <type>.type := array(num[1].val, <standard_type>.type)
+        <type>.type := array(num[1].val .. num[2].val, <standard_type>.type)
     }
 
 <standard_type> ->

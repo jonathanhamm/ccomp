@@ -73,9 +73,15 @@
     [ <expression> ] <dot>
 
 <dot> ->
-    \. id 
+    \. id <range>
     |
     ε
+    
+<range> ->
+    \.\. id [ num ] \. id
+    |
+    ε
+        
 
 <code>
     code <code>

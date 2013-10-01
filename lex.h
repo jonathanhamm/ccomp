@@ -116,6 +116,7 @@ struct tdat_s
         int itype;
     };
     int att;
+    sem_type_s type;
 };
 
 struct annotation_s
@@ -130,6 +131,7 @@ struct tlookup_s
 {
     bool is_found;
     tdat_s tdat;
+    idtnode_s *node;
 };
 
 struct idtnode_s
@@ -206,6 +208,7 @@ extern int ntstrcmp (char *nterm, char *str);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
 extern void *idtable_insert (idtable_s *table, char *str, tdat_s tdat);
+extern void idtable_set(idtable_s *table, char *str, tdat_s tdat);
 extern tlookup_s idtable_lookup (idtable_s *table, char *str);
 extern int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype);
 extern inline bool hashname(lex_s *lex, unsigned long token_val, char *name);
