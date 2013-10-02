@@ -47,6 +47,9 @@ enum lex_types_ {
     LEXTYPE_CROSS,
     LEXTYPE_CODE,
     LEXTYPE_DOT,
+    LEXTYPE_OPENBRACKET,
+    LEXTYPE_CLOSEBRACKET,
+    LEXTYPE_NEGATE,
     /* 
      Add lexical types here, then increment the
      value of the macro MACHID_START in semantics.c 
@@ -162,6 +165,7 @@ struct nfa_node_s
 
 struct nfa_edge_s
 {
+    bool negate;
     annotation_s annotation;
     token_s *token;
     nfa_node_s *state;

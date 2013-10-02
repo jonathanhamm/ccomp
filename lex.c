@@ -122,6 +122,7 @@ static regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count);
 static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
+static nfa_s *prx_cclass (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static int prx_closure (lex_s *lex, token_s **curr);
 
 static void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback);
@@ -201,6 +202,15 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 break;
             case ')':
                 addtok(&list, ")", lineno, LEXTYPE_CLOSEPAREN, LEXATTR_DEFAULT, NULL);
+                break;
+            case '[':
+                addtok(&list, "[", lineno, LEXTYPE_OPENBRACKET, LEXATTR_DEFAULT, NULL);
+                break;
+            case ']':
+                addtok(&list, "]", lineno, LEXTYPE_CLOSEBRACKET, LEXATTR_DEFAULT, NULL);
+                break;
+            case '^':
+                addtok(&list, "^", lineno, LEXTYPE_NEGATE, LEXATTR_DEFAULT, NULL);
                 break;
             case '*':
                 addtok(&list, "*", lineno, LEXTYPE_KLEENE, LEXATTR_DEFAULT, NULL);
@@ -830,13 +840,46 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
                 }
             }
             break;
+        case LEXTYPE_OPENBRACKET:
+            nfa = NULL;
+            *curr = (*curr)->next;
+            nfa = prx_cclass (lex, curr, unfa, concat);
+            if ((*curr)->type.val != LEXTYPE_CLOSEBRACKET) {
+                fprintf(stderr, "Syntax Error at line %u: Expected ']' but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                assert(false);
+            }
+            *curr = (*curr)->next;
+            break;
         default:
-            printf("Syntax Error at line %u: Expected '(' , terminal , or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %u: Expected '(' , terminal , or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
     return nfa;
 }
+
+nfa_s *prx_cclass (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
+{
+    nfa_s *class;
+    nfa_edge_s *edge;
+    bool negate = false;
+    
+    class = nfa_();
+    class->start = nfa_node_s_();
+    class->final = nfa_node_s_();
+    if ((*curr)->type.val > LEXTYPE_ERROR && (*curr)->type.val <= LEXTYPE_ANNOTATE) {
+        addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), class->start));
+        addedge(class->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
+        if ((*curr)->type.val == LEXTYPE_NEGATE)
+            negate = true;
+        while ((*curr)->type.val != LEXTYPE_CLOSEBRACKET) {
+            edge = nfa_edge_s_(*curr, class->final);
+            edge->negate = negate;
+            addedge(class->start, edge);
+        }
+    }
+}
+
 
 int prx_closure (lex_s *lex, token_s **curr)
 {

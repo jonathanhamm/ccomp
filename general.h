@@ -100,6 +100,7 @@ enum atypes {
     ATTYPE_CODE,
     ATTYPE_RANGE,
     ATTYPE_ARRAY,
+    ATTYPE_ID,
 };
 
 extern long safe_atol (char *str);

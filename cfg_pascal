@@ -205,11 +205,14 @@
 <factor> ->
 	id <factor'>
     {
+        if <factor'>.type = void then
+        <factor>.boobs := 1+1
+        fi
     }
 	|
 	num
     { 
-        <factor>.val := num.va0
+        <factor>.val := num.val
         print(<factor>.val)
     }
 	|
@@ -226,11 +229,14 @@
 <factor'> ->
 	[ <expression> ]
     { 
-        <factor'>.type := <expression>.type 
+        <factor'>.type := <expression>.type
+        <factor'>.val := <expression>.val
     }
 	|
 	ε
     {
+        print("inside epsilon", "HAHAHAHAH", ASDFADSF, 1+1)
+        halt()
         <factor'>.type := void
     }
     

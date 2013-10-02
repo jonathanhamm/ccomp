@@ -15,7 +15,7 @@
 #include <math.h>
 
 #define REGEX_DECORATIONS_FILE "regex_decorations"
-#define MACHID_START            33
+#define MACHID_START            36
 
 #define SEMSIGN_POS 0
 #define SEMSIGN_NEG 1
@@ -219,7 +219,7 @@ struct ftable_s
 
 static sem_type_s sem_type_s_(token_s *token);
 static void print_semtype(sem_type_s value);
-static int test_semtype(sem_type_s value);
+static bool test_semtype(sem_type_s value);
 static inline unsigned toaddop(unsigned val);
 static inline unsigned tomulop(unsigned val);
 static inline unsigned torelop(unsigned val);
@@ -304,6 +304,8 @@ void print_semtype(sem_type_s value)
         case ATTYPE_NUMREAL:
             printf("value: %f\n", value.real_);
             break;
+        case ATTYPE_ID:
+        case ATTYPE_CODE:
         case ATTYPE_STR:
             printf("value: %s\n", value.str_);
             break;
@@ -311,7 +313,7 @@ void print_semtype(sem_type_s value)
             printf("value: %ld..%ld\n", value.low, value.high);
             break;
         case ATTYPE_ARRAY:
-            printf("value: array[%ld..%ld] of type %s\n", value.low, value.high, value.str_);
+            printf("value: array[%ld..%ld] of type %s\n", value.low, value.high, value.lexeme);
             break;
         case ATTYPE_NULL:
             printf("value: null\n");
@@ -322,7 +324,7 @@ void print_semtype(sem_type_s value)
     }
 }
 
-int test_semtype(sem_type_s value)
+bool test_semtype(sem_type_s value)
 {
     return value.int_ || value.real_ || value.str_;
 }
@@ -610,10 +612,14 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.real_ >= v2.real_;
             break;
         case OPTYPE_EQ:
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
-                printf("Type Error: String type incompatible with subtraction.\n");
             result.type = ATTYPE_NUMINT;
-            if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
+
+            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR) {
+                if (!(v1.type == ATTYPE_STR && v2.type == ATTYPE_STR))
+                    printf("Type Error: Invalid Type mixing in comparrison.\n");
+                result.int_ = 1;//= !strcmp(v1.str_, v2.str_);
+            }
+            else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ == v2.int_;
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
                 result.int_ = v1.int_ == v2.real_;
@@ -727,6 +733,7 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, pda_s *pda, bool 
     sem_expression_s expression;
     sem_idsuffix_s idsuffix;
     sem_paramlist_s params;
+    bool test;
     
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
@@ -759,8 +766,9 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, pda_s *pda, bool 
             *curr = (*curr)->next;
             expression = sem_expression(curr, s, pda);
             sem_match(curr, SEMTYPE_THEN);
-            sem_statements(curr, s, pda, evaluate);
-            sem_else(curr, s, pda, test_semtype(expression.value) && evaluate);
+            test = test_semtype(expression.value);
+            sem_statements(curr, s, pda, test && evaluate);
+            sem_else(curr, s, pda, !test && evaluate);
             break;
         case SEMTYPE_ID:
             id = (*curr)->lexeme;
@@ -768,7 +776,8 @@ sem_statement_s sem_statement (token_s **curr, semantics_s *s, pda_s *pda, bool 
             sem_match(curr, SEMTYPE_OPENPAREN);
             params = sem_paramlist(curr, s, pda);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
-            get_semaction(id)(curr, s, pda, params, &expression);
+            if (s->pass && evaluate)
+                get_semaction(id)(curr, s, pda, params, &expression);
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected nonterm or if but got %s", (*curr)->lineno, (*curr)->lexeme);
@@ -803,14 +812,24 @@ sem_expression_s sem_expression (token_s **curr, semantics_s *s, pda_s *pda)
     
     simple_expression = sem_simple_expression(curr, s, pda);
     expression_ = sem_expression_(curr, s, pda);
-    expression.value = sem_op(simple_expression.value, expression_.value, expression_.op);
+    if (s->pass && expression_.op != OPTYPE_NOP) {
+        printf("Comparing:\n");
+        print_semtype(simple_expression.value);
+        puts("   ");
+        print_semtype(expression_.value);
+        //if (expression_.value.type == ATTYPE_ID)
+           // for(;;)printf("%u\n", expression_.value.type);
+        puts("\n\n");
+    }
+    if(s->pass)
+        expression.value = sem_op(simple_expression.value, expression_.value, expression_.op);
     return expression;
 }
 
 sem_expression__s sem_expression_ (token_s **curr, semantics_s *s, pda_s *pda)
 {
     sem_expression__s expression_;
-    
+        
     switch((*curr)->type.val) {
         case SEMTYPE_RELOP:
             expression_.op = torelop((*curr)->type.attribute);
@@ -993,7 +1012,9 @@ sem_factor_s sem_factor (token_s **curr, semantics_s *s, pda_s *pda)
 
                 }
                 else if (!strcmp(idsuffix.dot.id, "entry") && s->pass) {
-                    for(;;)printf("%s\n", id->lexeme);
+                    factor.value.type = ATTYPE_ID;
+                    pnode = getpnode_token(s, id->lexeme, idsuffix.factor_.index);
+                    factor.value.str_ = pnode->matched->lexeme;
                 }
 
                 //attadd(s, //id->lexeme, pnode-);
@@ -1256,6 +1277,8 @@ sem_paramlist_s sem_paramlist (token_s **curr, semantics_s *s, pda_s *pda)
     sem_paramlist_s paramlist;
     sem_expression_s expression;
 
+    paramlist.pstack = NULL;
+
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
         case SEMTYPE_CODE:
@@ -1266,13 +1289,11 @@ sem_paramlist_s sem_paramlist (token_s **curr, semantics_s *s, pda_s *pda)
         case SEMTYPE_NONTERM:
             expression = sem_expression(curr, s, pda);
             if (s->pass) {
-                paramlist.pstack = NULL;
                 llpush(&paramlist.pstack, alloc_semt(expression.value));
             }
             sem_paramlist_(curr, s, &paramlist, pda);
             break;
         case SEMTYPE_CLOSEPAREN:
-            paramlist.pstack = NULL;
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected + - code not number ( identifier or nonterm, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -1427,6 +1448,10 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s para
     llist_s *node;
     sem_type_s *val;
     
+    if (!s->pass)
+        return NULL;
+    
+    llreverse(&params.pstack);
     while (params.pstack) {
         node = llpop(&params.pstack);
         val = node->ptr;
@@ -1434,32 +1459,35 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s para
         print_semtype(*val);
         free(val);
     }
+    return NULL;
 }
 
 void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params, sem_type_s *type)
 {
     llist_s *node;
     sem_type_s val;
-    char *stdtype;
+    sem_type_s *stdtype;
+    
+    if (!s->pass)
+        return NULL;
     
     node = llpop(&params.pstack);
-    assert(is_allocated(node));
     val = *(sem_type_s *)node->ptr;
+
     if (is_allocated(node->ptr))
         free(node->ptr);
     free(node);
     
     node = llpop(&params.pstack);
     stdtype = node->ptr;
+    
     free(node);
     
-    set_type(s, stdtype, val);
     return NULL;
 }
 
 int ftable_strcmp(char *key, ftable_s *b)
 {
-    printf("comparing %s %s\n", key, b->key);
     return strcasecmp(key, b->key);
 }
 
@@ -1502,7 +1530,7 @@ char *sem_tostring(sem_type_s type)
 char *semstr_concat(char *base, sem_type_s val)
 {
     char *str = sem_tostring(val);
-    
+        
     if (!base) {
         base = malloc(sizeof(*base) + strlen(str) + 1);
         if (!base) {
@@ -1520,6 +1548,9 @@ void set_type(semantics_s *s, char *id, sem_type_s type)
 {
     tdat_s tdat;
     idtable_s *table = s->parse->lex->idtable;
+    
+    if (!s->pass)
+        return;
     
     tdat = idtable_lookup(table, id).tdat;
     tdat.type = type;

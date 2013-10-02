@@ -743,7 +743,7 @@ void build_parse_table (parse_s *parse, token_s *tokens)
     while (tokens) {
         
         
-        if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_DOT || tokens->type.val == LEXTYPE_EPSILON) {
+        if (tokens->type.val == LEXTYPE_TERM || tokens->type.val == LEXTYPE_DOT) {
             if (!lllex_contains(terminals, tokens->lexeme)) {
                 llpush(&terminals, tokens);
                 n_terminals++;
@@ -921,6 +921,8 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
     char *synerr;
     size_t errsize;
     
+    if (!strcmp("<factor'>", pda->nterm->lexeme))
+        printf("entering <factor'>\n");
     pnode = pda->productions[index].start;
     assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
