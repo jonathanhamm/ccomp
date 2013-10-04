@@ -143,7 +143,7 @@ static void prxann_equals (nfa_edge_s *edge, token_s **curr, void *ptr, ann_call
 
 static int prx_tokenid (lex_s *lex, token_s **curr);
 static void addcycle (nfa_node_s *start, nfa_node_s *dest);
-static int tokmatch(char *buf, token_s *tok, unsigned *lineno);
+static int tokmatch(char *buf, token_s *tok, unsigned *lineno, bool negate);
 match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigned *lineno);
 static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
 static void mscan (lexargs_s *args);
@@ -751,6 +751,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
             case LEXTYPE_OPENPAREN:
             case LEXTYPE_DOT:
             case LEXTYPE_TERM:
+            case LEXTYPE_OPENBRACKET:
             case LEXTYPE_NONTERM:
             case LEXTYPE_EPSILON:
                 return (exp__s){.op = OP_UNION, .nfa = prx_expression(lex, curr, unfa, concat)};
@@ -766,6 +767,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
         case LEXTYPE_OPENPAREN:
         case LEXTYPE_DOT:
         case LEXTYPE_TERM:
+        case LEXTYPE_OPENBRACKET:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
             return (exp__s){.op = OP_CONCAT, .nfa = prx_expression(lex, curr, unfa, concat)};
@@ -860,16 +862,25 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 
 nfa_s *prx_cclass (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
-    nfa_s *class;
+    nfa_s *class, *unfa_;
     nfa_edge_s *edge;
     bool negate = false;
     
     class = nfa_();
     class->start = nfa_node_s_();
     class->final = nfa_node_s_();
+
     if ((*curr)->type.val > LEXTYPE_ERROR && (*curr)->type.val <= LEXTYPE_ANNOTATE) {
-        addedge((*unfa)->start, nfa_edge_s_(make_epsilon(), class->start));
-        addedge(class->final, nfa_edge_s_(make_epsilon(), (*unfa)->final));
+        
+        if(*unfa) {
+            unfa_ = *unfa;
+            addedge(unfa_->start, nfa_edge_s_(make_epsilon(), class->start));
+            addedge(class->final, nfa_edge_s_(make_epsilon(), unfa_->final));
+        }
+        else {
+            unfa_ = nfa_();
+        }
+        
         if ((*curr)->type.val == LEXTYPE_NEGATE)
             negate = true;
         while ((*curr)->type.val != LEXTYPE_CLOSEBRACKET) {
@@ -1303,9 +1314,10 @@ void addmachine (lex_s *lex, token_s *tok)
     lex->nmachs++;
 }
 
-int tokmatch(char *buf, token_s *tok, unsigned *lineno)
+int tokmatch(char *buf, token_s *tok, unsigned *lineno, bool negate)
 {
     uint16_t i, len;
+    bool matched = true;
     
     if (*buf == EOF)
         return EOF;
@@ -1320,10 +1332,21 @@ int tokmatch(char *buf, token_s *tok, unsigned *lineno)
             return EOF;
         if (buf[i] == '\n')
             ++*lineno;
-        if (buf[i] != tok->lexeme[i])
-            return 0;
+        if (buf[i] != tok->lexeme[i]) {
+            matched = false;
+            break;
+        }
     }
-    return len;
+    if (matched) {
+        if(negate)
+            return 0;
+        return len;
+    }
+    else {
+        if(negate)
+            return len;
+        return 0;
+    }
 }
 
 match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigned *lineno)
@@ -1378,7 +1401,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigne
                 break;
             case LEXTYPE_TERM: /* case LEXTYPE_TERM */
             case LEXTYPE_DOT:
-                tmatch = tokmatch(buf, state->edges[i]->token, lineno);
+                tmatch = tokmatch(buf, state->edges[i]->token, lineno, state->edges[i]->negate);
                 if (tmatch && tmatch != EOF) {
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch], lineno);
                     if (result.success) {
