@@ -1,5 +1,3 @@
-
-
 program bob (input, output);
 var tom : integer; var ted : real; 
 var omg : array[23..44] of real;

@@ -122,7 +122,7 @@ static regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count);
 static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
 static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
-static nfa_s *prx_cclass (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
+static nfa_s *prx_cclass (lex_s *lex, token_s **curr);
 static int prx_closure (lex_s *lex, token_s **curr);
 
 static void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback);
@@ -188,6 +188,7 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
     char lbuf[2*MAX_LEXLEN + 1];
     token_s *list = NULL, *backup,
             *p, *pp;
+    extern uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data);
     
     buf = readfile(file);
     if (!buf)
@@ -240,7 +241,9 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 }
                 break;
             case '{':
+                printf("before %u\n", lineno);
                 tmp = af(&list, &buf[i], &lineno, data);
+                printf("after %u\n", lineno);
                 if (tmp)
                     i += tmp;
                 else {
@@ -336,6 +339,9 @@ dot_:
                         case '?':
                         case '|':
                         case '{':
+                        case '[':
+                        case ']':
+                        case '\\':
                         case '/':
                             if (bpos > 0) {
                                 lbuf[bpos] = '\0';
@@ -388,7 +394,6 @@ doublebreak_:
             list->prev = NULL;
         free(backup);
     }
-    //exit(1);
     return list;
 }
 
@@ -779,6 +784,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
 
 nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
+    bool isclass = false;
     exp__s exp_;
     nfa_edge_s *edge;
     nfa_s *nfa, *unfa_ = NULL, *concat_ = NULL, *backup1, *u_nfa;
@@ -802,17 +808,31 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
                 *concat = nfa;
                 return nfa;
             }
+        case LEXTYPE_OPENBRACKET:
+            isclass = true;
         case LEXTYPE_DOT:
         case LEXTYPE_TERM:
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
-            nfa = nfa_();
-            nfa->start = nfa_node_s_();
-            nfa->final = nfa_node_s_();
-            edge = nfa_edge_s_(*curr, nfa->final);
-            addedge(nfa->start, edge);
-            *curr = (*curr)->next;
-            prxa_annotation(curr, edge, (void (*)(token_s **curr, void *))prxa_edgestart);
+            if(isclass) {
+                *curr = (*curr)->next;
+                nfa = prx_cclass (lex, curr);
+                if((*curr)->type.val == LEXTYPE_CLOSEBRACKET)
+                    *curr = (*curr)->next;
+                else {
+                    fprintf(stderr, "Synax Error: Expected ] but got %s\n", (*curr)->lexeme);
+                    assert(false);
+                }
+            }
+            else {
+                nfa = nfa_();
+                nfa->start = nfa_node_s_();
+                nfa->final = nfa_node_s_();
+                edge = nfa_edge_s_(*curr, nfa->final);
+                addedge(nfa->start, edge);
+                *curr = (*curr)->next;
+                prxa_annotation(curr, edge, (void (*)(token_s **curr, void *))prxa_edgestart);
+            }
             exp_ = prx_expression_(lex, curr, unfa, concat);
             if (exp_.op == OP_UNION) {
                 if (*unfa) {
@@ -842,16 +862,6 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
                 }
             }
             break;
-        case LEXTYPE_OPENBRACKET:
-            nfa = NULL;
-            *curr = (*curr)->next;
-            nfa = prx_cclass (lex, curr, unfa, concat);
-            if ((*curr)->type.val != LEXTYPE_CLOSEBRACKET) {
-                fprintf(stderr, "Syntax Error at line %u: Expected ']' but got %s\n", (*curr)->lineno, (*curr)->lexeme);
-                assert(false);
-            }
-            *curr = (*curr)->next;
-            break;
         default:
             fprintf(stderr, "Syntax Error at line %u: Expected '(' , terminal , or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
@@ -860,10 +870,11 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
     return nfa;
 }
 
-nfa_s *prx_cclass (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
+nfa_s *prx_cclass (lex_s *lex, token_s **curr)
 {
-    nfa_s *class, *unfa_;
-    nfa_edge_s *edge;
+    nfa_s *class;
+    nfa_node_s *n1, *n2;
+    nfa_edge_s *edge, *e1, *e2;
     bool negate = false;
     
     class = nfa_();
@@ -871,24 +882,28 @@ nfa_s *prx_cclass (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
     class->final = nfa_node_s_();
 
     if ((*curr)->type.val > LEXTYPE_ERROR && (*curr)->type.val <= LEXTYPE_ANNOTATE) {
-        
-        if(*unfa) {
-            unfa_ = *unfa;
-            addedge(unfa_->start, nfa_edge_s_(make_epsilon(), class->start));
-            addedge(class->final, nfa_edge_s_(make_epsilon(), unfa_->final));
-        }
-        else {
-            unfa_ = nfa_();
-        }
-        
-        if ((*curr)->type.val == LEXTYPE_NEGATE)
+        if((*curr)->type.val == LEXTYPE_NEGATE) {
             negate = true;
+            *curr = (*curr)->next;
+        }
         while ((*curr)->type.val != LEXTYPE_CLOSEBRACKET) {
-            edge = nfa_edge_s_(*curr, class->final);
+            if((*curr)->type.val == LEXTYPE_EOF) {
+                fprintf(stderr, "Syntax Error at line %d: Expected ] but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+                assert(false);
+            }
+            n1 = nfa_node_s_();
+            n2 = nfa_node_s_();
+            edge = nfa_edge_s_(*curr, n2);
             edge->negate = negate;
-            addedge(class->start, edge);
+            addedge(n1, edge);
+            e1 = nfa_edge_s_(make_epsilon(), class->final);
+            addedge(n2, e1);
+            e2 = nfa_edge_s_(make_epsilon(), n1);
+            addedge(class->start, e2);
+            *curr = (*curr)->next;
         }
     }
+    return class;
 }
 
 
@@ -1321,17 +1336,12 @@ int tokmatch(char *buf, token_s *tok, unsigned *lineno, bool negate)
     
     if (*buf == EOF)
         return EOF;
-    if(tok->type.val == LEXTYPE_DOT) {
-        if (*buf == '\n')
-            ++*lineno;
+    if(tok->type.val == LEXTYPE_DOT)
         return 1;
-    }
     len = strlen(tok->lexeme);
     for (i = 0; i < len; i++) {
         if (buf[i] == EOF)
             return EOF;
-        if (buf[i] == '\n')
-            ++*lineno;
         if (buf[i] != tok->lexeme[i]) {
             matched = false;
             break;
@@ -1424,6 +1434,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigne
 
 lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
 {
+    int lcheck;
     bool unlimited;
     int idatt = 0;
     mach_s *mach, *bmach;
@@ -1482,6 +1493,10 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
                 else
                     overflow = res.overflow;
             }
+        }
+        for(lcheck = 0; lcheck < best.n; lcheck++) {
+            if(buf[lcheck] == '\n')
+                lineno++;
         }
         unlimited = bmach ? bmach->unlimited : false;
         c[0] = buf[best.n];

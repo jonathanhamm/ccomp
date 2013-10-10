@@ -206,7 +206,7 @@
 	id <factor'>
     {
         if <factor'>.type = void then
-        <factor>.boobs := 1+1
+        <factor>.derp := 1+1
         fi
     }
 	|
@@ -235,6 +235,7 @@
 	|
 	ε
     {
+        <factor'>.code := "hello hello hello"
         print("inside epsilon", "HAHAHAHAH", ASDFADSF, 1+1)
         halt()
         <factor'>.type := void

@@ -216,7 +216,6 @@ struct ftable_s
     sem_action_f action;
 };
 
-
 static sem_type_s sem_type_s_(token_s *token);
 static void print_semtype(sem_type_s value);
 static bool test_semtype(sem_type_s value);
@@ -358,18 +357,26 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
     lextok_s ltok;
     token_s *iter;
     static unsigned anlineno = 0;
-        
+    static unsigned last;
+    
+    assert(*lineno < 500);
     for (i = 1; buf[i] != '}'; i++);
     buf[i] = EOF;
         
     addtok(tlist, "generated {", *lineno, LEXTYPE_ANNOTATE, LEXATTR_DEFAULT, NULL);
     ltok = lexf(data, &buf[1], anlineno, true);
     anlineno = ltok.lines;
-    *lineno += ltok.lines;
+    *lineno = ltok.lines;
     (*tlist)->next = ltok.tokens;
     ltok.tokens->prev = *tlist;
     while ((*tlist)->next)
         *tlist = (*tlist)->next;
+    last = *lineno;
+    puts("\n\n-------------------------------------------------------------------------------");
+    for(iter = ltok.tokens; iter; iter = iter->next)
+        printf("%s %d\n", iter->lexeme, iter->type.val);
+    puts("-------------------------------------------------------------------------------\n\n");
+
     return i;
 }
 

@@ -47,7 +47,7 @@ not
     \* {0} | \/ {1} | and {2}
 
 <code>{length=unlimited}->
-    " [^"] "
+    " [^ "]* "
 
 <concat>->
     \|\|

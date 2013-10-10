@@ -1,0 +1,17 @@
+ <start> -> <root>
+ 
+ <root> -> 
+    <item> <item'>
+ 
+ <item> -> 
+    TYPE_TEXT | <elem>
+ <item'> ->
+    <root>
+    |
+    ε
+ 
+ <elem> ->
+    TYPE_OPEN_TAGOPEN text TYPE_CLOSETAG <depth> TYPE_OPEN_TAGCLOSE text TYPE_CLOSETAG
+ 
+ <depth> -> 
+    <root> | ε
