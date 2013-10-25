@@ -64,22 +64,35 @@
 	<standard_type>
     {
         <type>.type := <standard_type>.type
+        print(<type>.type)
+
     }
 	|
 	array \[ num \. \. num \] of <standard_type>
     {
+
         <type>.type := array(num[1].val .. num[2].val, <standard_type>.type)
+        print("got type: ", <type>.type)
     }
 
 <standard_type> ->
 	integer
-    { 
+    {
+           halt()
+
         <standard_type>.type := integer 
+
+        print("got _type: ", <standard_type>.type)
     }
 	|
 	real
     { 
-        <standard_type>.type := real 
+           halt()
+
+        <standard_type>.type := real
+
+       print("got _type: ", <standard_type>.type)
+
     }
 	
 <subprogram_declarations> ->
@@ -173,10 +186,26 @@
 	
 <expression> ->
 	<simple_expression> <expression'>
+    { 
+        if <expression'>.op <> nop then
+            print("printing op: ", <expression'>.op)
+            halt()
+        fi
+        <expression'>.in := <simple_expression>.val
+        <expression>.type := "derp"
+    }
 <expression'> ->
 	relop <simple_expression>
+    {
+        <expression'>.op := relop.val
+        <expression'>.val := <simple_expression>.val
+    }
 	|
 	ε
+    {
+        <expression'>.op := nop
+        <expression'>.type := void
+    }
 	
 <simple_expression> ->
 	<sign> <term> <simple_expression'> 
@@ -205,15 +234,16 @@
 <factor> ->
 	id <factor'>
     {
-        if <factor'>.type = void then
-        <factor>.derp := 1+1
+        if <factor'>.type <> void then
+            <factor>.derp := 1+1
+        else
+            print("printing factor type:", <factor'>.type)
         fi
     }
 	|
 	num
     { 
         <factor>.val := num.val
-        print(<factor>.val)
     }
 	|
 	\( <expression> \)
@@ -231,13 +261,11 @@
     { 
         <factor'>.type := <expression>.type
         <factor'>.val := <expression>.val
+        print("printing <factor'>.type", <expression>.type)
     }
 	|
 	ε
     {
-        <factor'>.code := "hello hello hello"
-        print("inside epsilon", "HAHAHAHAH", ASDFADSF, 1+1)
-        halt()
         <factor'>.type := void
     }
     

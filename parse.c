@@ -255,9 +255,10 @@ pnode_s *pnode_(token_s *token)
     }
     pnode->token = token;
     pnode->annotation = NULL;
-    pnode->s = NULL;
     pnode->next = NULL;
     pnode->prev = NULL;
+    pnode->in = NULL;
+    pnode->syn = NULL;
     return pnode;
 }
 
@@ -276,7 +277,7 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
     if ((*curr)->type.val == LEXTYPE_NONTERM) {
         pda = pda_(*curr);
         if (!hash_pda(parse, (*curr)->lexeme, pda)) {
-            printf("Error: Redefinition of production: %s\n", (*curr)->lexeme);
+            fprintf(stderr, "Error: Redefinition of production: %s\n", (*curr)->lexeme);
             assert(false);
         }
         *curr = (*curr)->next;
@@ -286,12 +287,12 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
             pp_productions(parse, curr, pda);
         }
         else {
-            printf("Syntax Error at line %d: Expected '->' but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected '->' but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
         }
     }
     else {
-        printf("Syntax Error at line %d: Expected nonterminal but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+        fprintf(stderr, "Syntax Error at line %d: Expected nonterminal but got %s\n", (*curr)->lineno, (*curr)->lexeme);
         assert(false);
     }
 }
@@ -307,7 +308,7 @@ void pp_nonterminals (parse_s *parse, token_s **curr)
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error at line %d: Expected EOL or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected EOL or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -331,7 +332,7 @@ void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
             pp_decoration(parse, curr, production);
             break;
         default:
-            printf("Syntax Error at line %d: Expected token but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected token but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -351,7 +352,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error at line %d: Expected '|', annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected '|', annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -380,7 +381,7 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda)
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error at line %d: Expected token, annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected token, annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -404,7 +405,7 @@ void pp_decoration (parse_s *parse, token_s **curr, production_s *prod)
         case LEXTYPE_EOF:
             break;
         default:
-            printf("Syntax Error at line %d: Expected annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected annotation, nonterm, or $, but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
@@ -883,8 +884,8 @@ void parse (parse_s *parse, lextok_s lex)
         adderror(parse->listing, synerr, lex.tokens->lineno);
         panic_recovery(parse->start->follows, &lex.tokens);
     }
-    root->s = semantics_s_(parse, lex.lex->machs, parse->start, root);
-    root->s->pass = true;
+    root->in = NULL;
+    root->syn = semantics_s_(parse, lex.lex->machs);
     nonterm(parse, root, lex.lex->machs, &lex.tokens, parse->start, index);
     if (lex.tokens->type.val != LEXTYPE_EOF) {
         errsize = (sizeof(SYNERR_PREFIX)-1)+FS_INTWIDTH_DEC(lex.tokens->lineno)+sizeof("EOF but got: ")+strlen(lex.tokens->lexeme);
@@ -921,14 +922,12 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
     char *synerr;
     size_t errsize;
     
-    if (!strcmp("<factor'>", pda->nterm->lexeme))
-        printf("entering <factor'>\n");
     pnode = pda->productions[index].start;
     assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
-        pnterm->s = semantics_s_(parse, machs, pda, pnode);
-        pnterm->s->pass = true;
-        sem_start(pnterm->s, parse, &pda->productions[index], machs, pda, pnode);
+        pnode->in = NULL;
+        pnode->syn = semantics_s_(parse, machs);
+        sem_start(NULL, parse, &pda->productions[index], machs, pda, pnterm, pnode);
         return true;
     }
     else {
@@ -947,16 +946,30 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
                         *curr = (*curr)->next;
                     }
                     else {
-                        pnode->s = sem_start(NULL, parse, &pda->productions[index], machs, pda, pnode);
+                        //Will set inherited attributes and handle l-attributed definitions
+                        pnode->in = semantics_s_(parse, machs);
+                        pnode->syn = semantics_s_(parse, machs);
+                        assert(pnode->in && pnode->syn);
+                        /*
+                         To set inherited attributes, must get the pnode
+                         To set synthesized attributes, must set in pnode. 
+                         
+                         To get inherited attributes, must get from pnode
+                         To get synthesized attributes, must get the pnode and check if set
+                         */
+                        sem_start(NULL, parse, &nterm->productions[index], machs, pda, pnterm, pnode);
                         nonterm(parse, pnode, machs, curr, nterm, result);
+                        pnode->pass = true;
+                        sem_start(NULL, parse, &pda->productions[index], machs, pda, pnterm, pnode);
                     }
                 }
                 else {
                     pnode->matched = *curr;
+                    pnode->pass = true;
                     result = match(curr, pnode);
                     if (!result) {
-                        errsize = sizeof(SYNERR_PREFIX)+FS_INTWIDTH_DEC((*curr)->lineno)+
-                                    +strlen(pnode->token->lexeme)+sizeof(" but got ")+strlen((*curr)->lexeme)-3;
+                        errsize = sizeof(SYNERR_PREFIX)+FS_INTWIDTH_DEC((*curr)->lineno)
+                                + strlen(pnode->token->lexeme)+sizeof(" but got ")+strlen((*curr)->lexeme)-3;
                         synerr = malloc(errsize);
                         if (!synerr) {
                             perror("Memory Allocation Error");
@@ -974,11 +987,11 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
             }
             while (!success);
         }
-        if (!pnterm->s) {
+        /* Not sure why this code was here 
+         
+         if (!pnterm->s) {
             pnterm->s = semantics_s_(parse, machs, pda, pnterm);
-            pnterm->s->pass = true;
-        }
-        sem_start(pnterm->s, parse, &pda->productions[index], machs, pda, pnterm);
+        }*/
     }
     
     return true;

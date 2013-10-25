@@ -55,7 +55,9 @@ struct pnode_s
     token_s *annotation;
     pnode_s *next;
     pnode_s *prev;
-    struct semantics_s *s;
+    bool pass;
+    struct semantics_s *in;
+    struct semantics_s *syn;
 };
 
 struct parsetable_s

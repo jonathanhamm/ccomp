@@ -80,7 +80,6 @@ struct linetable_s
 
 struct sem_type_s
 {
-    bool iseval;
     unsigned type;
     char *lexeme;
     union {
@@ -101,6 +100,7 @@ enum atypes {
     ATTYPE_RANGE,
     ATTYPE_ARRAY,
     ATTYPE_ID,
+    ATTYPE_NOT_EVALUATED,
 };
 
 extern long safe_atol (char *str);

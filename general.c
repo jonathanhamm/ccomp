@@ -244,7 +244,7 @@ bool hashinsert (hash_s *hash, void *key, void *data)
     new->data = data;
     new->next = *entry;
     *entry = new;
-    hash->indices |= (1llu << entry - hash->table);
+    hash->indices |= (1llu << (entry - hash->table));
     hash->nitems++;
     return true;
 }
@@ -271,7 +271,7 @@ void hashinsert_ (hash_s *hash, void *key, void *data)
     new->data = data;
     new->next = *entry;
     *entry = new;
-    hash->indices |= (1llu << entry - hash->table);
+    hash->indices |= (1llu << (entry - hash->table));
     hash->nitems++;
 }
 
@@ -443,6 +443,7 @@ void free_listing(linetable_s *table)
     free(table);
 }
 
+/* substandard function for debugging purposes */
 bool is_allocated (const void *ptr)
 {
     if (!ptr)
