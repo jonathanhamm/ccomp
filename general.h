@@ -101,6 +101,7 @@ enum atypes {
     ATTYPE_ARRAY,
     ATTYPE_ID,
     ATTYPE_NOT_EVALUATED,
+    ATTYPE_VOID,
 };
 
 extern long safe_atol (char *str);
@@ -114,6 +115,8 @@ extern void println (unsigned no, char *buf, void *stream);
 
 extern void llpush (llist_s **list, void *ptr);
 extern llist_s *llpop (llist_s **list);
+extern void *llremove(llist_s **list, void *key);
+extern void *llremove_(llist_s **list, isequal_f eq, void *key);
 extern void llreverse (llist_s **list);
 extern bool llcontains (llist_s *list, void *ptr);
 extern llist_s *llconcat (llist_s *first, llist_s *second);
@@ -132,7 +135,7 @@ extern uint16_t basic_hashf(void *key);
 extern bool basic_isequalf(void *key1, void *key2);
 extern uint16_t pjw_hashf(void *key);
 extern bool str_isequalf(void *key1, void *key2);
-
+extern void free_hash(hash_s *hash);
 
 extern inline linetable_s *linetable_s_(void);
 extern void addline(linetable_s **linelist_ptr, char *line);

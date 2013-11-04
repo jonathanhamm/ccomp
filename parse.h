@@ -43,6 +43,7 @@ struct pda_s
 
 struct production_s
 {
+    int nnodes;
     pnode_s *start;
     token_s *annot;
     struct semantics_s *s;

@@ -69,7 +69,7 @@ static void pp_nonterminal (parse_s *parse, token_s **curr);
 static void pp_nonterminals (parse_s *parse, token_s **curr);
 static void pp_production (parse_s *parse, token_s **curr, pda_s *pda);
 static void pp_productions (parse_s *parse, token_s **curr, pda_s *pda);
-static pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda);
+static pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda, int *count);
 static void pp_decoration (parse_s *parse, token_s **curr, production_s *prod);
 
 static ffnode_s *makeffnode (token_s *token, uint16_t prod);
@@ -93,7 +93,7 @@ static void print_parse_table (parsetable_s *ptable, FILE *stream);
 static void print_firfol (parse_s *parse, FILE *stream);
 
 static int match (token_s **curr, pnode_s *p);
-static bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index);
+static pna_s *nonterm (parse_s *parse, llist_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index);
 static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
 static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
 static char *make_synerr (pda_s *pda, token_s **curr);
@@ -241,6 +241,7 @@ production_s *addproduction (pda_s *pda)
     pda->productions[pda->nproductions].annot = NULL;
     pda->productions[pda->nproductions].s = NULL;
     pda->productions[pda->nproductions].start = NULL;
+    pda->productions[pda->nproductions].nnodes = 0;
     return &pda->productions[pda->nproductions++];
 }
 
@@ -248,17 +249,12 @@ pnode_s *pnode_(token_s *token)
 {
     pnode_s *pnode;
     
-    pnode = malloc(sizeof(*pnode));
+    pnode = calloc(1, sizeof(*pnode));
     if (!pnode) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
     pnode->token = token;
-    pnode->annotation = NULL;
-    pnode->next = NULL;
-    pnode->prev = NULL;
-    pnode->in = NULL;
-    pnode->syn = NULL;
     return pnode;
 }
 
@@ -326,8 +322,9 @@ void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
         case LEXTYPE_EPSILON:
             production = addproduction(pda);
             production->start = pnode_(*curr);
+            production->nnodes++;
             *curr = (*curr)->next;
-            token = pp_tokens(parse, curr, pda);
+            token = pp_tokens(parse, curr, pda, &production->nnodes);
             production->start->next = token;
             pp_decoration(parse, curr, production);
             break;
@@ -358,7 +355,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
     }
 }
 
-pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda)
+pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda, int *count)
 {
     pnode_s *pnode = NULL, *token;
     
@@ -368,8 +365,9 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda)
         case LEXTYPE_NONTERM:
         case LEXTYPE_EPSILON:
             pnode = pnode_(*curr);
+            ++*count;
             *curr = (*curr)->next;
-            token = pp_tokens(parse, curr, pda);
+            token = pp_tokens(parse, curr, pda, count);
             if (token) {
                 pnode->next = token;
                 token->prev = pnode;
@@ -885,8 +883,7 @@ void parse (parse_s *parse, lextok_s lex)
         panic_recovery(parse->start->follows, &lex.tokens);
     }
     root->in = NULL;
-    root->syn = semantics_s_(parse, lex.lex->machs);
-    nonterm(parse, root, lex.lex->machs, &lex.tokens, parse->start, index);
+    nonterm(parse, NULL, root, lex.lex->machs, &lex.tokens, parse->start, index);
     if (lex.tokens->type.val != LEXTYPE_EOF) {
         errsize = (sizeof(SYNERR_PREFIX)-1)+FS_INTWIDTH_DEC(lex.tokens->lineno)+sizeof("EOF but got: ")+strlen(lex.tokens->lexeme);
         synerr = malloc(errsize);
@@ -913,43 +910,61 @@ int match(token_s **curr, pnode_s *p)
     return 0;
 }
 
-bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index)
+pna_s *nonterm (parse_s *parse, llist_s *i1, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index)
 {
-    int result;
+    int result, i;
     pda_s *nterm;
     pnode_s *pnode;
     bool success;
     char *synerr;
     size_t errsize;
+    llist_s *l_in, *l_syn;
+    semantics_s *in = NULL, *syn = NULL;
+    pna_s *pcp, *synth;
+    llist_s *i2 = NULL;
+    
+    
+    assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
+    
+    pcp = malloc(sizeof(*pcp) + pda->productions[index].nnodes * sizeof(pnode_s));
+    if(!pcp) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    pcp->size = pda->productions[index].nnodes;
+    memset(pcp, 0, sizeof(*pcp) + pda->productions[index].nnodes * sizeof(pnode_s));
+    pcp->size = pda->productions[index].nnodes;
+    for(pnode = pda->productions[index].start, i = 0; i < pcp->size; pnode = pnode->next, i++) {
+        printf("PRINTING PNODE MATCHED: %p\n", pcp->array[i].matched);
+        pcp->array[i].matched = NULL;
+        pcp->array[i] = *pnode;
+        pcp->array[i].in = get_il(i1, pnterm);
+    }
     
     pnode = pda->productions[index].start;
-    assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
+    sem_start(NULL, pda->productions[index].annot, parse, machs, pda, pcp);
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
-        pnode->in = NULL;
-        pnode->syn = semantics_s_(parse, machs);
-        sem_start(NULL, parse, &pda->productions[index], machs, pda, pnterm, pnode);
-        return true;
+        syn = semantics_s_(parse, machs);
+        sem_start(NULL, pda->productions[index].annot, parse, machs, pda, pcp);
+        return pcp;
     }
     else {
-        for (; pnode; pnode = pnode->next) {
+        for (i = 0; pnode; pnode = pnode->next, i++) {
             do {
                 if (!*curr)
-                    return true;
+                    return pcp;
                 success = true;
                 if ((nterm = get_pda(parse, pnode->token->lexeme))) {
                     result = get_production(parse->parse_table, nterm, curr);
                     if (result < 0) {
                         adderror(parse->listing, make_synerr(nterm, curr), (*curr)->lineno);
-                        success = false;
+                        success = NULL;
                         if ((*curr)->type.val == LEXTYPE_EOF)
-                            return false;
+                            return NULL;
                         *curr = (*curr)->next;
                     }
                     else {
                         //Will set inherited attributes and handle l-attributed definitions
-                        pnode->in = semantics_s_(parse, machs);
-                        pnode->syn = semantics_s_(parse, machs);
-                        assert(pnode->in && pnode->syn);
                         /*
                          To set inherited attributes, must get the pnode
                          To set synthesized attributes, must set in pnode. 
@@ -957,15 +972,16 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
                          To get inherited attributes, must get from pnode
                          To get synthesized attributes, must get the pnode and check if set
                          */
-                        sem_start(NULL, parse, &nterm->productions[index], machs, pda, pnterm, pnode);
-                        nonterm(parse, pnode, machs, curr, nterm, result);
+                        pcp->curr = &pcp->array[i];
+                        i2 = sem_start(NULL, pda->productions[index].annot, parse, machs, pda, pcp);
+                        synth = nonterm(parse, i2, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
-                        sem_start(NULL, parse, &pda->productions[index], machs, pda, pnterm, pnode);
+                        sem_start(NULL, nterm->productions[index].annot, parse, machs, pda, pcp);
                     }
                 }
                 else {
-                    pnode->matched = *curr;
-                    pnode->pass = true;
+                    pcp->array[i].matched = *curr;
+                    pcp->array[i].pass = true;
                     result = match(curr, pnode);
                     if (!result) {
                         errsize = sizeof(SYNERR_PREFIX)+FS_INTWIDTH_DEC((*curr)->lineno)
@@ -980,21 +996,21 @@ bool nonterm (parse_s *parse, pnode_s *pnterm, mach_s *machs, token_s **curr, pd
                         adderror(parse->listing, synerr, (*curr)->lineno);
                         success = false;
                         if ((*curr)->type.val == LEXTYPE_EOF)
-                            return false;
+                            return NULL;
                         *curr = (*curr)->next;
                     }
                 }
             }
             while (!success);
         }
+        
         /* Not sure why this code was here 
          
          if (!pnterm->s) {
             pnterm->s = semantics_s_(parse, machs, pda, pnterm);
         }*/
     }
-    
-    return true;
+    return pcp;
 }
 
 size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme)

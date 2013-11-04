@@ -56,6 +56,10 @@
 	var id : <type> ; <declarations'>
     {
         addtype(id.entry, <type>.type)
+        print("Got type: ", <type>.type)
+    if <type>.type <> null then
+        halt()
+    fi
     }
 	|
 	ε
@@ -65,30 +69,27 @@
     {
         <type>.type := <standard_type>.type
         print(<type>.type)
-
+    if <type>.type <> null then
+        print(<type>.type)
+    fi
     }
 	|
 	array \[ num \. \. num \] of <standard_type>
     {
 
         <type>.type := array(num[1].val .. num[2].val, <standard_type>.type)
-        print("got type: ", <type>.type)
     }
 
 <standard_type> ->
 	integer
     {
-           halt()
-
-        <standard_type>.type := integer 
+        <standard_type>.type := integer
 
         print("got _type: ", <standard_type>.type)
     }
 	|
 	real
     { 
-           halt()
-
         <standard_type>.type := real
 
        print("got _type: ", <standard_type>.type)
@@ -189,7 +190,6 @@
     { 
         if <expression'>.op <> nop then
             print("printing op: ", <expression'>.op)
-            halt()
         fi
         <expression'>.in := <simple_expression>.val
         <expression>.type := "derp"
@@ -253,7 +253,7 @@
 	|
 	not <factor>
     {
-        <factor>.val := not <factor>.val
+        <factor>.val :=  <factor>.val
     }
     
 <factor'> ->

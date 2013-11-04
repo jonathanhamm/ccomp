@@ -23,6 +23,7 @@
 
 static void printline(char *buf, FILE *stream);
 static void llpush_(llist_s **list, llist_s *node);
+static bool default_eq(void *k1, void *k2);
 
 long safe_atol (char *str)
 {
@@ -103,14 +104,53 @@ void llpush_(llist_s **list, llist_s *node)
     *list = node;
 }
 
+bool default_eq(void *k1, void *k2)
+{
+    return k1 == k2;
+}
+
 
 llist_s *llpop (llist_s **list)
 {
     llist_s *backup;
     
-    backup = *list;
-    *list = (*list)->next;
-    return backup;
+    if(*list) {
+        backup = *list;
+        *list = (*list)->next;
+        return backup;
+    }
+    return NULL;
+}
+
+void *llremove(llist_s **list, void *key)
+{
+    return llremove_(list, default_eq, key);
+}
+
+void *llremove_(llist_s **list, isequal_f eq, void *k)
+{
+    void *r = NULL;
+    llist_s *l, *ll;
+    
+    l = *list;
+    if(eq(l->ptr, k)) {
+        ll = llpop(list);
+        r = ll->ptr;
+        free(ll);
+    }
+    else {
+        while(l) {
+            if(eq(l->ptr, k)) {
+                r = l->ptr;
+                ll->next = l->next;
+                free(l);
+                break;
+            }
+            ll = l;
+            l = l->next;
+        }
+    }
+    return r;
 }
 
 void llreverse(llist_s **list)
@@ -366,6 +406,20 @@ bool str_isequalf(void *key1, void *key2)
             return false;
     }
     return true;
+}
+
+void free_hash(hash_s *hash)
+{
+    hrecord_s *iter, *b;
+    uint64_t i, indices = hash->indices;
+    
+    for(i = ffsl(indices); i; indices &= ~(1llu << i), i = ffsl(indices)) {
+        for(iter = hash->table[i]; iter; iter = b) {
+            b = iter->next;
+            free(iter);
+        }
+    }
+    free(hash);
 }
 
 inline linetable_s *linetable_s_(void)
