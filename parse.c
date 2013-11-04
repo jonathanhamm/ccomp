@@ -99,7 +99,8 @@ static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char 
 static char *make_synerr (pda_s *pda, token_s **curr);
 static void panic_recovery (llist_s *follow, token_s **curr);
 
-uint16_t str_hashf (void *key);
+static uint16_t str_hashf (void *key);
+static bool find_in(void *k1, void *k2);
 
 void printpda(pda_s *start)
 {
@@ -922,6 +923,7 @@ pna_s *nonterm (parse_s *parse, llist_s *i1, pnode_s *pnterm, mach_s *machs, tok
     semantics_s *in = NULL, *syn = NULL;
     pna_s *pcp, *synth;
     llist_s *i2 = NULL;
+    semantics_s *is2 = NULL;
     
     
     assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
@@ -974,6 +976,7 @@ pna_s *nonterm (parse_s *parse, llist_s *i1, pnode_s *pnterm, mach_s *machs, tok
                          */
                         pcp->curr = &pcp->array[i];
                         i2 = sem_start(NULL, pda->productions[index].annot, parse, machs, pda, pcp);
+                        //is2 = llremove_(<#llist_s **list#>, <#isequal_f eq#>, <#void *key#>)
                         synth = nonterm(parse, i2, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
                         sem_start(NULL, nterm->productions[index].annot, parse, machs, pda, pcp);
@@ -1134,4 +1137,11 @@ bool hash_pda (parse_s *parser, char *name, pda_s *pda)
 uint16_t str_hashf (void *key)
 {
     return *(uint64_t *)key % HTABLE_SIZE;
+}
+
+bool find_in(void *k1, void *k2)
+{
+    pda_s *p = k1;
+    char *s = k2;
+    return !strcmp(p->nterm->lexeme, s);
 }
