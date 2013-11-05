@@ -93,7 +93,7 @@ static void print_parse_table (parsetable_s *ptable, FILE *stream);
 static void print_firfol (parse_s *parse, FILE *stream);
 
 static int match (token_s **curr, pnode_s *p);
-static pna_s *nonterm (parse_s *parse, llist_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index);
+static pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index);
 static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
 static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
 static char *make_synerr (pda_s *pda, token_s **curr);
@@ -911,7 +911,7 @@ int match(token_s **curr, pnode_s *p)
     return 0;
 }
 
-pna_s *nonterm (parse_s *parse, llist_s *i1, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index)
+pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index)
 {
     int result, i;
     pda_s *nterm;
@@ -919,12 +919,9 @@ pna_s *nonterm (parse_s *parse, llist_s *i1, pnode_s *pnterm, mach_s *machs, tok
     bool success;
     char *synerr;
     size_t errsize;
-    llist_s *l_in, *l_syn;
-    semantics_s *in = NULL, *syn = NULL;
     pna_s *pcp, *synth;
-    llist_s *i2 = NULL;
-    semantics_s *is2 = NULL;
-    
+    llist_s *child_inll;
+    semantics_s *child_in;
     
     assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
     
@@ -940,14 +937,13 @@ pna_s *nonterm (parse_s *parse, llist_s *i1, pnode_s *pnterm, mach_s *machs, tok
         printf("PRINTING PNODE MATCHED: %p\n", pcp->array[i].matched);
         pcp->array[i].matched = NULL;
         pcp->array[i] = *pnode;
-        pcp->array[i].in = get_il(i1, pnterm);
+        pcp->array[i].in = in;
     }
     
     pnode = pda->productions[index].start;
-    sem_start(NULL, pda->productions[index].annot, parse, machs, pda, pcp);
+    sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp);
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
-        syn = semantics_s_(parse, machs);
-        sem_start(NULL, pda->productions[index].annot, parse, machs, pda, pcp);
+        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp);
         return pcp;
     }
     else {
@@ -975,11 +971,11 @@ pna_s *nonterm (parse_s *parse, llist_s *i1, pnode_s *pnterm, mach_s *machs, tok
                          To get synthesized attributes, must get the pnode and check if set
                          */
                         pcp->curr = &pcp->array[i];
-                        i2 = sem_start(NULL, pda->productions[index].annot, parse, machs, pda, pcp);
-                        //is2 = llremove_(<#llist_s **list#>, <#isequal_f eq#>, <#void *key#>)
-                        synth = nonterm(parse, i2, pnode, machs, curr, nterm, result);
+                        child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp);
+                        child_in = llremove_(&child_inll, find_in, pnode);
+                        synth = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
-                        sem_start(NULL, nterm->productions[index].annot, parse, machs, pda, pcp);
+                        sem_start(NULL, parse, machs, pda, &pda->productions[index],  pcp);
                     }
                 }
                 else {
@@ -1006,18 +1002,12 @@ pna_s *nonterm (parse_s *parse, llist_s *i1, pnode_s *pnterm, mach_s *machs, tok
             }
             while (!success);
         }
-        
-        /* Not sure why this code was here 
-         
-         if (!pnterm->s) {
-            pnterm->s = semantics_s_(parse, machs, pda, pnterm);
-        }*/
     }
     return pcp;
 }
 
 size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme)
-{
+{    
     size_t oldsize = *errsize;
     *errsize += strlen(lexeme)+2;
     if (*errsize >= *bsize) {
@@ -1141,7 +1131,6 @@ uint16_t str_hashf (void *key)
 
 bool find_in(void *k1, void *k2)
 {
-    pda_s *p = k1;
-    char *s = k2;
-    return !strcmp(p->nterm->lexeme, s);
+    printf("PTR: %s %s\n", ((semantics_s *)k1)->n->token->lexeme, ((pnode_s *)k2)->token->lexeme);
+    return ((semantics_s *)k1)->n == k2;
 }

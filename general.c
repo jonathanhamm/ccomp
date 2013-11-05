@@ -133,7 +133,11 @@ void *llremove_(llist_s **list, isequal_f eq, void *k)
     llist_s *l, *ll;
     
     l = *list;
+    if(!l)
+        return NULL;
+    
     if(eq(l->ptr, k)) {
+        
         ll = llpop(list);
         r = ll->ptr;
         free(ll);

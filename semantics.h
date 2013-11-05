@@ -36,7 +36,7 @@ extern void free_sem(semantics_s *s);
 
 extern lex_s *semant_init(void);
 extern uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data);
-extern llist_s *sem_start (semantics_s *in, token_s *start, parse_s *parse, mach_s *machs, pda_s *pda, pna_s *pn);
+extern llist_s *sem_start (semantics_s *in, parse_s *parse, mach_s *machs, pda_s *pda, production_s *prod, pna_s *pn);
 extern semantics_s *get_il(llist_s *l, pnode_s *p);
 
 
