@@ -219,7 +219,6 @@ struct ftable_s
 };
 
 static sem_type_s sem_type_s_(token_s *token);
-static void print_semtype(sem_type_s value);
 static bool test_semtype(sem_type_s value);
 static inline unsigned toaddop(unsigned val);
 static inline unsigned tomulop(unsigned val);
@@ -228,22 +227,25 @@ static pnode_s *getpnode_token(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm_copy(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index);
 static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
-static sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, bool evaluate);
-static sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, bool evaluate);
-static sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, bool evaluate);
-static sem_expression_s sem_expression (token_s **curr, llist_s **il,  pda_s *pda, production_s *prod, pna_s *pn);
-static sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn);
-static sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn);
-static sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn);
-static sem_term_s sem_term (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn);
-static sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn);
-static sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn);
-static sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn);
-static sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn);
-static sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn);
-static sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn);
-static sem_paramlist_s sem_paramlist (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn);
-static void sem_paramlist_ (token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn);
+
+//sem_start(parse_s *parse, pda_s *pda, pna_s *pn, production_s *prod, semantics_s *in, semantics_s *syn)
+
+static sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate);
+static sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate);
+static sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate);
+static sem_expression_s sem_expression (token_s **curr, llist_s **il,  pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static sem_term_s sem_term (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn);
+static sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn);
+static sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn);
+static sem_paramlist_s sem_paramlist (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static void sem_paramlist_ (token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
 static sem_sign_s sem_sign (token_s **curr);
 static bool sem_match (token_s **curr, int type);
 
@@ -263,6 +265,8 @@ static char *sem_tostring(sem_type_s type);
 static char *semstr_concat(char *base, sem_type_s val);
 static void set_type(semantics_s *s, char *id, sem_type_s type);
 static sem_type_s get_type(semantics_s *s, char *id);
+
+void print_semtype(sem_type_s value);
 
 /* Must be alphabetized */
 static ftable_s ftable[] = {
@@ -301,26 +305,27 @@ void print_semtype(sem_type_s value)
 
     switch (value.type) {
         case ATTYPE_NUMINT:
-            printf("value: %ld\n", value.int_);
+            printf("value: %ld", value.int_);
             break;
         case ATTYPE_NUMREAL:
-            printf("value: %f\n", value.real_);
+            printf("value: %f", value.real_);
             break;
         case ATTYPE_ID:
         case ATTYPE_CODE:
         case ATTYPE_STR:
-            printf("value: %s\n", value.str_);
+            printf("value: %s", value.str_);
             break;
         case ATTYPE_RANGE:
-            printf("value: %ld..%ld\n", value.low, value.high);
+            printf("value: %ld..%ld", value.low, value.high);
             break;
         case ATTYPE_ARRAY:
-            printf("value: array[%ld..%ld] of type %s\n", value.low, value.high, value.lexeme);
+            printf("value: array[%ld..%ld] of type %s", value.low, value.high, value.lexeme);
             break;
         case ATTYPE_NULL:
-            printf("value: null\n");
+            printf("value: null");
             break;
         case ATTYPE_NOT_EVALUATED:
+            printf("not evaluated");
             break;
         default:
             /*illegal*/
@@ -513,9 +518,6 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     }
     switch(op) {
         case OPTYPE_MULT:
-            printf("multiplying:\n");
-            print_semtype(v1);
-            print_semtype(v2);
             
             
             assert (v1.int_ != 28);
@@ -539,9 +541,6 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             }
             break;
         case OPTYPE_DIV:
-            printf("dividing:\n");
-            print_semtype(v1);
-            print_semtype(v2);
 
             if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
                 printf("Type Error: String type incompatible with division.\n");
@@ -563,10 +562,6 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             }
             break;
         case OPTYPE_ADD:
-            printf("adding:\n");
-            print_semtype(v1);
-            print_semtype(v2);
-
             if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
                 printf("Type Error: Not yet implemented.\n");
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT) {
@@ -587,9 +582,6 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             }
             break;
         case OPTYPE_SUB:
-            printf("subtracting:\n");
-            print_semtype(v1);
-            print_semtype(v2);
 
             if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
                 printf("Type Error: String type incompatible with subtraction.\n");
@@ -719,9 +711,6 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.real_ && v2.real_;
             break;
         case OPTYPE_NOP:
-            printf("nop'ing:\n");
-            print_semtype(v1);
-            print_semtype(v2);
 
             result = v1;
             break;
@@ -730,13 +719,10 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             assert(false);
             break;
     }
-    printf("result:\n");
-    print_semtype(result);
-    puts("\n");
     return result;
 }
 
-llist_s *sem_start (semantics_s *inherit, parse_s *parse, mach_s *machs, pda_s *pda, production_s *prod, pna_s *pn)
+llist_s *sem_start(parse_s *parse, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *in, semantics_s *syn)
 {
     token_s *iter = prod->annot;
     llist_s *ilist = NULL;
@@ -744,18 +730,18 @@ llist_s *sem_start (semantics_s *inherit, parse_s *parse, mach_s *machs, pda_s *
     if(!iter)
         return NULL;
     
-    sem_statements(&iter, &ilist, pda, prod, pn, true);
+    sem_statements(&iter, &ilist, pda, prod, pn, syn, true);
     return ilist;
 }
 
-sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, bool evaluate)
+sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_ID:
-            sem_statement(curr, il, pda, prod, pn, evaluate);
-            sem_statements(curr, il, pda, prod, pn,  evaluate);
+            sem_statement(curr, il, pda, prod, pn, syn, evaluate);
+            sem_statements(curr, il, pda, prod, pn, syn, evaluate);
         case SEMTYPE_FI:
         case SEMTYPE_ELSE:
         case LEXTYPE_EOF:
@@ -768,7 +754,7 @@ sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, produ
 
 }
 
-sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, bool evaluate)
+sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate)
 {
     pnode_s *p;
     char *id, *nterm;
@@ -783,12 +769,14 @@ sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, product
         case SEMTYPE_NONTERM:
             nterm = (*curr)->lexeme;
             *curr = (*curr)->next;
-            idsuffix = sem_idsuffix(curr, il, pda, prod, pn);
+            idsuffix = sem_idsuffix(curr, il, pda, prod, pn, syn);
             index = idsuffix.factor_.index;
             id = idsuffix.dot.id;
             sem_match(curr, SEMTYPE_ASSIGNOP);
-            expression = sem_expression(curr, il, pda, prod, pn);
-            if (evaluate) {
+            expression = sem_expression(curr, il, pda, prod, pn, syn);
+
+            if (evaluate && expression.value.type != ATTYPE_NOT_EVALUATED) {
+
                 if(!strcmp(pda->nterm->lexeme, nterm)) {
                     if(pn->curr) {
                         if(!pn->curr->syn)
@@ -799,7 +787,7 @@ sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, product
                 else {
                     /* Setting inherited attributes */
                     p = getpnode_nterm(prod, nterm, index);
-                    if(p) {
+                    if(p && expression.value.type != ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, p);
                         if(!in) {
                             in = semantics_s_(NULL, NULL);
@@ -813,17 +801,17 @@ sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, product
             break;
         case SEMTYPE_IF:
             *curr = (*curr)->next;
-            expression = sem_expression(curr, il, pda, prod, pn);
+            expression = sem_expression(curr, il, pda, prod, pn, syn);
             sem_match(curr, SEMTYPE_THEN);
             test = test_semtype(expression.value);
-            sem_statements(curr, il, pda, prod, pn, test && evaluate);
-            sem_else(curr, il, pda, prod, pn, !test && evaluate);
+            sem_statements(curr, il, pda, prod, pn, syn, test && evaluate);
+            sem_else(curr, il, pda, prod, pn, syn, !test && evaluate);
             break;
         case SEMTYPE_ID:
             id = (*curr)->lexeme;
             *curr = (*curr)->next;
             sem_match(curr, SEMTYPE_OPENPAREN);
-            params = sem_paramlist(curr, il, pda, prod, pn);
+            params = sem_paramlist(curr, il, pda, prod, pn, syn);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             if (evaluate && params.ready)
                 get_semaction(id)(curr, NULL, pda, params, &expression);
@@ -835,12 +823,12 @@ sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, product
     }
 }
 
-sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, bool evaluate)
+sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_statements(curr, il, pda, prod, pn, evaluate);
+            sem_statements(curr, il, pda, prod, pn, syn, evaluate);
             sem_match(curr, SEMTYPE_FI);
             break;
         case SEMTYPE_FI:
@@ -853,28 +841,28 @@ sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *pro
     }
 }
 
-sem_expression_s sem_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn)
+sem_expression_s sem_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     sem_expression_s expression;
     sem_expression__s expression_;
     sem_simple_expression_s simple_expression;
     
-    simple_expression = sem_simple_expression(curr, il, pda, prod, pn);
-    expression_ = sem_expression_(curr, il, pda, prod, pn);
+    simple_expression = sem_simple_expression(curr, il, pda, prod, pn, syn);
+    expression_ = sem_expression_(curr, il, pda, prod, pn, syn);
     if (expression_.op != OPTYPE_NOP) {
-        printf("Comparing:\n");
+       /* printf("Comparing:\n");
         print_semtype(simple_expression.value);
         puts("   ");
         print_semtype(expression_.value);
         //if (expression_.value.type == ATTYPE_ID)
            // for(;;)printf("%u\n", expression_.value.type);
-        puts("\n\n");
+        puts("\n\n");*/
     }
     expression.value = sem_op(simple_expression.value, expression_.value, expression_.op);
     return expression;
 }
 
-sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn)
+sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     sem_expression__s expression_;
         
@@ -882,7 +870,7 @@ sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, pro
         case SEMTYPE_RELOP:
             expression_.op = torelop((*curr)->type.attribute);
             *curr = (*curr)->next;
-            expression_.value = sem_simple_expression(curr, il, pda, prod, pn).value;
+            expression_.value = sem_simple_expression(curr, il, pda, prod, pn, syn).value;
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_FI:
@@ -906,7 +894,7 @@ sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, pro
     return expression_;
 }
 
-sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn)
+sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     sem_sign_s sign;
     sem_simple_expression_s simple_expression;
@@ -915,10 +903,9 @@ sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda
     
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
-            puts("----------SIDE 3");
 
             sign = sem_sign(curr);
-            simple_expression = sem_simple_expression(curr, il, pda, prod, pn);
+            simple_expression = sem_simple_expression(curr, il, pda, prod, pn, syn);
             if (sign.value == SEMSIGN_NEG) {
                 if (simple_expression.value.type == ATTYPE_NUMINT)
                     simple_expression.value.int_ = -simple_expression.value.int_;
@@ -934,8 +921,8 @@ sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda
         case SEMTYPE_NONTERM:
         case SEMTYPE_OPENPAREN:
         case SEMTYPE_CODE:
-            term = sem_term(curr, il, pda, prod, pn);
-            simple_expression_ = sem_simple_expression_(curr, il, &term.value, pda, prod, pn);
+            term = sem_term(curr, il, pda, prod, pn, syn);
+            simple_expression_ = sem_simple_expression_(curr, il, &term.value, pda, prod, pn, syn);
             simple_expression.value = term.value;
             break;
         default:
@@ -946,7 +933,7 @@ sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda
     return simple_expression;
 }
 
-sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn)
+sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     unsigned op;
     sem_term_s term;
@@ -956,9 +943,9 @@ sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, s
         case SEMTYPE_ADDOP:
             op = toaddop((*curr)->type.attribute);
             *curr = (*curr)->next;
-            term = sem_term(curr, il, pda, prod, pn);
+            term = sem_term(curr, il, pda, prod, pn, syn);
             *accum = sem_op(*accum, term.value, op);
-            simple_expression__ = sem_simple_expression_(curr, il, accum, pda, prod, pn);
+            simple_expression__ = sem_simple_expression_(curr, il, accum, pda, prod, pn, syn);
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_RELOP:
@@ -982,20 +969,20 @@ sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, s
     return simple_expression_;
 }
 
-sem_term_s sem_term (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn)
+sem_term_s sem_term (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     sem_term_s term;
     sem_factor_s factor;
     sem_term__s term_;
     
-    factor = sem_factor(curr, il, pda, prod, pn);
-    term_ = sem_term_(curr, il, &factor.value, pda, prod, pn);
+    factor = sem_factor(curr, il, pda, prod, pn, syn);
+    term_ = sem_term_(curr, il, &factor.value, pda, prod, pn, syn);
     term.value = factor.value;
     //term.value = sem_op(factor.value, term_.value, term_.op);
     return term;
 }
 
-sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn)
+sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     unsigned op;
     sem_factor_s factor;
@@ -1005,9 +992,9 @@ sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *p
         case SEMTYPE_MULOP:
             op = tomulop((*curr)->type.attribute);
             *curr = (*curr)->next;
-            factor = sem_factor(curr, il, pda, prod, pn);
+            factor = sem_factor(curr, il, pda, prod, pn, syn);
             *accum = sem_op(*accum, factor.value, op);
-            term_ = sem_term_(curr, il, accum, pda, prod, pn);
+            term_ = sem_term_(curr, il, accum, pda, prod, pn, syn);
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_ADDOP:
@@ -1033,7 +1020,7 @@ sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *p
     return term_;
 }
 
-sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn)
+sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     token_s *id;
     pnode_s *pnode;
@@ -1048,11 +1035,10 @@ sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s 
             factor.value.type = ATTYPE_STR;
             factor.value.str_ = id->lexeme;
             *curr = (*curr)->next;
-            idsuffix = sem_idsuffix(curr, il, pda, prod, pn);
+            idsuffix = sem_idsuffix(curr, il, pda, prod, pn, syn);
             //attadd (semantics_s *s, char *id, sem_type_s *data)
             if (idsuffix.dot.id) {
                 if (!strcmp(idsuffix.dot.id, "val")) {
-                    printf("%s\n", id->lexeme);
                     pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
                     if(pnode && pnode->pass)
                         factor.value = sem_type_s_(pnode->matched);
@@ -1084,7 +1070,6 @@ sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s 
                 
                 if(idsuffix.params.ready) {
                     get_semaction(id->lexeme)(curr, NULL, pda, idsuffix.params, &factor.value);
-                    print_semtype(factor.value);
                 }
             }
             else {
@@ -1099,18 +1084,24 @@ sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s 
             factor.value.str_ = (*curr)->lexeme;
             factor.access.base = (*curr)->lexeme;
             *curr = (*curr)->next;
-            idsuffix = sem_idsuffix(curr, il, pda, prod, pn);
+            idsuffix = sem_idsuffix(curr, il, pda, prod, pn, syn);
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
             if (idsuffix.dot.id) {
-                if (!strcmp(factor.value.str_, pda->nterm->lexeme) && pn->curr) {
-                    factor.value = getatt(pn->curr->in, idsuffix.dot.id);
-                  //  assert(factor.value.type != ATTYPE_NULL);
+                if (!strcmp(factor.value.str_, pda->nterm->lexeme) && syn && syn->curr) {
+                    factor.value = getatt(syn->curr->in, idsuffix.dot.id);
+                    assert(factor.value.type != ATTYPE_NOT_EVALUATED);
                 }
                 else {
-                    pnode = getpnode_token(pn, factor.value.str_, idsuffix.factor_.index);
-                    if(pnode) {
-                        factor.value = getatt(pnode->syn, idsuffix.dot.id);
+                    if(syn) {
+                        pnode = getpnode_token(syn, factor.value.str_, idsuffix.factor_.index);
+                        if(pnode) {
+                            factor.value = getatt(pnode->syn, idsuffix.dot.id);
+
+                            assert(factor.value.type != ATTYPE_NOT_EVALUATED);
+                        }
+                        else
+                            factor.value.type = ATTYPE_NOT_EVALUATED;
                     }
                     else
                         factor.value.type = ATTYPE_NOT_EVALUATED;
@@ -1133,10 +1124,10 @@ sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s 
         case SEMTYPE_NOT:
             *curr = (*curr)->next;
             id = *curr;
-            factor = sem_factor(curr, il, pda, prod, pn);
+            factor = sem_factor(curr, il, pda, prod, pn, syn);
             switch(factor.value.type) {
                 case ATTYPE_STR:
-                    printf("Type Error: Cannot apply logical not to string type.");
+                    fprintf(stderr, "Type Error: Cannot apply logical not to string type.");
                     break;
                 case ATTYPE_NUMINT:
                     factor.value.int_ = !factor.value.int_;
@@ -1157,7 +1148,7 @@ sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s 
             break;
         case SEMTYPE_OPENPAREN:
             *curr = (*curr)->next;
-            expression = sem_expression(curr, il, pda, prod, pn);
+            expression = sem_expression(curr, il, pda, prod, pn, syn);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             factor.value = expression.value;
             break;
@@ -1174,7 +1165,7 @@ sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s 
     return factor;
 }
 
-sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn)
+sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn)
 {
     sem_factor__s factor_;
 
@@ -1210,7 +1201,7 @@ sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn)
     return factor_;
 }
 
-sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn)
+sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     sem_expression_s expression;
     sem_idsuffix_s idsuffix;
@@ -1231,24 +1222,24 @@ sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, productio
         case SEMTYPE_NUM:
         case SEMTYPE_ID:
         case LEXTYPE_EOF:
-            idsuffix.factor_ = sem_factor_(curr, il, pn);
-            idsuffix.dot = sem_dot(curr, il, pn);
+            idsuffix.factor_ = sem_factor_(curr, il, pn, syn);
+            idsuffix.dot = sem_dot(curr, il, pn, syn);
             idsuffix.hasparam = false;
             break;
         case SEMTYPE_OPENPAREN:
             *curr = (*curr)->next;
             idsuffix.hasparam = true;
-            idsuffix.params = sem_paramlist(curr, il, pda, prod, pn);
+            idsuffix.params = sem_paramlist(curr, il, pda, prod, pn, syn);
             idsuffix.factor_.index = 1;
             idsuffix.dot.id = NULL;
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             break;
         case SEMTYPE_OPENBRACKET:
             *curr = (*curr)->next;
-            expression = sem_expression(curr, il, pda, prod, pn);
+            expression = sem_expression(curr, il, pda, prod, pn, syn);
             sem_match(curr, SEMTYPE_CLOSEBRACKET);
             idsuffix.factor_.index = 1;
-            idsuffix.dot = sem_dot(curr, il, pn);
+            idsuffix.dot = sem_dot(curr, il, pn, syn);
             idsuffix.hasparam = false;
             break;
         default:
@@ -1260,7 +1251,7 @@ sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, productio
     return idsuffix;
 }
 
-sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn)
+sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn)
 {
     sem_dot_s dot;
     
@@ -1269,7 +1260,7 @@ sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn)
             *curr = (*curr)->next;
             dot.id = (*curr)->lexeme;
             sem_match(curr, SEMTYPE_ID);
-            dot.range = sem_range(curr, il, pn);
+            dot.range = sem_range(curr, il, pn, syn);
             break;
         case SEMTYPE_MULOP:
         case SEMTYPE_ADDOP:
@@ -1296,7 +1287,7 @@ sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn)
     return dot;
 }
 
-sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn)
+sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn)
 {
     unsigned index;
     token_s *id1, *id2;
@@ -1351,7 +1342,7 @@ sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn)
     return range;
 }
 
-sem_paramlist_s sem_paramlist(token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn)
+sem_paramlist_s sem_paramlist(token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     sem_paramlist_s paramlist;
     sem_expression_s expression;
@@ -1367,12 +1358,12 @@ sem_paramlist_s sem_paramlist(token_s **curr, llist_s **il, pda_s *pda, producti
         case SEMTYPE_OPENPAREN:
         case SEMTYPE_ID:
         case SEMTYPE_NONTERM:
-            expression = sem_expression(curr, il, pda, prod, pn);
+            expression = sem_expression(curr, il, pda, prod, pn, syn);
             if(expression.value.type == ATTYPE_NOT_EVALUATED)
                 paramlist.ready = false;
             else
                 llpush(&paramlist.pstack, alloc_semt(expression.value));
-            sem_paramlist_(curr, il, &paramlist, pda, prod, pn);
+            sem_paramlist_(curr, il, &paramlist, pda, prod, pn, syn);
             break;
         case SEMTYPE_CLOSEPAREN:
             break;
@@ -1384,19 +1375,19 @@ sem_paramlist_s sem_paramlist(token_s **curr, llist_s **il, pda_s *pda, producti
     return paramlist;
 }
 
-void sem_paramlist_ (token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn)
+void sem_paramlist_ (token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
 {
     sem_expression_s expression;
     
     switch ((*curr)->type.val) {
         case SEMTYPE_COMMA:
             *curr = (*curr)->next;
-            expression = sem_expression(curr, il, pda, prod, pn);
+            expression = sem_expression(curr, il, pda, prod, pn, syn);
             if(expression.value.type == ATTYPE_NOT_EVALUATED)
                 list->ready = false;
             else if (list->ready)
                 llpush(&list->pstack, alloc_semt(expression.value));
-            sem_paramlist_(curr, il, list, pda, prod, pn);
+            sem_paramlist_(curr, il, list, pda, prod, pn, syn);
             break;
         case SEMTYPE_CLOSEPAREN:
             break;

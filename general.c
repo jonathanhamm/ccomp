@@ -418,12 +418,25 @@ void free_hash(hash_s *hash)
     uint64_t i, indices = hash->indices;
     
     for(i = ffsl(indices); i; indices &= ~(1llu << i), i = ffsl(indices)) {
+        i--;
         for(iter = hash->table[i]; iter; iter = b) {
             b = iter->next;
             free(iter);
         }
     }
     free(hash);
+}
+
+void print_hash(hash_s *hash, void (*callback)(void *, void *))
+{
+    hrecord_s *iter;
+    uint64_t i, indices = hash->indices;
+
+    for(i = ffsl(indices); i; indices &= ~(1llu << i), i = ffsl(indices)) {
+        i--;
+        for(iter = hash->table[i]; iter; iter = iter->next)
+            callback(iter->key, iter->data);
+    }
 }
 
 inline linetable_s *linetable_s_(void)

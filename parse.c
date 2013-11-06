@@ -98,6 +98,7 @@ static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
 static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
 static char *make_synerr (pda_s *pda, token_s **curr);
 static void panic_recovery (llist_s *follow, token_s **curr);
+static void print_pnode_hash(void *key, void *data);
 
 static uint16_t str_hashf (void *key);
 static bool find_in(void *k1, void *k2);
@@ -934,16 +935,14 @@ pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs,
     memset(pcp, 0, sizeof(*pcp) + pda->productions[index].nnodes * sizeof(pnode_s));
     pcp->size = pda->productions[index].nnodes;
     for(pnode = pda->productions[index].start, i = 0; i < pcp->size; pnode = pnode->next, i++) {
-        printf("PRINTING PNODE MATCHED: %p\n", pcp->array[i].matched);
         pcp->array[i].matched = NULL;
         pcp->array[i] = *pnode;
         pcp->array[i].in = in;
     }
     
     pnode = pda->productions[index].start;
-    sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp);
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
-        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp);
+        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL);
         return pcp;
     }
     else {
@@ -962,20 +961,19 @@ pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs,
                         *curr = (*curr)->next;
                     }
                     else {
-                        //Will set inherited attributes and handle l-attributed definitions
-                        /*
-                         To set inherited attributes, must get the pnode
-                         To set synthesized attributes, must set in pnode. 
-                         
-                         To get inherited attributes, must get from pnode
-                         To get synthesized attributes, must get the pnode and check if set
-                         */
                         pcp->curr = &pcp->array[i];
-                        child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp);
+                        child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL);
                         child_in = llremove_(&child_inll, find_in, pnode);
+                        if(child_in) {
+                            printf("----------------------------------Printing for: %s\n", pda->nterm->lexeme);
+                            print_hash(child_in->table, print_pnode_hash);
+                            puts("\n--\n");
+                            //print_pnode_hash
+                        }
                         synth = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
-                        sem_start(NULL, parse, machs, pda, &pda->productions[index],  pcp);
+                        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synth);
+                        
                     }
                 }
                 else {
@@ -1003,6 +1001,7 @@ pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs,
             while (!success);
         }
     }
+    sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL);
     return pcp;
 }
 
@@ -1133,4 +1132,13 @@ bool find_in(void *k1, void *k2)
 {
     printf("PTR: %s %s\n", ((semantics_s *)k1)->n->token->lexeme, ((pnode_s *)k2)->token->lexeme);
     return ((semantics_s *)k1)->n == k2;
+}
+
+void print_pnode_hash(void *key, void *data)
+{
+    extern void print_semtype(sem_type_s value);
+
+    printf("{ %s -> ", (char *)key);
+    print_semtype(*(sem_type_s *)data);
+    puts(" }");
 }

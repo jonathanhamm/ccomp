@@ -136,6 +136,7 @@ extern bool basic_isequalf(void *key1, void *key2);
 extern uint16_t pjw_hashf(void *key);
 extern bool str_isequalf(void *key1, void *key2);
 extern void free_hash(hash_s *hash);
+extern void print_hash(hash_s *hash, void (*callback)(void *, void *));
 
 extern inline linetable_s *linetable_s_(void);
 extern void addline(linetable_s **linelist_ptr, char *line);
