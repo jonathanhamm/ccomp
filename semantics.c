@@ -227,25 +227,22 @@ static pnode_s *getpnode_token(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm_copy(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index);
 static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
-
-//sem_start(parse_s *parse, pda_s *pda, pna_s *pn, production_s *prod, semantics_s *in, semantics_s *syn)
-
-static sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate);
-static sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate);
-static sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate);
-static sem_expression_s sem_expression (token_s **curr, llist_s **il,  pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
-static sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
-static sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
-static sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
-static sem_term_s sem_term (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
-static sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
-static sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
-static sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn);
-static sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
-static sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn);
-static sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn);
-static sem_paramlist_s sem_paramlist (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
-static void sem_paramlist_ (token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn);
+static sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, bool evaluate);
+static sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, bool evaluate);
+static sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, bool evaluate);
+static sem_expression_s sem_expression (token_s **curr, llist_s **il,  pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
+static sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
+static sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
+static sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
+static sem_term_s sem_term (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
+static sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
+static sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
+static sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn);
+static sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
+static sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn);
+static sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn);
+static sem_paramlist_s sem_paramlist (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
+static void sem_paramlist_ (token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn);
 static sem_sign_s sem_sign (token_s **curr);
 static bool sem_match (token_s **curr, int type);
 
@@ -722,7 +719,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     return result;
 }
 
-llist_s *sem_start(parse_s *parse, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *in, semantics_s *syn)
+llist_s *sem_start (semantics_s *in, parse_s *parse, mach_s *machs, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     token_s *iter = prod->annot;
     llist_s *ilist = NULL;
@@ -734,7 +731,7 @@ llist_s *sem_start(parse_s *parse, pda_s *pda, production_s *prod, pna_s *pn, se
     return ilist;
 }
 
-sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate)
+sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, bool evaluate)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_IF:
@@ -754,7 +751,7 @@ sem_statements_s sem_statements (token_s **curr, llist_s **il, pda_s *pda, produ
 
 }
 
-sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate)
+sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, bool evaluate)
 {
     pnode_s *p;
     char *id, *nterm;
@@ -778,10 +775,9 @@ sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, product
             if (evaluate && expression.value.type != ATTYPE_NOT_EVALUATED) {
 
                 if(!strcmp(pda->nterm->lexeme, nterm)) {
-                    if(pn->curr) {
-                        if(!pn->curr->syn)
-                            pn->curr->syn = semantics_s_(NULL, NULL);
-                        setatt(pn->curr->syn, id, alloc_semt(expression.value));
+                    if(syn) {
+                        setatt(syn, id, alloc_semt(expression.value));
+
                     }
                 }
                 else {
@@ -823,7 +819,7 @@ sem_statement_s sem_statement (token_s **curr, llist_s **il, pda_s *pda, product
     }
 }
 
-sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn, bool evaluate)
+sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, bool evaluate)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
@@ -841,7 +837,7 @@ sem_else_s sem_else (token_s **curr, llist_s **il, pda_s *pda, production_s *pro
     }
 }
 
-sem_expression_s sem_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+sem_expression_s sem_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     sem_expression_s expression;
     sem_expression__s expression_;
@@ -862,7 +858,7 @@ sem_expression_s sem_expression (token_s **curr, llist_s **il, pda_s *pda, produ
     return expression;
 }
 
-sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     sem_expression__s expression_;
         
@@ -894,7 +890,7 @@ sem_expression__s sem_expression_ (token_s **curr, llist_s **il, pda_s *pda, pro
     return expression_;
 }
 
-sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     sem_sign_s sign;
     sem_simple_expression_s simple_expression;
@@ -933,7 +929,7 @@ sem_simple_expression_s sem_simple_expression (token_s **curr, llist_s **il, pda
     return simple_expression;
 }
 
-sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     unsigned op;
     sem_term_s term;
@@ -969,7 +965,7 @@ sem_simple_expression__s sem_simple_expression_ (token_s **curr, llist_s **il, s
     return simple_expression_;
 }
 
-sem_term_s sem_term (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+sem_term_s sem_term (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     sem_term_s term;
     sem_factor_s factor;
@@ -982,7 +978,7 @@ sem_term_s sem_term (token_s **curr, llist_s **il, pda_s *pda, production_s *pro
     return term;
 }
 
-sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     unsigned op;
     sem_factor_s factor;
@@ -1020,7 +1016,7 @@ sem_term__s sem_term_ (token_s **curr, llist_s **il, sem_type_s *accum, pda_s *p
     return term_;
 }
 
-sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     token_s *id;
     pnode_s *pnode;
@@ -1088,17 +1084,23 @@ sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s 
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
             if (idsuffix.dot.id) {
-                if (!strcmp(factor.value.str_, pda->nterm->lexeme) && syn && syn->curr) {
-                    factor.value = getatt(syn->curr->in, idsuffix.dot.id);
-                    assert(factor.value.type != ATTYPE_NOT_EVALUATED);
+                if (!strcmp(factor.value.str_, pda->nterm->lexeme)) {
+                  /*  factor.value.type = ATTYPE_NOT_EVALUATED;
+                    if(syn)
+                        factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
+                    if(factor.value.type == ATTYPE_NOT_EVALUATED && pn->curr)
+                        factor.value = getatt(pn->curr->in, idsuffix.dot.id);*/
+                    if(pn->curr)
+                        factor.value = getatt(pn->curr->in, idsuffix.dot.id);
+                    if(factor.value.type == ATTYPE_NOT_EVALUATED)
+                        factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
                 }
                 else {
                     if(syn) {
-                        pnode = getpnode_token(syn, factor.value.str_, idsuffix.factor_.index);
+                        pnode = getpnode_token(pn, factor.value.str_, idsuffix.factor_.index);
                         if(pnode) {
                             factor.value = getatt(pnode->syn, idsuffix.dot.id);
-
-                            assert(factor.value.type != ATTYPE_NOT_EVALUATED);
+                            
                         }
                         else
                             factor.value.type = ATTYPE_NOT_EVALUATED;
@@ -1165,7 +1167,7 @@ sem_factor_s sem_factor (token_s **curr, llist_s **il, pda_s *pda, production_s 
     return factor;
 }
 
-sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn)
+sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn)
 {
     sem_factor__s factor_;
 
@@ -1201,7 +1203,7 @@ sem_factor__s sem_factor_ (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn)
     return factor_;
 }
 
-sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     sem_expression_s expression;
     sem_idsuffix_s idsuffix;
@@ -1251,7 +1253,7 @@ sem_idsuffix_s sem_idsuffix (token_s **curr, llist_s **il, pda_s *pda, productio
     return idsuffix;
 }
 
-sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn)
+sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn)
 {
     sem_dot_s dot;
     
@@ -1287,7 +1289,7 @@ sem_dot_s sem_dot (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn)
     return dot;
 }
 
-sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn)
+sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn)
 {
     unsigned index;
     token_s *id1, *id2;
@@ -1342,7 +1344,7 @@ sem_range_s sem_range (token_s **curr, llist_s **il, pna_s *pn, pna_s *syn)
     return range;
 }
 
-sem_paramlist_s sem_paramlist(token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+sem_paramlist_s sem_paramlist(token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     sem_paramlist_s paramlist;
     sem_expression_s expression;
@@ -1375,7 +1377,7 @@ sem_paramlist_s sem_paramlist(token_s **curr, llist_s **il, pda_s *pda, producti
     return paramlist;
 }
 
-void sem_paramlist_ (token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, pna_s *syn)
+void sem_paramlist_ (token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn)
 {
     sem_expression_s expression;
     
@@ -1457,7 +1459,7 @@ void setatt (semantics_s *s, char *id, sem_type_s *data)
     
     
     if(data->type != ATTYPE_NOT_EVALUATED) {
-        print_semtype(*data);
+       // print_semtype(*data);
         hashinsert_(s->table, id, data);
     }
 }
@@ -1484,24 +1486,29 @@ sem_type_s getatt (semantics_s *s, char *id)
 void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params, sem_type_s *fill)
 {
     llist_s *node;
-    sem_type_s *val;
+    sem_type_s *val1, *val2;
     
     node = llpop(&params.pstack);
-    val = node->ptr;
-    fill->str_ = val->str_;
-    fill->lexeme = val->str_;
-    free(val);
+    val1 = node->ptr;
     free(node);
-    
     node = llpop(&params.pstack);
-    val = node->ptr;
-    fill->low = val->low;
-    fill->high = val->high;
-    free(val);
+    val2 = node->ptr;
     free(node);
+
+    val1->lexeme = malloc(strlen(val1->str_) + 1);
+    if(!val1->lexeme) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(val1->lexeme, val1->str_);
+    val1->low = val2->low;
+    val1->high = val2->high;
+
+    val1->type = ATTYPE_ARRAY;
     
-    fill->type = ATTYPE_ARRAY;
-    return NULL;
+    print_semtype(*val1);
+    
+    return val1;
 }
 
 void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s params, void *fill)
@@ -1531,6 +1538,7 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, sem_paramlist_s para
         val = node->ptr;
         free(node);
         print_semtype(*val);
+        putchar('\n');
         free(val);
     }
     return NULL;

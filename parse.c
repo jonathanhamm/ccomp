@@ -93,7 +93,7 @@ static void print_parse_table (parsetable_s *ptable, FILE *stream);
 static void print_firfol (parse_s *parse, FILE *stream);
 
 static int match (token_s **curr, pnode_s *p);
-static pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index);
+static semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index);
 static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
 static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
 static char *make_synerr (pda_s *pda, token_s **curr);
@@ -912,7 +912,7 @@ int match(token_s **curr, pnode_s *p)
     return 0;
 }
 
-pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index)
+semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index)
 {
     int result, i;
     pda_s *nterm;
@@ -923,6 +923,8 @@ pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs,
     pna_s *pcp, *synth;
     llist_s *child_inll;
     semantics_s *child_in;
+    semantics_s *synhash = semantics_s_(parse, machs);
+    synhash->n = pnterm;
     
     assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
     
@@ -942,14 +944,14 @@ pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs,
     
     pnode = pda->productions[index].start;
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
-        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL);
-        return pcp;
+        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash);
+        return synhash;
     }
     else {
         for (i = 0; pnode; pnode = pnode->next, i++) {
             do {
                 if (!*curr)
-                    return pcp;
+                    return synhash;
                 success = true;
                 if ((nterm = get_pda(parse, pnode->token->lexeme))) {
                     result = get_production(parse->parse_table, nterm, curr);
@@ -961,6 +963,10 @@ pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs,
                         *curr = (*curr)->next;
                     }
                     else {
+                        /*
+                         Problem: Synthesized attributes must be accessed by an array of 
+                         hashes corresponding to each child nonterminal.
+                         */
                         pcp->curr = &pcp->array[i];
                         child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL);
                         child_in = llremove_(&child_inll, find_in, pnode);
@@ -970,10 +976,9 @@ pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs,
                             puts("\n--\n");
                             //print_pnode_hash
                         }
-                        synth = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
+                        pcp->curr->syn = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
-                        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synth);
-                        
+                        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL);
                     }
                 }
                 else {
@@ -1001,8 +1006,8 @@ pna_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs,
             while (!success);
         }
     }
-    sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL);
-    return pcp;
+    sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash);
+    return synhash;
 }
 
 size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme)

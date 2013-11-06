@@ -75,6 +75,10 @@
     {
 
         <type>.type := array(num[1].val .. num[2].val, <standard_type>.type)
+        if <standard_type>.type <> null then
+            print("type: ", <standard_type>.type)
+            halt()
+        fi
     }
 
 <standard_type> ->
@@ -82,7 +86,7 @@
     {
         <standard_type>.type := integer
 
-        print("got _type: ", <standard_type>.type)
+        print("got type: ", <standard_type>.type)
     }
 	|
 	real
@@ -90,9 +94,6 @@
         <standard_type>.type := real
 
        print("got _type: ", <standard_type>.type)
-       if <standard_type>.type <> null then
-            halt()
-       fi
     }
 	
 <subprogram_declarations> ->
