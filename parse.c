@@ -154,7 +154,7 @@ parse_s *build_parse (const char *file, lextok_s lextok)
 
 void match_phase (lextok_s regex, token_s *cfg)
 {
-    type_s type;
+    toktype_s type;
     mach_s *idmach = NULL;
     tfind_s tfind;
 
@@ -177,7 +177,7 @@ void match_phase (lextok_s regex, token_s *cfg)
         if (tfind.found) 
             cfg->type.val = tfind.token->type.val;
         else {
-            type = gettype(regex.lex, cfg->lexeme);
+            type = gettoktype(regex.lex, cfg->lexeme);
             if (type.val != LEXTYPE_ERROR)
                 cfg->type.val = type.val;
         }

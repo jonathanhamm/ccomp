@@ -84,7 +84,7 @@ typedef struct annotation_s annotation_s;
 typedef struct tlookup_s tlookup_s;
 typedef struct idtable_s idtable_s;
 typedef struct idtnode_s idtnode_s;
-typedef struct type_s type_s;
+typedef struct toktype_s toktype_s;
 typedef struct token_s token_s;
 typedef struct nfa_s nfa_s;
 typedef struct nfa_node_s nfa_node_s;
@@ -94,7 +94,7 @@ typedef struct lextok_s lextok_s;
 
 typedef unsigned (*annotation_f) (token_s **, char *, unsigned *, void *);
 
-struct type_s
+struct toktype_s
 {
     unsigned short val;
     unsigned short attribute;
@@ -102,7 +102,7 @@ struct type_s
 
 struct token_s
 {
-    type_s type;
+    toktype_s type;
     char *stype;
     unsigned lineno;
     char lexeme[MAX_LEXLEN + 1];
@@ -217,6 +217,8 @@ extern tlookup_s idtable_lookup (idtable_s *table, char *str);
 extern int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype);
 extern inline bool hashname(lex_s *lex, unsigned long token_val, char *name);
 extern inline char *getname(lex_s *lex, unsigned long token_val);
-extern type_s gettype (lex_s *lex, char *buf);
+extern void settype(lex_s *lex, char *id, sem_type_s type);
+extern sem_type_s gettype(lex_s *lex, char *id);
+extern toktype_s gettoktype (lex_s *lex, char *id);
 
 #endif

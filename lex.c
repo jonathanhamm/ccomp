@@ -1448,7 +1448,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
     
     c[1] = '\0';
     backup = buf;
-    init_type.type = ATTYPE_NULL;
+    init_type.type = ATTYPE_NOT_EVALUATED;
     if (listing && *buf != EOF) {
         addline(&lex->listing, buf);
         lineno++;
@@ -1615,17 +1615,34 @@ mach_s *getmach(lex_s *lex, char *id)
     return iter;
 }
 
-type_s gettype (lex_s *lex, char *buf)
+void settype(lex_s *lex, char *id, sem_type_s type)
 {
-    type_s type;
+    tdat_s tdat;
+    
+    tdat = idtable_lookup(lex->idtable, id).tdat;
+    tdat.type = type;
+    idtable_set(lex->idtable, id, tdat);
+}
+
+sem_type_s gettype(lex_s *lex, char *id)
+{
+    tdat_s tdat;
+    
+    tdat = idtable_lookup(lex->idtable, id).tdat;
+    return tdat.type;
+}
+
+toktype_s gettoktype (lex_s *lex, char *id)
+{
+    toktype_s type;
     size_t len;
     lextok_s ltok;
     token_s *iter;
     
-    len = strlen(buf);
-    buf[len] = EOF;
-    ltok = lexf(lex, buf, 1, false);
-    buf[len] = '\0';
+    len = strlen(id);
+    id[len] = EOF;
+    ltok = lexf(lex, id, 1, false);
+    id[len] = '\0';
     type.val = LEXTYPE_ERROR;
     type.attribute = LEXATTR_DEFAULT;
     for (iter = ltok.tokens; iter; iter = iter->next) {

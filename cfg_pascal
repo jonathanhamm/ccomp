@@ -56,10 +56,6 @@
 	var id : <type> ; <declarations'>
     {
         addtype(id.entry, <type>.type)
-        print("Got type: ", <type>.type)
-    if <type>.type <> null then
-        halt()
-    fi
     }
 	|
 	ε
@@ -68,32 +64,22 @@
 	<standard_type>
     {
         <type>.type := <standard_type>.type
-        print(<type>.type)
     }
 	|
 	array \[ num \. \. num \] of <standard_type>
     {
-
         <type>.type := array(num[1].val .. num[2].val, <standard_type>.type)
-        if <standard_type>.type <> null then
-            print("type: ", <standard_type>.type)
-            halt()
-        fi
     }
 
 <standard_type> ->
 	integer
     {
         <standard_type>.type := integer
-
-        print("got type: ", <standard_type>.type)
     }
 	|
 	real
     { 
         <standard_type>.type := real
-
-       print("got _type: ", <standard_type>.type)
     }
 	
 <subprogram_declarations> ->
@@ -224,10 +210,16 @@
 <term> ->
 	<factor> <term'>
 	{
-		<term>.val := herp
+		<term'>.in := <factor>.val
 	}
 <term'> ->
 	mulop <factor> <term'>
+    {
+        print(<term'>.in)
+        if <term'>.in <> null then
+            halt()
+        fi
+    }
 	|
 	ε
 
