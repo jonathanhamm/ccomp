@@ -1593,6 +1593,9 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, parse_s *p, sem_pa
     llist_s *node;
     sem_type_s *t, *id;
     
+    if(pass > 2)
+        return NULL;
+    
     node = llpop(&params.pstack);
     t = node->ptr;
     free(node);
@@ -1601,12 +1604,13 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, parse_s *p, sem_pa
     id = node->ptr;
     free(node);
     
-    printf("Adding %s of type ", id->str_);
+    printf("Adding Type %s of type ", id->str_);
     print_semtype(*t);
     putchar('\n');
-    if(bobb > 60)
-        assert(false);
     settype(p->lex, id->str_, *t);
+    if(bobb > 10)
+        assert(false);
+
     ++bobb;
     return NULL;
 }

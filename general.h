@@ -19,7 +19,7 @@
 #include <stddef.h>
 
 #define HTABLE_SIZE 53
-#define FS_INTWIDTH_DEC(num) ((size_t)log10(num)-2)
+#define FS_INTWIDTH_DEC(num) ((size_t)ceil(log10((num)+1)))
 
 typedef unsigned long ulong_bool;
 

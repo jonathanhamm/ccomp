@@ -91,7 +91,7 @@ end;
 procedure bosstweed (aaaaaaa : real ; omnomnom : 
 
 integer; omgomgomg : real);
-
+var hahah : array[-12..3124] of real;
 begin
 	if not aaa*omnomnom*omgomgomg*(aaa+(omnomnom*(-aaaaaaa+3.3)*32)
 	 mod (33+23*4 or 3))/32.1 <> 32.232E-3 then
