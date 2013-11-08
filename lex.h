@@ -91,6 +91,7 @@ typedef struct nfa_node_s nfa_node_s;
 typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
 typedef struct lextok_s lextok_s;
+typedef struct iditer_s iditer_s;
 
 typedef unsigned (*annotation_f) (token_s **, char *, unsigned *, void *);
 

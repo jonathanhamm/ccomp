@@ -19,18 +19,6 @@
 	
 <dec> ->
 	<subprogram_declarations>
-	{
-        <subprogram_declarations>.type := integer[10]
-        emit(1,11,1,3)
-        <subprogram_declarations>1.val := 10
-        <dec>.value := (4*3*4)+40*(3*2*1)/(4-3.2)
-        if <subprogram_declarations>.type = 4 or (<subprogram_declarations>.type <> 5) then 
-            <subprogram_declarations>.type := 32
-        else
-            <subprogram_declarations>.haha := 23+ 4
-        fi
-        <dec>.omgnom := (4+3-3.3*321+322+(1+1))
-    }
 	|
 	ε
 
@@ -178,7 +166,6 @@
             print("printing op: ", <expression'>.op)
         fi
         <expression'>.in := <simple_expression>.val
-        <expression>.type := "derp"
     }
 <expression'> ->
 	relop <simple_expression>
@@ -215,9 +202,8 @@
 <term'> ->
 	mulop <factor> <term'>
     {
-        print(<term'>.in)
         if <term'>.in <> null then
-            halt()
+         print(<term'>.in)
         fi
     }
 	|
@@ -226,16 +212,18 @@
 <factor> ->
 	id <factor'>
     {
-        if <factor'>.type <> void then
-            <factor>.derp := 1+1
+        if <factor'>.type <> null then
+            print(<factor'>.type)
         else
             print("printing factor type:", <factor'>.type)
         fi
+
     }
 	|
 	num
     { 
         <factor>.val := num.val
+    <factor>.type := num.type
     }
 	|
 	\( <expression> \)
@@ -245,7 +233,7 @@
 	|
 	not <factor>
     {
-        <factor>.val :=  <factor>.val
+        <factor>.val := <factor>.val
     }
     
 <factor'> ->
@@ -253,7 +241,6 @@
     { 
         <factor'>.type := <expression>.type
         <factor'>.val := <expression>.val
-        print("printing <factor'>.type", <expression>.type)
     }
 	|
 	ε

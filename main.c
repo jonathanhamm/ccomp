@@ -77,10 +77,10 @@ int main (int argc, const char *argv[])
     list = arg_tokenize(argc, argv);    
 
     files = argsparse_start(&list);
-
+    //puts("\n\n\n\n\n\n\n\n\n\n\n\n\n");
     free_tokens(list);
     lextok = lexf(buildlex(files.regex), readfile(files.source), 0, true);
-    
+    //assert(false);
     p = build_parse (files.cfg, lextok);
     parse (p, lextok);
     print_listing(p->listing, stdout);

@@ -925,6 +925,7 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
     semantics_s *child_in;
     semantics_s *synhash = semantics_s_(parse, machs);
     synhash->n = pnterm;
+    unsigned pass = 0;
     
     assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
     
@@ -944,7 +945,7 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
     
     pnode = pda->productions[index].start;
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
-        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash);
+        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass);
         return synhash;
     }
     else {
@@ -968,7 +969,7 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
                          hashes corresponding to each child nonterminal.
                          */
                         pcp->curr = &pcp->array[i];
-                        child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL);
+                        child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass);
                         child_in = llremove_(&child_inll, find_in, pnode);
                         if(child_in) {
                             printf("----------------------------------Printing for: %s\n", pda->nterm->lexeme);
@@ -978,7 +979,7 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
                         }
                         pcp->curr->syn = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
-                        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL);
+                        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass);
                     }
                 }
                 else {
@@ -1006,7 +1007,7 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
             while (!success);
         }
     }
-    sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash);
+    sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass);
     return synhash;
 }
 

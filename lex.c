@@ -50,7 +50,6 @@ typedef struct overflow_s overflow_s;
 typedef struct match_s match_s;
 typedef struct regex_ann_s regex_ann_s;
 typedef struct prxa_expression_s prxa_expression_s;
-typedef struct nolimit_s nolimit_s;
 
 typedef void (*ann_callback_f) (token_s **, void *);
 typedef void (*regex_callback_f) (token_s **, void *);
@@ -458,6 +457,7 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
 {
     token_s *ntok;
     
+   // printf("adding stype: %s\n", stype);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");
