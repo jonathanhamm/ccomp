@@ -282,26 +282,16 @@ static ftable_s ftable[] = {
 sem_type_s sem_type_s_(parse_s *parse, token_s *token)
 {
     sem_type_s s;
-    tlookup_s look;
     
-    s.lexeme = token->lexeme;
-    look = idtable_lookup(parse->lex->kwtable, token->lexeme);
-    if (token->stype) {
-
+    s.type = ATTYPE_NOT_EVALUATED;
+    
+    
+    printf("stype: %s %s %u\n", token->stype, token->lexeme, token->type.attribute);
+    
+    // switch(token->type.val) {
         
-        if (!strcmp(token->stype, "integer")) {
-            s.type = ATTYPE_NUMINT;
-            s.int_ = safe_atol(token->lexeme);
-            return s;
-        }
-        else if (!strcmp(token->stype, "real")) {
-            s.type = ATTYPE_NUMREAL;
-            s.real_ = safe_atod(token->lexeme);
-            return s;
-        }
-    }
-    s.type = ATTYPE_STR;
-    s.str_ = token->lexeme;
+    //}
+    
     return s;
 }
 

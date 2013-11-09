@@ -30,7 +30,7 @@
 <identifier_list'> ->
 	, id <identifier_list'>
 	{
-        <identifier_list'>.code:=derp
+        <identifier_list'>.code := derp
 	}
 	|
 	ε
@@ -98,9 +98,9 @@
 <arguments> ->
 	\( <parameter_list> \)
 <parameter_list> ->
-	id : <type> <parameter_list'>
+	id : <type> <parameter_list'> { addtype(id.entry, <type>.type) }
 <parameter_list'> ->
-	; id : <type> <parameter_list'>
+	; id : <type> <parameter_list'> { addtype(id.entry, <type>.type) }
 	|
 	ε
 	
@@ -212,12 +212,16 @@
 <factor> ->
 	id <factor'>
     {
-        if <factor'>.type <> null then
-            print(<factor'>.type)
-        else
-            print("printing factor type:", <factor'>.type)
+    if <factor'>.type = void then
+        <factor>.type := lookup(id)
+        <factor>.val := id.val
+    else
+        <factor>.type := lookup(id)
+        if <factor>.type <> null then
+            print(<factor>.type)
+            halt()
         fi
-
+    fi
     }
 	|
 	num
