@@ -221,5 +221,6 @@ extern inline char *getname(lex_s *lex, unsigned long token_val);
 extern void settype(lex_s *lex, char *id, sem_type_s type);
 extern sem_type_s gettype(lex_s *lex, char *id);
 extern toktype_s gettoktype (lex_s *lex, char *id);
+extern bool lex_matches(lex_s *lex, char *machid, char *str);
 
 #endif

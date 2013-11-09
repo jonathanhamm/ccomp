@@ -81,6 +81,7 @@ struct linetable_s
 struct sem_type_s
 {
     unsigned type;
+    bool isvar;
     char *lexeme;
     union {
         long int_;

@@ -1691,3 +1691,19 @@ int addtok_(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
         ret = addtok(tlist, lexeme, lineno, type, attribute, stype);
     return ret;
 }
+
+bool lex_matches(lex_s *lex, char *machid, char *str)
+{
+    mach_s *m;
+    unsigned dummy = 0;
+    match_s match;
+    
+    for(m = lex->machs; m; m = m->next) {
+        if(!ntstrcmp(m->nterm->lexeme, machid)) {
+            match = nfa_match (lex, m->nfa, m->nfa->start, machid, &dummy);
+            return match.success;
+        }
+            
+    }
+    return false;
+}
