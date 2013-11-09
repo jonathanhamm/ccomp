@@ -1380,7 +1380,9 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigne
             case LEXTYPE_EPSILON:
                 result = nfa_match(lex, nfa, state->edges[i]->state, buf, lineno);
                 old = curr.stype;
-                if (result.success && result.n >= curr.n) {
+                
+                /********************************** POSSIBLE ISSUE NEEDING TO BE REVISITED HERE! **********************************/
+                if (result.success && result.n >= curr.n /*Attribute type issue was fixed by inserting this clause*/ ) {
                     curr.success = true;
                     curr.stype = (state->edges[i]->annotation.type) ? state->edges[i]->annotation.type : result.stype;
                     curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
