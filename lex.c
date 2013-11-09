@@ -457,7 +457,7 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
 {
     token_s *ntok;
     
-   // printf("adding stype: %s\n", stype);
+    printf("token: %s %u %u\n", lexeme, type, attribute);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");
@@ -1365,7 +1365,8 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigne
     uint16_t i;
     mach_s *tmp;
     match_s curr, result;
-
+    char *old;
+    
     curr.n = 0;
     curr.stype = NULL;
     curr.attribute = 0;
@@ -1378,7 +1379,8 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigne
         switch (state->edges[i]->token->type.val) {
             case LEXTYPE_EPSILON:
                 result = nfa_match(lex, nfa, state->edges[i]->state, buf, lineno);
-                if (result.success) {
+                old = curr.stype;
+                if (result.success && result.n >= curr.n) {
                     curr.success = true;
                     curr.stype = (state->edges[i]->annotation.type) ? state->edges[i]->annotation.type : result.stype;
                     curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
@@ -1416,6 +1418,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigne
                     result = nfa_match(lex, nfa, state->edges[i]->state, &buf[tmatch], lineno);
                     if (result.success) {
                         curr.success = true;
+
                         curr.attribute = (state->edges[i]->annotation.attribute > 0) ? state->edges[i]->annotation.attribute : result.attribute;
                         curr.stype = (state->edges[i]->annotation.type) ? state->edges[i]->annotation.type : result.stype;
                         if (result.n + tmatch > curr.n)
