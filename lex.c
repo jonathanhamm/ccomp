@@ -457,7 +457,7 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
 {
     token_s *ntok;
     
-    printf("token: %s %u %u\n", lexeme, type, attribute);
+    //printf("token: %s %u %u\n", lexeme, type, attribute);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");

@@ -285,13 +285,18 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     
     s.type = ATTYPE_NOT_EVALUATED;
     
-    
-    printf("stype: %s %s %u\n", token->stype, token->lexeme, token->type.attribute);
-    
-    // switch(token->type.val) {
+    if(!token->stype) {
         
-    //}
-    
+    }
+    else if(!strcmp(token->stype, "integer")) {
+        s.type = ATTYPE_NUMINT;
+        s.int_ = safe_atol(token->lexeme);
+    }
+    else if(!strcmp(token->stype, "real")) {
+        s.type = ATTYPE_NUMREAL;
+        s.real_ = safe_atod(token->lexeme);
+        printf("real: %s %lf\n", token->lexeme, s.real_);
+    }
     return s;
 }
 
