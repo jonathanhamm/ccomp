@@ -909,7 +909,7 @@ nfa_s *prx_cclass (lex_s *lex, token_s **curr)
 
 int prx_closure (lex_s *lex, token_s **curr)
 {
-    int type;
+        int type;
     
     switch((*curr)->type.val) {
         case LEXTYPE_KLEENE:
@@ -1692,18 +1692,19 @@ int addtok_(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
     return ret;
 }
 
-bool lex_matches(lex_s *lex, char *machid, char *str)
+regex_match_s lex_matches(lex_s *lex, char *machid, char *str)
 {
     mach_s *m;
     unsigned dummy = 0;
     match_s match;
+    regex_match_s ret = (regex_match_s){.matched = false, .attribute = 0};
     
     for(m = lex->machs; m; m = m->next) {
         if(!ntstrcmp(m->nterm->lexeme, machid)) {
-            match = nfa_match (lex, m->nfa, m->nfa->start, machid, &dummy);
-            return match.success;
+            match = nfa_match (lex, m->nfa, m->nfa->start, str, &dummy);
+            return (regex_match_s){.matched = match.success, .attribute = match.attribute};
         }
             
     }
-    return false;
+    return ret;
 }

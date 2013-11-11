@@ -190,6 +190,7 @@
 <simple_expression'> ->
 	addop <term> <simple_expression'>
     {
+        <simple_expression'>.op := addop.val
     }
 	|
 	ε
@@ -197,17 +198,17 @@
 <term> ->
 	<factor> <term'>
 	{
-		<term'>.in := <factor>.val
+        <term'>.in := <factor>.val
 	}
 <term'> ->
-	mulop <factor> <term'>
-    {
-        if <term'>.in <> null then
-         print(<term'>.in)
-        fi
-    }
-	|
-	ε
+        mulop <factor> <term'>
+        {
+            <term'>[1].in := <term'>.in * <factor>.val
+
+            <term'>.val := <term'>[1].val
+        }
+        |
+        ε
 
 <factor> ->
 	id <factor'>

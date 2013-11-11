@@ -15,7 +15,7 @@
 #include <math.h>
 
 #define REGEX_DECORATIONS_FILE "regex_decorations"
-#define MACHID_START            36
+#define MACHID_START            37
 
 #define SEMSIGN_POS 0
 #define SEMSIGN_NEG 1
@@ -62,6 +62,7 @@ enum semantic_types_ {
     SEMTYPE_SEMICOLON,
     SEMTYPE_OPENBRACKET,
     SEMTYPE_CLOSEBRACKET,
+    SEMTYPE_ELIF,
     /*^ When removing one of these, subtract 1 from MACHID_START */
     
     /*gap for id types*/
@@ -85,6 +86,8 @@ typedef struct access_s access_s;
 typedef struct sem_statements_s sem_statements_s;
 typedef struct sem_statement_s sem_statement_s;
 typedef struct sem_else_s sem_else_s;
+typedef struct sem_elif_s sem_elif_s;
+typedef struct sem_elif__s sem_elif__s;
 typedef struct sem_expression_s sem_expression_s;
 typedef struct sem_expression__s sem_expression__s;
 typedef struct sem_simple_expression_s sem_simple_expression_s;
@@ -121,6 +124,16 @@ struct sem_statement_s
 };
 
 struct sem_else_s
+{
+    
+};
+
+struct sem_elif_s
+{
+    
+};
+
+struct sem_elif__s
 {
     
 };
@@ -230,6 +243,8 @@ static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
 static sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate);
 static sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate);
 static sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate);
+static sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate);
+static sem_elif__s sem_elif_(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate);
 static sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il,  pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass);
 static sem_expression__s sem_expression_ (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass);
 static sem_simple_expression_s sem_simple_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass);
@@ -279,25 +294,108 @@ static ftable_s ftable[] = {
     {"print", sem_print}
 };
 
+/*
+ enum lex_attr_relop {
+ LEXATTR_EQ,
+ LEXATTR_NEQ,
+ LEXATTR_LE,
+ LEXATTR_LEQ,
+ LEXATTR_GEQ,
+ LEXATTR_GE
+ };
+ 
+ enum lex_attr_addop {
+ LEXATTR_PLUS,
+ LEXATTR_MINUS,
+ LEXATTR_OR
+ };
+ 
+ enum lex_attr_mulop {
+ LEXATTR_MULT,
+ LEXATTR_DIV1,
+ LEXATTR_DIV2,
+ LEXATTR_MOD,
+ LEXATTR_AND
+ };
+
+ */
+
 sem_type_s sem_type_s_(parse_s *parse, token_s *token)
 {
     sem_type_s s;
     tlookup_s res;
-    
-    s.type = ATTYPE_NOT_EVALUATED;
+    regex_match_s match;
     
     if(!token->stype) {
         res = idtable_lookup(parse->lex->idtable, token->lexeme);
-        if(res.is_found) {
-            
-        }
+        if(res.is_found)
+            s = res.tdat.type;
         else {
-            res = idtable_lookup(parse->lex->kwtable, token->lexeme);
-            if(res.is_found) {
-                
+            s.type = ATTYPE_CODE;
+            if((match = lex_matches(parse->lex, "addop", token->lexeme)).matched) {
+                switch(match.attribute){
+                    case LEXATTR_PLUS:
+                        s.str_ = "+";
+                        break;
+                    case LEXATTR_MINUS:
+                        s.str_ = "-";
+                        break;
+                    case LEXATTR_OR:
+                        s.str_ = "OR";
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+            }
+            else if((match = lex_matches(parse->lex, "mulop", token->lexeme)).matched) {
+                switch(match.attribute){
+                    case LEXATTR_MULT:
+                        s.str_ = "*";
+                        break;
+                    case LEXATTR_DIV1:
+                    case LEXATTR_DIV2:
+                        s.str_ = "/";
+                        break;
+                    case LEXATTR_MOD:
+                        s.str_ = "MOD";
+                        break;
+                    case LEXATTR_AND:
+                        s.str_ = "AND";
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+            }
+            else if((match = lex_matches(parse->lex, "relop", token->lexeme)).matched) {
+                switch(match.attribute) {
+                    case LEXATTR_EQ:
+                        s.str_ = "=";
+                        break;
+                    case LEXATTR_NEQ:
+                        s.str_ = "<>";
+                        break;
+                    case LEXATTR_LE:
+                        s.str_ = "<";
+                        break;
+                    case LEXATTR_LEQ:
+                        s.str_ = "<=";
+                        break;
+                    case LEXATTR_GEQ:
+                        s.str_ = ">=";
+                        break;
+                    case LEXATTR_GE:
+                        s.str_ = ">";
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
             }
             else {
-                
+                s.type = ATTYPE_STR;
+                s.str_ = token->lexeme;
             }
         }
     }
@@ -310,8 +408,10 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
         s.real_ = safe_atod(token->lexeme);
         printf("real: %s %lf\n", token->lexeme, s.real_);
     }
-    else
-        assert(false);
+    else {
+        s.type = ATTYPE_STR;
+        s.str_ = token->lexeme;
+    }
     return s;
 }
 
@@ -674,7 +774,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
         case OPTYPE_EQ:
             result.type = ATTYPE_NUMINT;
             result.int_ = 0;
-            if (v1.type == ATTYPE_STR && v2.type == ATTYPE_STR) {
+            if ((v1.type == ATTYPE_STR || v1.type == ATTYPE_CODE) && (v2.type == ATTYPE_STR || v2.type == ATTYPE_CODE)) {
                 result.int_ = !strcmp(v1.str_, v2.str_);
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -689,7 +789,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
         case OPTYPE_NE:
             result.type = ATTYPE_NUMINT;
             result.int_ = 0;
-            if (v1.type == ATTYPE_STR && v2.type == ATTYPE_STR)
+            if ((v1.type == ATTYPE_STR || v2.type == ATTYPE_CODE )&& (v2.type == ATTYPE_STR || v2.type == ATTYPE_CODE))
                 result.int_ = !!strcmp(v1.str_, v2.str_);
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ != v2.int_;
@@ -793,7 +893,7 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
 
             if (evaluate && expression.value.type != ATTYPE_NOT_EVALUATED) {
 
-                if(!strcmp(pda->nterm->lexeme, nterm)) {
+                if(!strcmp(pda->nterm->lexeme, nterm) && !index) {
                     if(syn) {
                         setatt(syn, id, alloc_semt(expression.value));
 
@@ -854,6 +954,16 @@ sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, p
             assert(false);
             break;
     }
+}
+
+sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate)
+{
+    
+}
+
+sem_elif__s sem_elif_(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate)
+{
+    
 }
 
 sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
@@ -1103,7 +1213,7 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
             if (idsuffix.dot.id) {
-                if (!strcmp(factor.value.str_, pda->nterm->lexeme)) {
+                if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.index) {
                   /*  factor.value.type = ATTYPE_NOT_EVALUATED;
                     if(syn)
                         factor.value = getatt(pn->curr->syn, idsuffix.dot.id);

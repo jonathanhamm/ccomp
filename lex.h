@@ -21,10 +21,33 @@ enum lex_attr_ {
     LEXATTR_FAKEEOF
 };
 
-enum lex_attr__ {
+enum lex_attr_num {
     LEXATTR_INT,
     LEXATTR_REAL,
     LEXATTR_LREAL
+};
+
+enum lex_attr_relop {
+    LEXATTR_EQ,
+    LEXATTR_NEQ,
+    LEXATTR_LE,
+    LEXATTR_LEQ,
+    LEXATTR_GEQ,
+    LEXATTR_GE
+};
+
+enum lex_attr_addop {
+    LEXATTR_PLUS,
+    LEXATTR_MINUS,
+    LEXATTR_OR
+};
+
+enum lex_attr_mulop {
+    LEXATTR_MULT,
+    LEXATTR_DIV1,
+    LEXATTR_DIV2,
+    LEXATTR_MOD,
+    LEXATTR_AND
 };
 
 enum lex_types_ {
@@ -92,6 +115,7 @@ typedef struct nfa_edge_s nfa_edge_s;
 typedef struct mach_s mach_s;
 typedef struct lextok_s lextok_s;
 typedef struct iditer_s iditer_s;
+typedef struct regex_match_s regex_match_s;
 
 typedef unsigned (*annotation_f) (token_s **, char *, unsigned *, void *);
 
@@ -205,6 +229,12 @@ struct lextok_s
     token_s *tokens;
 };
 
+struct regex_match_s
+{
+    bool matched;
+    unsigned attribute;
+};
+
 extern lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing);
 extern lex_s *buildlex (const char *file);
 extern token_s *lexspec (const char *file, annotation_f af, void *data);
@@ -221,6 +251,6 @@ extern inline char *getname(lex_s *lex, unsigned long token_val);
 extern void settype(lex_s *lex, char *id, sem_type_s type);
 extern sem_type_s gettype(lex_s *lex, char *id);
 extern toktype_s gettoktype (lex_s *lex, char *id);
-extern bool lex_matches(lex_s *lex, char *machid, char *str);
+extern regex_match_s lex_matches(lex_s *lex, char *machid, char *str);
 
 #endif

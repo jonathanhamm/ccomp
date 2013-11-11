@@ -18,6 +18,14 @@
     else <statements> fi
     |
     fi
+    |
+    <elif>
+
+<elif>->
+    elif <expression> then <statements> <elif'>
+    
+<elif'>->
+    fi | <elif>
 
 <expression> ->
 	<simple_expression> <expression'>
