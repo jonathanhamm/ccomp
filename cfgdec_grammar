@@ -60,9 +60,6 @@
 	num
 	|
 	not <factor>
-    {
-        <factor>.value := not <factor>[1].value;
-    }
     |
     \( <expression> \)
     |
@@ -78,7 +75,7 @@
     |
     \( <paramlist> \)
     |
-    [ <expression> ] <dot>
+    \[ <expression> \] <dot>
 
 <dot> ->
     \. id <range>
@@ -86,7 +83,7 @@
     ε
     
 <range> ->
-    \.\. id [ num ] \. id
+    \.\. id \[ num \] \. id
     |
     ε
         

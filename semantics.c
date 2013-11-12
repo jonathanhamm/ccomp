@@ -860,6 +860,7 @@ sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, p
             sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate);
         case SEMTYPE_FI:
         case SEMTYPE_ELSE:
+        case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             break;
         default:
@@ -949,6 +950,10 @@ sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, p
         case SEMTYPE_FI:
             *curr = (*curr)->next;
             break;
+        case SEMTYPE_ELIF:
+            sem_elif(parse, curr, il, pda, prod, pn, syn, pass, evaluate);
+
+            break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected else or fi but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
@@ -958,12 +963,27 @@ sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, p
 
 sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate)
 {
-    
+    sem_match(curr, SEMTYPE_ELIF);
+    sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
+    sem_match(curr, SEMTYPE_THEN);
+    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate);
+    sem_elif_(parse, curr, il, pda, prod, pn, syn, pass, evaluate);
 }
 
 sem_elif__s sem_elif_(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate)
 {
-    
+    switch((*curr)->type.val) {
+        case SEMTYPE_FI:
+            *curr = (*curr)->next;
+            break;
+        case SEMTYPE_ELIF:
+            sem_elif(parse, curr, il, pda, prod, pn, syn, pass, evaluate);
+            break;
+        default:
+            fprintf(stderr, "Syntax Error at line %d: Expected fi or elif but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+            assert(false);
+            break;
+    }
 }
 
 sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
@@ -1006,6 +1026,7 @@ sem_expression__s sem_expression_ (parse_s *parse, token_s **curr, llist_s **il,
         case SEMTYPE_CLOSEPAREN:
         case SEMTYPE_CLOSEBRACKET:
         case SEMTYPE_ID:
+        case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             expression_.op = OPTYPE_NOP;
             expression_.value.type = ATTYPE_VOID;
@@ -1082,6 +1103,7 @@ sem_simple_expression__s sem_simple_expression_ (parse_s *parse, token_s **curr,
         case SEMTYPE_CLOSEPAREN:
         case SEMTYPE_CLOSEBRACKET:
         case SEMTYPE_ID:
+        case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             simple_expression_.op = OPTYPE_NOP;
             simple_expression_.value.type = ATTYPE_VOID;
@@ -1132,6 +1154,7 @@ sem_term__s sem_term_ (parse_s *parse, token_s **curr, llist_s **il, sem_type_s 
         case SEMTYPE_CLOSEPAREN:
         case SEMTYPE_CLOSEBRACKET:
         case SEMTYPE_ID:
+        case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             term_.op = OPTYPE_NOP;
             term_.value.type = ATTYPE_VOID;
@@ -1320,6 +1343,7 @@ sem_factor__s sem_factor_ (parse_s *parse, token_s **curr, llist_s **il, pna_s *
         case SEMTYPE_COMMA:
         case SEMTYPE_ASSIGNOP:
         case SEMTYPE_ID:
+        case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             factor_.index = 1;
             break;
@@ -1351,6 +1375,7 @@ sem_idsuffix_s sem_idsuffix (parse_s *parse, token_s **curr, llist_s **il, pda_s
         case SEMTYPE_NONTERM:
         case SEMTYPE_NUM:
         case SEMTYPE_ID:
+        case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             idsuffix.factor_ = sem_factor_(parse, curr, il, pn, syn, pass);
             idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass);
@@ -1405,6 +1430,7 @@ sem_dot_s sem_dot (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, sema
         case SEMTYPE_COMMA:
         case SEMTYPE_ID:
         case SEMTYPE_ASSIGNOP:
+        case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             dot.id = NULL;
             dot.range.isset = false;
@@ -1459,6 +1485,7 @@ sem_range_s sem_range (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, 
         case SEMTYPE_IF:
         case SEMTYPE_ASSIGNOP:
         case SEMTYPE_NONTERM:
+        case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             range.isready = true;
             range.isset = false;
