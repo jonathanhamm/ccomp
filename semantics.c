@@ -244,7 +244,6 @@ static sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s 
 static sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate);
 static sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate);
 static sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate);
-static sem_elif__s sem_elif_(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate);
 static sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il,  pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass);
 static sem_expression__s sem_expression_ (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass);
 static sem_simple_expression_s sem_simple_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass);
@@ -967,23 +966,7 @@ sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
     sem_match(curr, SEMTYPE_THEN);
     sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate);
-    sem_elif_(parse, curr, il, pda, prod, pn, syn, pass, evaluate);
-}
-
-sem_elif__s sem_elif_(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate)
-{
-    switch((*curr)->type.val) {
-        case SEMTYPE_FI:
-            *curr = (*curr)->next;
-            break;
-        case SEMTYPE_ELIF:
-            sem_elif(parse, curr, il, pda, prod, pn, syn, pass, evaluate);
-            break;
-        default:
-            fprintf(stderr, "Syntax Error at line %d: Expected fi or elif but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
-            assert(false);
-            break;
-    }
+    sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate);
 }
 
 sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
