@@ -922,7 +922,7 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             sem_match(curr, SEMTYPE_THEN);
             test = test_semtype(expression.value);
             sem_statements(parse, curr, il, pda, prod, pn, syn, pass, test, test);
-            sem_else(parse, curr, il, pda, prod, pn, syn, pass, !test && evaluate, !test);
+            sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test);
             break;
         case SEMTYPE_ID:
             id = (*curr)->lexeme;
@@ -953,7 +953,7 @@ sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, p
             *curr = (*curr)->next;
             break;
         case SEMTYPE_ELIF:
-            sem_elif(parse, curr, il, pda, prod, pn, syn, pass, evaluate && !elprev, elprev);
+            sem_elif(parse, curr, il, pda, prod, pn, syn, pass, evaluate, elprev);
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected else or fi but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -972,7 +972,7 @@ sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     sem_match(curr, SEMTYPE_THEN);
     test = test_semtype(expression.value);
     sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && test && !elprev, elprev);
-    sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate && !test, test || elprev);
+    sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test || elprev);
 }
 
 sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
