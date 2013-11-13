@@ -213,20 +213,10 @@
 <factor> ->
 	id <factor'>
     {
-    if <factor'>.type = void then
         <factor>.type := lookup(id)
-        <factor>.val := id.val
-    elif x=4 then
-        if <factor>.type <> null then 
-            print(<factor>.type)
-        fi
-    else
-        <factor>.type := lookup(id)
-        if <factor>.type <> null then
-            print(<factor>.type)
+        if <factor'>.type = void then
             halt()
         fi
-    fi
     }
 	|
 	num

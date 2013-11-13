@@ -22,7 +22,7 @@
     <elif>
 
 <elif>->
-    elif <expression> then <statements>
+    elif <expression> then <statements> <else>
 
 <expression> ->
 	<simple_expression> <expression'>

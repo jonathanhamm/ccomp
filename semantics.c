@@ -919,8 +919,8 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
             sem_match(curr, SEMTYPE_THEN);
             test = test_semtype(expression.value);
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, test && evaluate, false);
-            sem_else(parse, curr, il, pda, prod, pn, syn, pass, !test && evaluate, test);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, test, test);
+            sem_else(parse, curr, il, pda, prod, pn, syn, pass, !test && evaluate, !test);
             break;
         case SEMTYPE_ID:
             id = (*curr)->lexeme;
@@ -928,8 +928,9 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             sem_match(curr, SEMTYPE_OPENPAREN);
             params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
-            if (evaluate && params.ready)
+            if (evaluate && params.ready) {
                 get_semaction(id)(curr, NULL, pda, parse, params, pass, &expression);
+            }
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected nonterm or if but got %s", (*curr)->lineno, (*curr)->lexeme);
@@ -943,7 +944,7 @@ sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, p
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && !elprev, false);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && !elprev, elprev);
             sem_match(curr, SEMTYPE_FI);
             break;
         case SEMTYPE_FI:
@@ -968,8 +969,8 @@ sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
     sem_match(curr, SEMTYPE_THEN);
     test = test_semtype(expression.value);
-    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && test && !elprev, false);
-    sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test || elprev);
+    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && test && !elprev, elprev);
+    sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate && !test, test || elprev);
 }
 
 sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
