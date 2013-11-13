@@ -1453,7 +1453,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
     
     c[1] = '\0';
     backup = buf;
-    init_type.type = ATTYPE_NOT_EVALUATED;
+    init_type.type = ATTYPE_NULL;
     if (listing && *buf != EOF) {
         addline(&lex->listing, buf);
         lineno++;

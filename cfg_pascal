@@ -187,6 +187,10 @@
     }
 	|
 	<term> <simple_expression'>
+    {
+        <simple_expression>.val := <term>.val
+        <simple_expression>.type := <term>.type
+    }
 <simple_expression'> ->
 	addop <term> <simple_expression'>
     {
@@ -198,6 +202,8 @@
 <term> ->
 	<factor> <term'>
 	{
+        <term>.val := <factor>.val
+        <term>.type := <factor>.type
         <term'>.in := <factor>.val
 	}
 <term'> ->
@@ -213,8 +219,11 @@
 <factor> ->
 	id <factor'>
     {
+        <factor>.val := id.entry
         <factor>.type := lookup(id)
         if <factor'>.type = void then
+            halt()
+        else
             halt()
         fi
     }
