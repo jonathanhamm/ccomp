@@ -945,7 +945,9 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
     
     pnode = pda->productions[index].start;
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
+        pcp->curr = pcp->array;
         sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass);
+        pnode->pass = true;
         return synhash;
     }
     else {

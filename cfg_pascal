@@ -222,8 +222,10 @@
         <factor>.val := id.entry
         <factor>.type := lookup(id)
         if <factor'>.type = void then
+            print(<factor>.type)
             halt()
-        else
+        elif <factor'>.type <> void then
+            print(<factor'>.type)
             halt()
         fi
     }

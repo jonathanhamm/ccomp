@@ -179,6 +179,7 @@ struct sem_factor_s
 
 struct sem_factor__s
 {
+    bool isset;
     unsigned index;
 };
 
@@ -392,8 +393,16 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
                         break;
                 }
             }
+            else if (!strcmp(token->lexeme, "integer")) {
+                s.type = ATTYPE_NUMINT;
+                s.str_ = "integer";
+            }
+            else if (!strcmp(token->lexeme, "real")) {
+                s.type = ATTYPE_NUMREAL;
+                s.str_ = "real";
+            }
             else {
-                s.type = ATTYPE_STR;
+                s.type = ATTYPE_ID;
                 s.str_ = token->lexeme;
             }
         }
@@ -405,10 +414,9 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     else if(!strcmp(token->stype, "real")) {
         s.type = ATTYPE_NUMREAL;
         s.real_ = safe_atod(token->lexeme);
-        printf("real: %s %lf\n", token->lexeme, s.real_);
     }
     else {
-        s.type = ATTYPE_STR;
+        s.type = ATTYPE_ID;
         s.str_ = token->lexeme;
     }
     return s;
@@ -426,7 +434,6 @@ void print_semtype(sem_type_s value)
             break;
         case ATTYPE_ID:
         case ATTYPE_CODE:
-        case ATTYPE_STR:
             printf("%s", value.str_);
             break;
         case ATTYPE_RANGE:
@@ -595,13 +602,14 @@ pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index)
     return NULL;
 }
 
-
 /* performs basic arithmetic operations with implicit type coercion */
 sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
 {
     sem_type_s result;
     if(op != OPTYPE_NOP) {
         if(v1.type == ATTYPE_NULL) {
+            puts("COMPARING A NULL");
+
             if(op == OPTYPE_EQ) {
                 result.type = ATTYPE_NUMINT;
                 result.int_ = ((v2.type == ATTYPE_NOT_EVALUATED) || (v2.type == ATTYPE_NULL));
@@ -613,6 +621,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             return result;
         }
         if(v2.type == ATTYPE_NULL) {
+            puts("COMPARING A NULL");
             if(op == OPTYPE_EQ) {
                 result.type = ATTYPE_NUMINT;
                 result.int_ = ((v1.type == ATTYPE_NOT_EVALUATED) || (v1.type == ATTYPE_NULL));
@@ -639,7 +648,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     switch(op) {
         case OPTYPE_MULT:
             assert (v1.int_ != 28);
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: String type incompatible with multiplication.\n");
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT) {
                 result.type = ATTYPE_NUMINT;
@@ -660,7 +669,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             break;
         case OPTYPE_DIV:
 
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: String type incompatible with division.\n");
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT) {
                 result.type = ATTYPE_NUMREAL;
@@ -680,7 +689,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             }
             break;
         case OPTYPE_ADD:
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: Not yet implemented.\n");
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT) {
                 result.type = ATTYPE_NUMINT;
@@ -701,7 +710,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             break;
         case OPTYPE_SUB:
 
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: String type incompatible with subtraction.\n");
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT) {
                 result.type = ATTYPE_NUMINT;
@@ -721,7 +730,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             }
             break;
         case OPTYPE_L:
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: String type incompatible with subtraction.\n");
             result.type = ATTYPE_NUMINT;
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -734,7 +743,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.real_ < v2.real_;
             break;
         case OPTYPE_G:
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: String type incompatible with subtraction.\n");
             result.type = ATTYPE_NUMINT;
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -747,7 +756,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.real_ > v2.real_;
             break;
         case OPTYPE_LE:
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: String type incompatible with subtraction.\n");
             result.type = ATTYPE_NUMINT;
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -760,7 +769,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.real_ <= v2.real_;
             break;
         case OPTYPE_GE:
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: String type incompatible with subtraction.\n");
             result.type = ATTYPE_NUMINT;
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -775,7 +784,9 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
         case OPTYPE_EQ:
             result.type = ATTYPE_NUMINT;
             result.int_ = 0;
-            if ((v1.type == ATTYPE_STR || v1.type == ATTYPE_CODE) && (v2.type == ATTYPE_STR || v2.type == ATTYPE_CODE)) {
+            if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID)) {
+                printf("testing string or code type\n");
+                assert(strcmp("void", v1.str_) && strcmp("void", v2.str_));
                 result.int_ = !strcmp(v1.str_, v2.str_);
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -790,8 +801,12 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
         case OPTYPE_NE:
             result.type = ATTYPE_NUMINT;
             result.int_ = 0;
-            if ((v1.type == ATTYPE_STR || v2.type == ATTYPE_CODE )&& (v2.type == ATTYPE_STR || v2.type == ATTYPE_CODE))
+            if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID)) {
+                printf("testing string or code type\n");
+                assert(strcmp("void", v1.str_) && strcmp("void", v2.str_));
+
                 result.int_ = !!strcmp(v1.str_, v2.str_);
+            }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ != v2.int_;
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
@@ -802,7 +817,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.real_ != v2.real_;
             break;
         case OPTYPE_OR:
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: String type incompatible with subtraction.\n");
             result.type = ATTYPE_NUMINT;
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -815,7 +830,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.real_ || v2.real_;
             break;
         case OPTYPE_AND:
-            if (v1.type == ATTYPE_STR || v2.type == ATTYPE_STR)
+            if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
                 printf("Type Error: String type incompatible with subtraction.\n");
             result.type = ATTYPE_NUMINT;
             if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -893,9 +908,10 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
 
+
             if (evaluate && expression.value.type != ATTYPE_NOT_EVALUATED) {
 
-                if(!strcmp(pda->nterm->lexeme, nterm) && !index) {
+                if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
                     if(syn) {
                         setatt(syn, id, alloc_semt(expression.value));
 
@@ -921,7 +937,7 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
             sem_match(curr, SEMTYPE_THEN);
             test = test_semtype(expression.value);
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, test, test);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, test, false);
             sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test);
             break;
         case SEMTYPE_ID:
@@ -946,7 +962,7 @@ sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, p
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && !elprev, elprev);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && !elprev, false);
             sem_match(curr, SEMTYPE_FI);
             break;
         case SEMTYPE_FI:
@@ -971,7 +987,7 @@ sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
     sem_match(curr, SEMTYPE_THEN);
     test = test_semtype(expression.value);
-    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && test && !elprev, elprev);
+    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && test && !elprev, false);
     sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test || elprev);
 }
 
@@ -993,6 +1009,7 @@ sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, p
         puts("\n\n");*/
     }
     expression.value = sem_op(simple_expression.value, expression_.value, expression_.op);
+
     return expression;
 }
 
@@ -1170,7 +1187,6 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
     switch((*curr)->type.val) {
         case SEMTYPE_ID:
             id = *curr;
-            factor.value.type = ATTYPE_STR;
             factor.value.str_ = id->lexeme;
             *curr = (*curr)->next;
             idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass);
@@ -1180,10 +1196,9 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
                     pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
                     if(pnode && pnode->pass) {
                         factor.value = sem_type_s_(parse, pnode->matched);
-                        if(factor.value.type != ATTYPE_NOT_EVALUATED) {
+                        if(factor.value.type != ATTYPE_NOT_EVALUATED && factor.value.type != ATTYPE_NULL) {
                             print_semtype(factor.value);
                             putchar('\n');
-                           // assert(false);
                         }
                         else
                             print_semtype(factor.value);
@@ -1206,6 +1221,7 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
             else if (idsuffix.hasparam) {
                 if(idsuffix.params.ready) {
                     factor.value = *(sem_type_s *)get_semaction(id->lexeme)(curr, NULL, pda, pn, parse, idsuffix.params, pass, &factor.value);
+                    
                 }
             }
             else {
@@ -1213,10 +1229,13 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
                     factor.value.type = ATTYPE_NULL;
                     factor.value.str_ = "null";
                 }
+                else {
+                    factor.value = sem_type_s_(parse, id);
+                }
             }
             break;
         case SEMTYPE_NONTERM:
-            factor.value.type = ATTYPE_STR;
+            factor.value.type = ATTYPE_ID;
             factor.value.str_ = (*curr)->lexeme;
             factor.access.base = (*curr)->lexeme;
             *curr = (*curr)->next;
@@ -1269,7 +1288,7 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
             id = *curr;
             factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass);
             switch(factor.value.type) {
-                case ATTYPE_STR:
+                case ATTYPE_ID:
                     fprintf(stderr, "Type Error: Cannot apply logical not to string type.");
                     break;
                 case ATTYPE_NUMINT:
@@ -1314,6 +1333,7 @@ sem_factor__s sem_factor_ (parse_s *parse, token_s **curr, llist_s **il, pna_s *
 
     switch((*curr)->type.val) {
         case SEMTYPE_NUM:
+            factor_.isset = true;
             factor_.index = (unsigned)safe_atol((*curr)->lexeme);
             *curr = (*curr)->next;
             break;
@@ -1333,6 +1353,7 @@ sem_factor__s sem_factor_ (parse_s *parse, token_s **curr, llist_s **il, pna_s *
         case SEMTYPE_ID:
         case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
+            factor_.isset = false;
             factor_.index = 1;
             break;
         default:
@@ -1596,18 +1617,20 @@ att_s *att_s_ (void *data, unsigned tid)
     return att;
 }
 
-void setatt (semantics_s *s, char *id, sem_type_s *data)
+void setatt(semantics_s *s, char *id, sem_type_s *data)
 {
   //  printf("\n------------------INSERTING %s INTO %s %p %p  ", id, s->pda->nterm->lexeme, s->pda, data);
     
     
     if(data->type != ATTYPE_NOT_EVALUATED) {
-       // print_semtype(*data);
+        if(data->type == ATTYPE_ID){
+            printf("Adding: %s\n", data->str_);
+        }
         hashinsert_(s->table, id, data);
     }
 }
 
-sem_type_s getatt (semantics_s *s, char *id)
+sem_type_s getatt(semantics_s *s, char *id)
 {
     sem_type_s dummy;
     sem_type_s *data;
@@ -1699,11 +1722,11 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
         val = node->ptr;
         free(node);
         p = getpnode_nterm_copy(pn, val->str_, 1);
-        printf("getting type for: %s\n", p->matched->lexeme);
+        printf("getting type for: %s from %s\n", p->matched->lexeme, val->str_);
         type = gettype(parse->lex, p->matched->lexeme);
         if(type.type == ATTYPE_NULL) {
             fprintf(stderr, "Semantics Error at line %u: Undeclared identifier: %s\n", p->matched->lineno, p->matched->lexeme);
-            
+           // assert(false);
         }
         return alloc_semt(type);
     }
@@ -1778,7 +1801,7 @@ char *sem_tostring(sem_type_s type)
     char *stralloc;
     
     switch(type.type) {
-        case ATTYPE_STR:
+        case ATTYPE_ID:
         case ATTYPE_CODE:
             return type.str_;
         case ATTYPE_NUMINT:

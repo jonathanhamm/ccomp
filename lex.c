@@ -240,9 +240,9 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 }
                 break;
             case '{':
-                printf("before %u\n", lineno);
+              //  printf("before %u\n", lineno);
                 tmp = af(&list, &buf[i], &lineno, data);
-                printf("after %u\n", lineno);
+               // printf("after %u\n", lineno);
                 if (tmp)
                     i += tmp;
                 else {
