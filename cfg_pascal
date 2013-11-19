@@ -221,19 +221,19 @@
     {
         <factor>.val := id.entry
         <factor>.type := lookup(id)
-        if <factor'>.type = void then
+        if <factor'>.type <> void then
             print(<factor>.type)
             halt()
-        elif <factor'>.type <> void then
+        else
             print(<factor'>.type)
-            halt()
         fi
     }
 	|
 	num
     { 
         <factor>.val := num.val
-    <factor>.type := num.type
+        <factor>.type := num.type
+        
     }
 	|
 	\( <expression> \)

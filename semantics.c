@@ -786,7 +786,6 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             result.int_ = 0;
             if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID)) {
                 printf("testing string or code type\n");
-                assert(strcmp("void", v1.str_) && strcmp("void", v2.str_));
                 result.int_ = !strcmp(v1.str_, v2.str_);
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -803,7 +802,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             result.int_ = 0;
             if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID)) {
                 printf("testing string or code type\n");
-                assert(strcmp("void", v1.str_) && strcmp("void", v2.str_));
+               // assert(strcmp("void", v1.str_) && strcmp("void", v2.str_));
 
                 result.int_ = !!strcmp(v1.str_, v2.str_);
             }
@@ -851,6 +850,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             assert(false);
             break;
     }
+    putchar('\n');
     return result;
 }
 
@@ -1200,9 +1200,11 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
                             print_semtype(factor.value);
                             putchar('\n');
                         }
-                        else
-                            print_semtype(factor.value);
+                        else {
                             
+                            print_semtype(factor.value);
+                        }
+                        
                     }
                 
                     if (idsuffix.dot.range.isset && idsuffix.dot.range.isready) {
@@ -1525,7 +1527,7 @@ sem_paramlist_s sem_paramlist(parse_s *parse, token_s **curr, llist_s **il, pda_
         case SEMTYPE_ID:
         case SEMTYPE_NONTERM:
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
-            if(expression.value.type == ATTYPE_NOT_EVALUATED)
+            if(expression.value.type == ATTYPE_NOT_EVALUATED || expression.value.type == ATTYPE_NULL)
                 paramlist.ready = false;
             else
                 llpush(&paramlist.pstack, alloc_semt(expression.value));
@@ -1549,7 +1551,7 @@ void sem_paramlist_ (parse_s *parse, token_s **curr, llist_s **il, sem_paramlist
         case SEMTYPE_COMMA:
             *curr = (*curr)->next;
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
-            if(expression.value.type == ATTYPE_NOT_EVALUATED)
+            if(expression.value.type == ATTYPE_NOT_EVALUATED || expression.value.type == ATTYPE_NULL)
                 list->ready = false;
             else if (list->ready)
                 llpush(&list->pstack, alloc_semt(expression.value));
