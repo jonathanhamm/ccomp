@@ -288,6 +288,9 @@
 	\[ <expression> \]
     {
         <factor'>.type := <expression>.type
+        if <expression>.type <> null then
+            print("printing: ", <expression>.type)
+        fi
         if <expression>.type <> void then
             halt()
         fi
