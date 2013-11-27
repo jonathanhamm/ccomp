@@ -23,6 +23,12 @@
 
 <elif>->
     elif <expression> then <statements> <else>
+    
+<explist>-> 
+    <expression> <explist'>
+
+<explist'>-> 
+    relop <expression> <explist'>
 
 <expression> ->
 	<simple_expression> <expression'>

@@ -6,8 +6,8 @@ procedure bob (a : integer; b : real; c : real);
 	procedure lolololol (d:real);
 	var derp : real;
 	begin
-        zomg := 23
-		if 43 > herp[32*32/44.2] then 
+        zomg := 32;
+		if 43 > herp[32*32/44.2] then
 			derp := 3
 		else
 			derp := 4.7E3 + a+22.1 + (33-4)

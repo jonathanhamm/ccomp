@@ -1245,7 +1245,8 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
             if (idsuffix.dot.id) {
-                if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.index) {
+                //printf("got: %s\n", factor.value.str_, print);
+                if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
                   /*  factor.value.type = ATTYPE_NOT_EVALUATED;
                     if(syn)
                         factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
@@ -1254,6 +1255,7 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
                     if(pn->curr) {
                         printf("Attempting to get %s from %s\n", idsuffix.dot.id, pn->curr->token->lexeme);
                         factor.value = getatt(pn->curr->in, idsuffix.dot.id);
+                        print_semtype(factor.value);
                     }
                     if(factor.value.type == ATTYPE_NOT_EVALUATED)
                         factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
@@ -1588,7 +1590,7 @@ bool sem_match (token_s **curr, int type)
         return true;
     }
     fprintf(stderr, "Syntax Error at line %d: Got %s\n", (*curr)->lineno, (*curr)->lexeme);
-    assert(false);
+    asm("hlt");
     return false;
 }
 

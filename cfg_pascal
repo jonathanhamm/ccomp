@@ -162,65 +162,105 @@
 <expression> ->
 	<simple_expression> <expression'>
     { 
-        if <expression'>.op <> nop then
-            print("printing op: ", <expression'>.op)
+        <expression'>.in := <simple_expression>.type
+        if <expression'>.type <> void then
+            <expression>.type := <expression'>.type
         fi
-        <expression'>.in := <simple_expression>.val
     }
 <expression'> ->
 	relop <simple_expression>
     {
-        <expression'>.op := relop.val
-        <expression'>.val := <simple_expression>.val
+        <expresion'>.type := integer
     }
 	|
 	ε
     {
-        <expression'>.op := nop
         <expression'>.type := void
     }
 	
 <simple_expression> ->
 	<sign> <term> <simple_expression'> 
     {
-        
+        <simple_expression>.type := <term>.type
+        <simple_expression'>.in := <term>.type
+        if <simple_expression'>.type <> void then
+            <simple_expression>.type := <simple_expression>.type
+        fi
     }
 	|
 	<term> <simple_expression'>
     {
-        <simple_expression>.val := <term>.val
         <simple_expression>.type := <term>.type
+        <simple_expression'>.in := <term>.type
+        if <simple_expression'>.type <> void then
+            <simple_expression>.type := <simple_expression>.type
+        fi
     }
 <simple_expression'> ->
 	addop <term> <simple_expression'>
     {
-        <simple_expression'>.op := addop.val
+        if (<simple_expression'>.in = integer) and (<term>.type = integer) then
+            <simple_expression'>[1].in := integer
+            <simple_expression'>.type := integer
+        elif (<simple_expression'>.in = integer) and (<term>.type = real) then
+            <simple_expression'>[i].in := real
+            <simple_expression'>.type := real
+        elif (<simple_expression'>.in = real ) and (<term>.type = integer) then
+            <simple_expression'>[i].in := real
+            <simple_expression'>.type := real
+        else 
+
+        fi
+        if <simple_expression'>[1].type <> void then
+            <simple_expression'>.type := <simple_expression'>[1].type
+        fi
     }
 	|
 	ε
+    {
+        <simple_expression'>.type := void
+    }
+
 
 <term> ->
 	<factor> <term'>
 	{
-        <term>.val := <factor>.val
         <term>.type := <factor>.type
-        <term'>.in := <factor>.val
+        <term'>.in := <factor>.type
+        if <term'>.type <> void then
+            <term'>.type := <term'>.type
+        fi
 	}
 <term'> ->
         mulop <factor> <term'>
         {
-            <term'>[1].in := <term'>.in * <factor>.val
+            if (<term'>.in = integer) and (<factor>.type = integer) then
+                <term'>[1].in := integer
+                <term'>.type := integer
+            elif (<term'>.in = integer) and (<factor>.type = real) then
+                <term'>[i].in := real
+                <term'>.type := real
+            elif (<term'>.in = real ) and (<factor>.type = integer) then
+                <term'>[i].in := real
+                <term'>.type := real
+            else 
 
-            <term'>.val := <term'>[1].val
+            fi
+            if <term'>[1].type <> void then
+                <term'>.type := <term'>[1].type
+            fi
         }
         |
         ε
+        {
+            <term'>.type := void
+        }
 
 <factor> ->
 	id <factor'>
     {
-        <factor>.val := id.entry
         <factor>.type := lookup(id)
+
         if <factor'>.type <> void then
             print(<factor>.type)
             halt()
@@ -231,26 +271,26 @@
 	|
 	num
     { 
-        <factor>.val := num.val
         <factor>.type := num.type
-        
     }
 	|
 	\( <expression> \)
     { 
-        <factor>.val := <expression>.val
+        <factor>.type := <expression>.type
     }
 	|
 	not <factor>
     {
-        <factor>.val := <factor>.val
+        <factor>.type := <factor>[1].type
     }
     
 <factor'> ->
 	\[ <expression> \]
-    { 
+    {
         <factor'>.type := <expression>.type
-        <factor'>.val := <expression>.val
+        if <expression>.type <> void then
+            halt()
+        fi
     }
 	|
 	ε
