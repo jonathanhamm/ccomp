@@ -326,6 +326,9 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     tlookup_s res;
     regex_match_s match;
     
+    
+    printf("Not SType:\n");
+    s.str_ = NULL;
     if(!token->stype) {
         res = idtable_lookup(parse->lex->idtable, token->lexeme);
         if(res.is_found)
@@ -394,11 +397,11 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
                 }
             }
             else if (!strcmp(token->lexeme, "integer")) {
-                s.type = ATTYPE_NUMINT;
+                s.type = ATTYPE_ID;
                 s.str_ = "integer";
             }
             else if (!strcmp(token->lexeme, "real")) {
-                s.type = ATTYPE_NUMREAL;
+                s.type = ATTYPE_ID;
                 s.str_ = "real";
             }
             else {
@@ -434,7 +437,7 @@ void print_semtype(sem_type_s value)
             break;
         case ATTYPE_ID:
         case ATTYPE_CODE:
-            printf("%s", value.str_);
+            printf("string: %s", value.str_);
             break;
         case ATTYPE_RANGE:
             printf("%ld..%ld", value.low, value.high);
@@ -444,6 +447,7 @@ void print_semtype(sem_type_s value)
             break;
         case ATTYPE_NULL:
             printf("null");
+            break;
         case ATTYPE_VOID:
             printf("void");
             break;
@@ -608,10 +612,10 @@ pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index)
 sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
 {
     sem_type_s result;
+    result.str_ = NULL;
     if(op != OPTYPE_NOP) {
         if(v1.type == ATTYPE_NULL) {
             puts("COMPARING A NULL");
-
             if(op == OPTYPE_EQ) {
                 result.type = ATTYPE_NUMINT;
                 result.int_ = ((v2.type == ATTYPE_NOT_EVALUATED) || (v2.type == ATTYPE_NULL));
@@ -643,7 +647,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
         else if(v1.type == ATTYPE_NULL || v2.type == ATTYPE_NULL) {
             result.type = ATTYPE_NULL;
             result.str_ = "null";
-            puts("Not Evaluated");
+      //      puts("Not Evaluated");
             return result;
         }
     }
@@ -909,8 +913,6 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             id = idsuffix.dot.id;
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
-
-
             if (evaluate && expression.value.type != ATTYPE_NOT_EVALUATED) {
 
                 if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
@@ -999,6 +1001,9 @@ sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, p
     sem_expression__s expression_;
     sem_simple_expression_s simple_expression;
     
+    expression.value.str_= NULL;
+    expression.value.str_ = NULL;
+    simple_expression.value.str_ = NULL;
     simple_expression = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass);
     expression_ = sem_expression_(parse, curr, il, pda, prod, pn, syn, pass);
     if (expression_.op != OPTYPE_NOP) {
@@ -1018,7 +1023,8 @@ sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, p
 sem_expression__s sem_expression_ (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
 {
     sem_expression__s expression_;
-        
+    
+    expression_.value.str_ = NULL;
     switch((*curr)->type.val) {
         case SEMTYPE_RELOP:
             expression_.op = torelop((*curr)->type.attribute);
@@ -1055,6 +1061,9 @@ sem_simple_expression_s sem_simple_expression (parse_s *parse, token_s **curr, l
     sem_term_s term;
     sem_simple_expression__s simple_expression_;
     
+    simple_expression.value.str_ = NULL;
+    term.value.str_ = NULL;
+    simple_expression_.value.str_ = NULL;
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
 
@@ -1093,6 +1102,9 @@ sem_simple_expression__s sem_simple_expression_ (parse_s *parse, token_s **curr,
     sem_term_s term;
     sem_simple_expression__s simple_expression_, simple_expression__;
     
+    term.value.str_ = NULL;
+    simple_expression_.value.str_ = NULL;
+    simple_expression__.value.str_ = NULL;
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
             op = toaddop((*curr)->type.attribute);
@@ -1130,6 +1142,9 @@ sem_term_s sem_term (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, p
     sem_factor_s factor;
     sem_term__s term_;
     
+    term.value.str_ = NULL;
+    factor.value.str_= NULL;
+    term_.value.str_ = NULL;
     factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass);
     term_ = sem_term_(parse, curr, il, &factor.value, pda, prod, pn, syn, pass);
     term.value = factor.value;
@@ -1143,6 +1158,9 @@ sem_term__s sem_term_ (parse_s *parse, token_s **curr, llist_s **il, sem_type_s 
     sem_factor_s factor;
     sem_term__s term_, term__;
     
+    factor.value.str_ = NULL;
+    term_.value.str_ = NULL;
+    term__.value.str_ = NULL;
     switch((*curr)->type.val) {
         case SEMTYPE_MULOP:
             op = tomulop((*curr)->type.attribute);
@@ -1186,6 +1204,8 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
     sem_idsuffix_s idsuffix;
     sem_expression_s expression;
     
+    expression.value.str_ = NULL;
+    value.str_ = NULL;
     switch((*curr)->type.val) {
         case SEMTYPE_ID:
             id = *curr;
@@ -1269,12 +1289,15 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
                 else {
                     factor.value.type = ATTYPE_NOT_EVALUATED;
                     pnode = getpnode_token(pn, factor.value.str_, idsuffix.factor_.index);
-                    if(!strcmp("<expression>", factor.value.str_) && !strcmp("<factor'>", pda->nterm->lexeme)) {
-                        asm("hlt");
-                    }
                     if(pnode) {
+                        int derp = 0;
+                        if(factor.value.str_ && !strcmp("<expression>", factor.value.str_) && !strcmp("<factor'>", pda->nterm->lexeme) && pnode->syn) {
+                            derp = 1;
+                        }
+                        
                         factor.value = getatt(pnode->syn, idsuffix.dot.id);
-                            
+                        if(derp && factor.value.type != ATTYPE_NOT_EVALUATED)
+                            asm("hlt");
                     }
                     if(factor.value.type == ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, pnode);
@@ -1382,6 +1405,7 @@ sem_idsuffix_s sem_idsuffix (parse_s *parse, token_s **curr, llist_s **il, pda_s
     sem_expression_s expression;
     sem_idsuffix_s idsuffix;
     
+    expression.value.str_ = NULL;
     switch ((*curr)->type.val) {
         case SEMTYPE_COMMA:
         case SEMTYPE_CLOSEPAREN:
@@ -1526,6 +1550,7 @@ sem_paramlist_s sem_paramlist(parse_s *parse, token_s **curr, llist_s **il, pda_
     sem_paramlist_s paramlist;
     sem_expression_s expression;
 
+    expression.value.str_ = NULL;
     paramlist.ready = true;
     paramlist.pstack = NULL;
 
@@ -1634,11 +1659,11 @@ void setatt(semantics_s *s, char *id, sem_type_s *data)
 {
   //  printf("\n------------------INSERTING %s INTO %s %p %p  ", id, s->pda->nterm->lexeme, s->pda, data);
     
-    
-    if(data->type != ATTYPE_NOT_EVALUATED) {
-        if(data->type == ATTYPE_ID){
-            printf("Adding: %s\n", data->str_);
-        }
+  //  assert(data->type != ATTYPE_VOID);
+    if(data->type != ATTYPE_NOT_EVALUATED && data->type != ATTYPE_NULL && data->type != ATTYPE_VOID) {
+        puts("Adding: ");
+        print_semtype(*data);
+        printf("\nto: %s with attribute: %s\n", s->n->token->lexeme, id);
         hashinsert_(s->table, id, data);
     }
 }
@@ -1649,7 +1674,7 @@ sem_type_s getatt(semantics_s *s, char *id)
     sem_type_s *data;
     
     dummy.type = ATTYPE_NOT_EVALUATED;
-    
+    dummy.str_ = NULL;
    // printf("\n------------------RETRIEVING %s FROM %s %p\n", id, s->pda->nterm->lexeme, s->pda);
     if(!s)
         return dummy;
@@ -1720,7 +1745,7 @@ void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
 {
     printf("Halt Called in %s\n", pda->nterm->lexeme);
     fflush(stderr);
-    fflush(stdin);
+    fflush(stdout);
     assert(false);
 }
 
@@ -1741,6 +1766,9 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
             fprintf(stderr, "Semantics Error at line %u: Undeclared identifier: %s\n", p->matched->lineno, p->matched->lexeme);
            // assert(false);
         }
+        printf("Got Type: ");
+        print_semtype(type);
+        
         return alloc_semt(type);
     }
     return NULL;
@@ -1760,6 +1788,7 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
         putchar('\n');
         free(val);
     }
+    printf("exiting sem print\n");
     return NULL;
 }
 static int bobb;
@@ -1769,6 +1798,7 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     llist_s *node;
     sem_type_s *t, *id;
     
+    for(;;)printf("baaa");
     if(pass > 2)
         return NULL;
     
@@ -1862,8 +1892,7 @@ void set_type(semantics_s *s, char *id, sem_type_s type)
 sem_type_s get_type(semantics_s *s, char *id)
 {
     tdat_s tdat;
-    idtable_s *table = s->parse->lex->idtable;
-    
+    idtable_s *table = s->parse->lex->idtable;    
     tdat = idtable_lookup(table, id).tdat;
     return tdat.type;
 }

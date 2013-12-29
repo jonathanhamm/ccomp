@@ -514,7 +514,14 @@ void free_listing(linetable_s *table)
     free(table);
 }
 
-/* substandard function for debugging purposes */
+/* 
+ Substandard function for debugging purposes.
+ Mainly needed for an ugly hack for differentiating 
+ strings of static duration and character buffers 
+ stored in dynamically allocated memory. This is needed
+ for freeing a particular linked list when parsing command
+ line arguments.
+ */
 bool is_allocated (const void *ptr)
 {
     if (!ptr)

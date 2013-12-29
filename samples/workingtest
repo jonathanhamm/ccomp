@@ -1,5 +1,5 @@
 program bob (input, output);
-var tom : integer; var ted : real; 
+var tom : integer; var ted : real;
 var omg : array[23..44] of real;
 procedure bob (a : integer; b : real; c : real);
 	var zomg : integer; var herp : array[1..2321] of real;
@@ -71,8 +71,6 @@ begin
 		end
 	end
 end;
-
-
 
 procedure lolwut (a : integer; b : real; c : real);
 	var x : integer; var y : real;

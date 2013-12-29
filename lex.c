@@ -880,7 +880,6 @@ nfa_s *prx_cclass (lex_s *lex, token_s **curr)
     class = nfa_();
     class->start = nfa_node_s_();
     class->final = nfa_node_s_();
-
     if ((*curr)->type.val > LEXTYPE_ERROR && (*curr)->type.val <= LEXTYPE_ANNOTATE) {
         if((*curr)->type.val == LEXTYPE_NEGATE) {
             negate = true;
