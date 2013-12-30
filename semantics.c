@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define REGEX_DECORATIONS_FILE "regex_decorations"
+#define REGEX_DECORATIONS_FILE "/Users/jhamm/compilers/pcomp/pcomp/regex_decorations"
 #define MACHID_START            37
 
 #define SEMSIGN_POS 0
@@ -331,11 +331,14 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     s.str_ = NULL;
     if(!token->stype) {
         res = idtable_lookup(parse->lex->idtable, token->lexeme);
-        if(res.is_found)
+        if(res.is_found) {
             s = res.tdat.type;
+            s.str_ = token->lexeme;
+        }
         else {
             s.type = ATTYPE_CODE;
             if((match = lex_matches(parse->lex, "addop", token->lexeme)).matched) {
+                puts("addop");
                 switch(match.attribute){
                     case LEXATTR_PLUS:
                         s.str_ = "+";
@@ -352,6 +355,7 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
                 }
             }
             else if((match = lex_matches(parse->lex, "mulop", token->lexeme)).matched) {
+                puts("mulop");
                 switch(match.attribute){
                     case LEXATTR_MULT:
                         s.str_ = "*";
@@ -372,6 +376,7 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
                 }
             }
             else if((match = lex_matches(parse->lex, "relop", token->lexeme)).matched) {
+                puts("relop");
                 switch(match.attribute) {
                     case LEXATTR_EQ:
                         s.str_ = "=";
@@ -397,28 +402,36 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
                 }
             }
             else if (!strcmp(token->lexeme, "integer")) {
+                puts("integer 1");
                 s.type = ATTYPE_ID;
                 s.str_ = "integer";
             }
             else if (!strcmp(token->lexeme, "real")) {
+                puts("real 1");
                 s.type = ATTYPE_ID;
                 s.str_ = "real";
             }
             else {
+                puts("id 1");
                 s.type = ATTYPE_ID;
                 s.str_ = token->lexeme;
             }
         }
     }
     else if(!strcmp(token->stype, "integer")) {
+        puts("integer");
+
         s.type = ATTYPE_NUMINT;
         s.int_ = safe_atol(token->lexeme);
     }
     else if(!strcmp(token->stype, "real")) {
+        puts("real");
+
         s.type = ATTYPE_NUMREAL;
         s.real_ = safe_atod(token->lexeme);
     }
     else {
+        puts("id");
         s.type = ATTYPE_ID;
         s.str_ = token->lexeme;
     }
@@ -951,6 +964,7 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             if (evaluate && params.ready) {
+                
                 get_semaction(id)(curr, NULL, pda, pn, parse, params, pass, &expression);
             }
             break;
@@ -1217,6 +1231,7 @@ sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pd
                 if (!strcmp(idsuffix.dot.id, "val") || !strcmp(idsuffix.dot.id, "entry")) {
                     pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
                     if(pnode && pnode->pass) {
+                        printf("pnode->matched: %s\n", pnode->matched->lexeme);
                         factor.value = sem_type_s_(parse, pnode->matched);
                         if(factor.value.type != ATTYPE_NOT_EVALUATED && factor.value.type != ATTYPE_NULL) {
                             print_semtype(factor.value);
@@ -1660,7 +1675,7 @@ void setatt(semantics_s *s, char *id, sem_type_s *data)
   //  printf("\n------------------INSERTING %s INTO %s %p %p  ", id, s->pda->nterm->lexeme, s->pda, data);
     
   //  assert(data->type != ATTYPE_VOID);
-    if(data->type != ATTYPE_NOT_EVALUATED && data->type != ATTYPE_NULL && data->type != ATTYPE_VOID) {
+    if(data->type != ATTYPE_NOT_EVALUATED && data->type != ATTYPE_NULL) {
         puts("Adding: ");
         print_semtype(*data);
         printf("\nto: %s with attribute: %s\n", s->n->token->lexeme, id);
@@ -1798,9 +1813,9 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     llist_s *node;
     sem_type_s *t, *id;
     
-    for(;;)printf("baaa");
-    if(pass > 2)
+    if(pass > 2) {
         return NULL;
+    }
     
     node = llpop(&params.pstack);
     t = node->ptr;
@@ -1809,6 +1824,9 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     node = llpop(&params.pstack);
     id = node->ptr;
     free(node);
+    
+    if(strlen(id->str_) > 100)
+        asm("hlt");
     
     printf("Adding Type %s of type ", id->str_);
     print_semtype(*t);

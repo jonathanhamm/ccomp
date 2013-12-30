@@ -242,7 +242,7 @@ extern idtable_s *idtable_s_ (void);
 extern int ntstrcmp (char *nterm, char *str);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
-extern void *idtable_insert (idtable_s *table, char *str, tdat_s tdat);
+extern void *idtable_insert(idtable_s *table, char *str, tdat_s tdat);
 extern void idtable_set(idtable_s *table, char *str, tdat_s tdat);
 extern tlookup_s idtable_lookup (idtable_s *table, char *str);
 extern int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype);

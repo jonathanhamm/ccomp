@@ -1201,7 +1201,7 @@ idtable_s *idtable_s_ (void)
     return table;
 }
 
-void *idtable_insert (idtable_s *table, char *str, tdat_s tdat)
+void *idtable_insert(idtable_s *table, char *str, tdat_s tdat)
 {
     return trie_insert(table, table->root, str, tdat);
 }
@@ -1452,7 +1452,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
     
     c[1] = '\0';
     backup = buf;
-    init_type.type = ATTYPE_NULL;
+    init_type.type = ATTYPE_VOID;
     if (listing && *buf != EOF) {
         addline(&lex->listing, buf);
         lineno++;
@@ -1700,7 +1700,7 @@ regex_match_s lex_matches(lex_s *lex, char *machid, char *str)
     
     for(m = lex->machs; m; m = m->next) {
         if(!ntstrcmp(m->nterm->lexeme, machid)) {
-            match = nfa_match (lex, m->nfa, m->nfa->start, str, &dummy);
+            match = nfa_match(lex, m->nfa, m->nfa->start, str, &dummy);
             return (regex_match_s){.matched = match.success, .attribute = match.attribute};
         }
             

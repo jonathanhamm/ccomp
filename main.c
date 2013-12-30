@@ -67,7 +67,7 @@ static const char **argparse_word (argtok_s **curr, files_s *parent);
 
 static void print_usage (const char *message, const char *curr);
 
-int main (int argc, const char *argv[])
+int main(int argc, const char *argv[])
 {
     files_s files;
     argtok_s *list;
