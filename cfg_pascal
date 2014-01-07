@@ -16,7 +16,7 @@
 	{}
 	|
 	ε
-	
+
 <dec> ->
 	<subprogram_declarations>
 	|
@@ -144,11 +144,25 @@
 	ε
 	
 <variable> ->
-	id <variable'>
+	id <variable'> 
+    {
+        if <variable'>.type <> void then
+        
+        else
+            <variable>.type := lookup(id)
+        fi
+    }
 <variable'> ->
 	\[ <expression> \]
+    {
+        <variable'>.type := <expression>.type
+        <variable'>.val := <expression>.val
+    }
 	|
 	ε
+    {
+        <variable'>.type := void
+    }
 
 <procedure_statement> ->
 	call id <procedure_statement'>
@@ -210,14 +224,14 @@
             <simple_expression'>.type := integer
         elif (<simple_expression'>.in = integer) and (<term>.type = real) then
             halt()
-            <simple_expression'>[i].in := real
+            <simple_expression'>[1].in := real
             <simple_expression'>.type := real
         elif (<simple_expression'>.in = real ) and (<term>.type = integer) then
             halt()
-             <simple_expression'>[i].in := real
+             <simple_expression'>[1].in := real
             <simple_expression'>.type := real
-        else 
-            print("type error")
+        elif (<simple_expression'>.in = real) and (<term>.type = real) then
+            <simple_expression'>[1].in := real
         fi
         if <simple_expression'>[1].type <> void then
             <simple_expression'>.type := <simple_expression'>[1].type
