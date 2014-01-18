@@ -975,8 +975,8 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
                         child_in = llremove_(&child_inll, find_in, pnode);
                         if(child_in) {
                             printf("----------------------------------Printing for: %s\n", pda->nterm->lexeme);
-                            print_hash(child_in->table, print_pnode_hash);
-                            puts("\n--\n");
+                            //print_hash(child_in->table, print_pnode_hash);
+                           // puts("\n--\n");
                             //print_pnode_hash
                         }
                         pcp->curr->syn = nonterm(parse, child_in, pnode, machs, curr, nterm, result);

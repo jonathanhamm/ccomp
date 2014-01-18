@@ -762,7 +762,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
                 return (exp__s){.op = OP_UNION, .nfa = prx_expression(lex, curr, unfa, concat)};
             default:
                 *curr = (*curr)->next;
-                printf("Syntax Error line %u: Expected '(' , terminal, or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                fprintf(stderr, "Syntax Error line %u: Expected '(' , terminal, or nonterminal, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
                 assert(false);
                 /* make compiler happy */
                 return (exp__s){.op = -1, .nfa = NULL};
@@ -876,7 +876,7 @@ nfa_s *prx_cclass (lex_s *lex, token_s **curr)
     nfa_node_s *n1, *n2;
     nfa_edge_s *edge, *e1, *e2;
     bool negate = false;
-    
+
     class = nfa_();
     class->start = nfa_node_s_();
     class->final = nfa_node_s_();
