@@ -948,7 +948,7 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
             sem_match(curr, SEMTYPE_THEN);
             test = test_semtype(expression.value);
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, test, false);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, test && evaluate, false);
             sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test);
             break;
         case SEMTYPE_ID:
@@ -958,7 +958,6 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             if (evaluate && params.ready) {
-                
                 get_semaction(id)(curr, NULL, pda, pn, parse, params, pass, &expression);
             }
             break;

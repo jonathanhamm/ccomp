@@ -221,6 +221,7 @@
         elif (<simple_expression'>.in = real ) and (<term>.type = integer) then
              <simple_expression'>[1].in := real
             <simple_expression'>.type := real
+            print("Case Hit!")
         elif (<simple_expression'>.in = real) and (<term>.type = real) then
             <simple_expression'>[1].in := real
         else
