@@ -103,6 +103,7 @@ typedef struct sem_paramlist_s sem_paramlist_s;
 typedef struct sem_paramlist__s sem_paramlist__s;
 typedef struct sem_sign_s sem_sign_s;
 typedef struct ftable_s ftable_s;
+typedef struct test_s test_s;
 
 typedef void *(*sem_action_f)(token_s **, semantics_s *, pda_s *, pna_s *, parse_s *, sem_paramlist_s, unsigned , void *);
 
@@ -232,8 +233,14 @@ struct ftable_s
     sem_action_f action;
 };
 
+struct test_s
+{
+    bool evaluated;
+    bool result;
+};
+
 static sem_type_s sem_type_s_(parse_s *parse, token_s *token);
-static bool test_semtype(sem_type_s value);
+static test_s test_semtype(sem_type_s value);
 static inline unsigned toaddop(unsigned val);
 static inline unsigned tomulop(unsigned val);
 static inline unsigned torelop(unsigned val);
@@ -241,10 +248,10 @@ static pnode_s *getpnode_token(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm_copy(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index);
 static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
-static sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate, bool elprev);
-static sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate, bool elprev);
-static sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate, bool elprev);
-static sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate, bool elprev);
+static sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev);
+static sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev);
+static sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev);
+static sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev);
 static sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il,  pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass);
 static sem_expression__s sem_expression_ (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass);
 static sem_simple_expression_s sem_simple_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass);
@@ -328,6 +335,8 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     
     printf("Not SType:\n");
     s.str_ = NULL;
+    s.low = 0 ;
+    s.high = 0;
     if(!token->stype) {
         res = idtable_lookup(parse->lex->idtable, token->lexeme);
         if(res.is_found) {
@@ -473,11 +482,11 @@ void print_semtype(sem_type_s value)
     puts("\n~~~~~~~~~~~~~~~\n");
 }
 
-bool test_semtype(sem_type_s value)
+test_s test_semtype(sem_type_s value)
 {
     if(value.type == ATTYPE_NOT_EVALUATED || value.type == ATTYPE_NULL)
-        return false;
-    return value.int_ || value.real_ || value.str_;
+        return (test_s){.evaluated = false, .result = false};
+    return (test_s){.evaluated = true, .result = value.int_ || value.real_ || value.str_};
 }
 
 semantics_s *semantics_s_(parse_s *parse, mach_s *machs)
@@ -801,7 +810,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             result.int_ = 0;
             if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID || v1.type == ATTYPE_VOID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID || v2.type == ATTYPE_VOID)) {
                 printf("testing string or code type\n");
-                result.int_ = !strcmp(v1.str_, v2.str_);
+                result.int_ = !strcmp(v1.str_, v2.str_) && (v1.low == v2.low && v1.high == v2.high);
                 printf("Tested: %s and %s and got result %ld\n", v1.str_, v2.str_, result.int_);
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
@@ -819,7 +828,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID || v1.type == ATTYPE_VOID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID || v2.type == ATTYPE_VOID)) {
                 printf("testing string or code type\n");
              //   assert(strcmp("void", v1.str_) && strcmp("void", v2.str_));
-                result.int_ = !!strcmp(v1.str_, v2.str_);
+                result.int_ = !!strcmp(v1.str_, v2.str_) && !(v1.low == v2.low && v1.high == v2.high);
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ != v2.int_;
@@ -869,7 +878,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     return result;
 }
 
-llist_s *sem_start (semantics_s *in, parse_s *parse, mach_s *machs, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
+llist_s *sem_start(semantics_s *in, parse_s *parse, mach_s *machs, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
 {
     token_s *iter = prod->annot;
     llist_s *ilist = NULL;
@@ -877,11 +886,11 @@ llist_s *sem_start (semantics_s *in, parse_s *parse, mach_s *machs, pda_s *pda, 
     if(!iter)
         return NULL;
     
-    sem_statements(parse, &iter, &ilist, pda, prod, pn, syn, pass, true, false);
+    sem_statements(parse, &iter, &ilist, pda, prod, pn, syn, pass, (test_s){true, true}, false);
     return ilist;
 }
 
-sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate, bool elprev)
+sem_statements_s sem_statements(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_IF:
@@ -901,7 +910,7 @@ sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, p
     }
 }
 
-sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate, bool elprev)
+sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev)
 {
     pnode_s *p;
     char *id, *nterm;
@@ -910,7 +919,7 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
     sem_idsuffix_s idsuffix;
     sem_paramlist_s params;
     semantics_s *in = NULL;
-    bool test;
+    test_s test;
     
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
@@ -921,7 +930,7 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             id = idsuffix.dot.id;
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
-            if (evaluate && expression.value.type != ATTYPE_NOT_EVALUATED) {
+            if (evaluate.result && evaluate.evaluated && expression.value.type != ATTYPE_NOT_EVALUATED) {
 
                 if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
                     if(syn) {
@@ -948,8 +957,8 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
             sem_match(curr, SEMTYPE_THEN);
             test = test_semtype(expression.value);
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, test && evaluate, false);
-            sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = test.result && evaluate.result}, false);
+            sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test.result);
             break;
         case SEMTYPE_ID:
             id = (*curr)->lexeme;
@@ -957,7 +966,7 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
             sem_match(curr, SEMTYPE_OPENPAREN);
             params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
-            if (evaluate && params.ready) {
+            if (evaluate.result && evaluate.evaluated && params.ready) {
                 get_semaction(id)(curr, NULL, pda, pn, parse, params, pass, &expression);
             }
             break;
@@ -968,12 +977,12 @@ sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda
     }
 }
 
-sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate, bool elprev)
+sem_else_s sem_else(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && !elprev, false);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated, .result = evaluate.result && !elprev}, false);
             sem_match(curr, SEMTYPE_FI);
             break;
         case SEMTYPE_FI:
@@ -989,17 +998,17 @@ sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, p
     }
 }
 
-sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool evaluate, bool elprev)
+sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev)
 {
-    bool test;
+    test_s test;
     sem_expression_s expression;
     
     sem_match(curr, SEMTYPE_ELIF);
     expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
     sem_match(curr, SEMTYPE_THEN);
     test = test_semtype(expression.value);
-    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate && test && !elprev, false);
-    sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test || elprev);
+    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result && test.result && !elprev}, false);
+    sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated, .result = evaluate.result}, test.result || elprev);
 }
 
 sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
