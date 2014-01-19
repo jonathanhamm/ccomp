@@ -150,6 +150,12 @@
     {
         <variable'>.type := <expression>.type
         <variable'>.val := <expression>.val
+        if <expression>.type = integer then
+
+        else
+            print("type error")
+            halt()
+        fi
     }
 	|
 	ε
@@ -175,6 +181,7 @@
 	<simple_expression> <expression'>
     { 
         <expression'>.in := <simple_expression>.type
+        <expression>.type := <simple_expression>.type
         if <expression'>.type <> void then
             <expression>.type := <expression'>.type
         fi
@@ -278,7 +285,12 @@
 	id <factor'>
     {
         <factor>.type := lookup(id)
-        print(<factor>.type)
+        if <factor'>.type = integer then
+
+        elif <factor'>.type <> void then
+            print("Type Error")
+            halt()
+        fi
     }
 	|
 	num
@@ -303,12 +315,6 @@
 	\[ <expression> \]
     {
         <factor'>.type := <expression>.type
-        if <expression>.type <> null then
-            print("printing: ", <expression>.type)
-        fi
-        if <expression>.type <> void then
-            halt()
-        fi
     }
 	|
 	ε

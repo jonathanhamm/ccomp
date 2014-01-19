@@ -214,6 +214,8 @@ struct sem_idsuffix_s
     sem_dot_s dot;
     bool hasparam;
     sem_paramlist_s params;
+    bool hasmap;
+    sem_type_s map;
 };
 
 struct sem_sign_s
@@ -810,8 +812,8 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             result.int_ = 0;
             if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID || v1.type == ATTYPE_VOID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID || v2.type == ATTYPE_VOID)) {
                 printf("testing string or code type\n");
-                result.int_ = !strcmp(v1.str_, v2.str_) && (v1.low == v2.low && v1.high == v2.high);
-                printf("Tested: %s and %s and got result %ld\n", v1.str_, v2.str_, result.int_);
+                result.int_ = !strcmp(v1.str_, v2.str_);
+                printf("Tested: %s and %s and %ld %ld %ld %ld got result %ld\n", v1.str_, v2.str_, v1.low, v1.high, v2.low, v2.high, result.int_);
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ == v2.int_;
@@ -819,6 +821,9 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.int_ == v2.real_;
             else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.real_ == v2.int_;
+            else if(v1.type == ATTYPE_ARRAY || v2.type == ATTYPE_ARRAY) {
+                result.int_ = (v2.type == ATTYPE_ARRAY && v1.low == v2.low && v1.high == v2.high);
+            }
             else
                 result.int_ = v1.real_ == v2.real_;
             break;
@@ -828,14 +833,16 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID || v1.type == ATTYPE_VOID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID || v2.type == ATTYPE_VOID)) {
                 printf("testing string or code type\n");
              //   assert(strcmp("void", v1.str_) && strcmp("void", v2.str_));
-                result.int_ = !!strcmp(v1.str_, v2.str_) && !(v1.low == v2.low && v1.high == v2.high);
+                result.int_ = !!strcmp(v1.str_, v2.str_);
             }
-            else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
+            else if(v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ != v2.int_;
-            else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
+            else if(v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMREAL)
                 result.int_ = v1.int_ != v2.real_;
-            else if (v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
+            else if(v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.real_ != v2.int_;
+            else if(v1.type == ATTYPE_ARRAY || v2.type == ATTYPE_ARRAY)
+                result.int_ = !(v2.type == ATTYPE_ARRAY && v1.low == v2.low && v1.high == v2.high);
             else
                 result.int_ = v1.real_ != v2.real_;
             break;
@@ -1305,8 +1312,6 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                         }
                         
                         factor.value = getatt(pnode->syn, idsuffix.dot.id);
-                        if(derp && factor.value.type != ATTYPE_NOT_EVALUATED)
-                            asm("hlt");
                     }
                     if(factor.value.type == ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, pnode);
@@ -1435,10 +1440,12 @@ sem_idsuffix_s sem_idsuffix (parse_s *parse, token_s **curr, llist_s **il, pda_s
             idsuffix.factor_ = sem_factor_(parse, curr, il, pn, syn, pass);
             idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass);
             idsuffix.hasparam = false;
+            idsuffix.hasmap = false;
             break;
         case SEMTYPE_OPENPAREN:
             *curr = (*curr)->next;
             idsuffix.hasparam = true;
+            idsuffix.hasmap = false;
             idsuffix.params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass);
             idsuffix.factor_.index = 1;
             idsuffix.dot.id = NULL;
@@ -1451,6 +1458,13 @@ sem_idsuffix_s sem_idsuffix (parse_s *parse, token_s **curr, llist_s **il, pda_s
             idsuffix.factor_.index = 1;
             idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass);
             idsuffix.hasparam = false;
+            idsuffix.hasmap = false;
+            break;
+        case SEMTYPE_MAP:
+            *curr = (*curr)->next;
+            idsuffix.hasmap = true;
+            idsuffix.hasparam = false;
+            
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected , ] [ * / + - = < > <> <= >= fi else then if . nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);

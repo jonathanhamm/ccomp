@@ -76,6 +76,8 @@
 <idsuffix> ->
     <factor'> <dot>
     |
+    map id
+    |
     \( <paramlist> \)
     |
     \[ <expression> \] <dot>
