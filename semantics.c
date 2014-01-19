@@ -414,6 +414,7 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
             else if (!strcmp(token->lexeme, "integer")) {
                 puts("integer 1");
                 s.type = ATTYPE_ID;
+            
                 s.str_ = "integer";
             }
             else if (!strcmp(token->lexeme, "real")) {
@@ -430,13 +431,13 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     }
     else if(!strcmp(token->stype, "integer")) {
         puts("integer");
-        s.type = ATTYPE_NUMINT;
-        s.int_ = safe_atol(token->lexeme);
+        s.type = ATTYPE_ID;
+        s.str_ = "integer";
     }
     else if(!strcmp(token->stype, "real")) {
         puts("real");
-        s.type = ATTYPE_NUMREAL;
-        s.real_ = safe_atod(token->lexeme);
+        s.type = ATTYPE_ID;
+        s.str_ = "real";
     }
     else {
         puts("id");

@@ -296,9 +296,6 @@
 	num
     { 
         <factor>.type := num.type
-        if <factor>.type <> null then 
-            print(num.type)
-        fi
     }
 	|
 	\( <expression> \)
