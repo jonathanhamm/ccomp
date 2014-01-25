@@ -1452,7 +1452,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
     
     c[1] = '\0';
     backup = buf;
-    init_type.type = ATTYPE_VOID;
+    init_type.type = ATTYPE_NULL;
     if (listing && *buf != EOF) {
         addline(&lex->listing, buf);
         lineno++;
@@ -1631,8 +1631,12 @@ void settype(lex_s *lex, char *id, sem_type_s type)
 sem_type_s gettype(lex_s *lex, char *id)
 {
     tdat_s tdat;
+    tlookup_s tlook;
     
-    tdat = idtable_lookup(lex->idtable, id).tdat;
+    
+    tlook = idtable_lookup(lex->idtable, id);
+    
+    tdat = tlook.tdat;
     return tdat.type;
 }
 

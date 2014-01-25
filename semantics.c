@@ -1242,6 +1242,7 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
 
 sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
 {
+    char strtype;
     token_s *id;
     pnode_s *pnode, *ptmp;
     semantics_s *in;
@@ -1260,7 +1261,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval);
             //attadd (semantics_s *s, char *id, sem_type_s *data)
             if (idsuffix.dot.id) {
-                if (!strcmp(idsuffix.dot.id, "val") || !strcmp(idsuffix.dot.id, "entry")) {
+                if (!strcmp(idsuffix.dot.id, "entry")) {
                     pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
                     if(pnode && pnode->pass) {
                         printf("pnode->matched: %s\n", pnode->matched->lexeme);
@@ -1282,6 +1283,19 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                         }
                     }
 
+                }
+                else if (!strcmp(idsuffix.dot.id, "val")) {
+                    pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
+                    if(pnode->matched->stype) {
+                        if(!strcmp(pnode->matched->stype, "integer")) {
+                            factor.value.type = ATTYPE_NUMINT;
+                            factor.value.int_ = safe_atol(pnode->matched->lexeme);
+                        }
+                        else if(!strcmp(pnode->matched->stype, "real")) {
+                            factor.value.type = ATTYPE_NUMREAL;
+                            factor.value.real_ = safe_atod(pnode->matched->lexeme);
+                        }
+                    }
                 }
                 else if(!strcmp(idsuffix.dot.id, "type")) {
                     ptmp = getpnode_token(pn, id->lexeme, 1);
@@ -1321,20 +1335,19 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                     if(pn->curr) {
                         factor.value = getatt(pn->curr->in, idsuffix.dot.id);
                         if(factor.value.type == ATTYPE_NOT_EVALUATED) {
-                            
+
                             factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
                         }
                     }
+                    else {
+                        factor.value.type = ATTYPE_NOT_EVALUATED;
+                    }
+
                 }
                 else {
                     factor.value.type = ATTYPE_NOT_EVALUATED;
                     pnode = getpnode_token(pn, factor.value.str_, idsuffix.factor_.index);
                     if(pnode) {
-                        int derp = 0;
-                        if(factor.value.str_ && !strcmp("<expression>", factor.value.str_) && !strcmp("<factor'>", pda->nterm->lexeme) && pnode->syn) {
-                            derp = 1;
-                        }
-                        
                         factor.value = getatt(pnode->syn, idsuffix.dot.id);
                     }
                     if(factor.value.type == ATTYPE_NOT_EVALUATED) {
@@ -1342,6 +1355,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                         factor.value = getatt(in, idsuffix.dot.id);
                     }
                 }
+
             }
             break;
         case SEMTYPE_NUM:
@@ -1867,6 +1881,9 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     
     puts("~~~~~In print");
     
+    if(!(params.ready && eval))
+        return NULL;
+    
     llreverse(&params.pstack);
     while (params.pstack) {
         node = llpop(&params.pstack);
@@ -1882,16 +1899,15 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     printf("exiting sem print\n");
     return NULL;
 }
-static int bobb;
 
 void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval)
 {
     llist_s *node;
+    pnode_s *pnode;
     sem_type_s *t, *id;
-        
-    if(pass > 2) {
+    
+    if(!(params.ready && eval))
         return NULL;
-    }
     
     node = llpop(&params.pstack);
     t = node->ptr;
@@ -1901,14 +1917,10 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     id = node->ptr;
     free(node);
     
-    printf("Adding Type %s of type ", id->str_);
+    pnode = getpnode_nterm_copy(pn, id->str_, 1);
     print_semtype(*t);
     putchar('\n');
-    settype(p->lex, id->str_, *t);
-   // if(bobb > 10)
-     //   assert(false);
-
-    ++bobb;
+    settype(p->lex, pnode->matched->lexeme, *t);
     return NULL;
 }
 

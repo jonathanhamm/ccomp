@@ -35,12 +35,13 @@
 <declarations> ->
 	var id : <type> ; <declarations'> 
     {
-        addtype(id.entry, <type>.type)
+        addtype(id, <type>.type)
+
     }
 <declarations'> ->
 	var id : <type> ; <declarations'>
     {
-        addtype(id.entry, <type>.type)
+        addtype(id, <type>.type)
     }
 	|
 	ε
@@ -260,6 +261,8 @@
 <term'> ->
         mulop <factor> <term'>
         {
+            <factor>.bob := true
+
             if (<term'>.in = integer) and (<factor>.type = integer) then
                 <term'>[1].in := integer
                 <term'>.type := integer
@@ -269,13 +272,15 @@
             elif (<term'>.in = real ) and (<factor>.type = integer) then
                 <term'>[i].in := real
                 <term'>.type := real
+            else
+                print("type error")
+                halt()
             fi
+
             if <term'>[1].type <> void then
                 <term'>.type := <term'>[1].type
-            else
-                <term'>.type := <term'>.in
+                print(<term'>[1].type)
             fi
-            
 
         }
         |
@@ -299,7 +304,6 @@
 	num
     {
         <factor>.type := num.type
-        <factor>.hitnum := true
     }
 	|
 	\( <expression> \)
