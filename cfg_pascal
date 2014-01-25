@@ -122,7 +122,12 @@
 	ε
 
 <statement> ->
-	<variable> assignop <expression>
+	<variable> assignop <expression> 
+    {
+        if <variable>.type = integer then
+            print(<variable>.type)
+        fi
+    }
 	|
 	<procedure_statement>
 	|
@@ -139,23 +144,20 @@
 <variable> ->
 	id <variable'> 
     {
-        if <variable'>.type <> void then
-        
-        else
+        if <variable'>.type = integer then
+            <variable>.type := getarray(id)
+        elif <variable'>.type = void then
             <variable>.type := lookup(id)
+        else
+            error(id, "Non-integer type used in array index")
         fi
+
     }
 <variable'> ->
 	\[ <expression> \]
     {
         <variable'>.type := <expression>.type
         <variable'>.val := <expression>.val
-        if <expression>.type = integer then
-
-        else
-            print("type error")
-            halt()
-        fi
     }
 	|
 	ε
@@ -253,7 +255,7 @@
         <term'>.in := <factor>.type
         if <term'>.type <> void then
             <term>.type := <term'>.type
-        fi        
+        fi
 	}
 <term'> ->
         mulop <factor> <term'>
@@ -290,8 +292,7 @@
         elif <factor'>.type = void then
             <factor>.type := lookup(id)
         else
-            print("Type Error")
-            halt()
+            error(id, "Non-integer type used in array index")
         fi
     }
 	|
