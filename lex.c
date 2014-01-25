@@ -1028,7 +1028,7 @@ void prxa_assignment(token_s **curr, nfa_edge_s *edge)
 {
     prxa_expression_s val;
     char *str;
-    
+
     if (ISANNOTATE(curr)) {
 
         if ((*curr)->type.attribute == LEXATTR_FAKEEOF) {

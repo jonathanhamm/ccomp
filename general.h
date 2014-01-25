@@ -141,9 +141,11 @@ extern void print_hash(hash_s *hash, void (*callback)(void *, void *));
 
 extern inline linetable_s *linetable_s_(void);
 extern void addline(linetable_s **linelist_ptr, char *line);
-extern void adderror(linetable_s *linelist, char *message, unsigned lineno);
+extern void adderror(linetable_s *listing, char *message, unsigned lineno);
+extern bool check_listing(linetable_s *listing, unsigned lineno, char *str);
 
 extern void print_listing(linetable_s *table, void *stream);
+extern bool check_listing(linetable_s *table, unsigned lineno, char *str);
 extern void free_listing(linetable_s *table);
 
 extern bool is_allocated (const void *ptr);

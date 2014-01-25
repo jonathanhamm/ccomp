@@ -486,6 +486,21 @@ void adderror(linetable_s *linelist, char *message, unsigned lineno)
     linelist->table[lineno].tail = n;
 }
 
+bool check_listing(linetable_s *linelist, unsigned lineno, char *str)
+{
+    llist_s *list;
+    
+    assert(lineno <= linelist->nlines);
+    
+    list = linelist->table[--lineno].errors;
+    while(list) {
+        if(!strcmp(list->ptr, str))
+            return true;
+        list = list->next;
+    }
+    return false;
+}
+
 void print_listing(linetable_s *table, void *stream)
 {
     unsigned i;

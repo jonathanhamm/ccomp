@@ -47,6 +47,9 @@
 #define ATTYPE_GE   4
 #define ATTYPE_G    5
 
+#define TYPE_ERROR_PREFIX "      --Type Error at line %u: "
+#define TYPE_ERROR_SUFFIX " at token %s"
+
 #define FTABLE_SIZE (sizeof(ftable) / sizeof(ftable[0]))
 
 enum semantic_types_ {
@@ -277,6 +280,7 @@ static sem_type_s getatt(semantics_s *s, char *id);
 static void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *fill);
 static void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill);
 static void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill);
+static void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill);
 static void *sem_gettype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill);
 static void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill);
 static void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill);
@@ -288,6 +292,8 @@ static char *sem_tostring(sem_type_s type);
 static char *semstr_concat(char *base, sem_type_s val);
 static void set_type(semantics_s *s, char *id, sem_type_s type);
 static sem_type_s get_type(semantics_s *s, char *id);
+static char *make_semerror(unsigned lineno, char *lexeme, char *message);
+static void add_semerror(parse_s *p, token_s *t, char *message);
 
 void print_semtype(sem_type_s value);
 
@@ -297,6 +303,7 @@ static ftable_s ftable[] = {
     {"array", (sem_action_f)sem_array},
     {"emit", sem_emit},
     {"error", sem_error},
+    {"getarray", sem_getarray},
     {"gettype", sem_gettype},
     {"halt", sem_halt},
     {"lookup", sem_lookup},
@@ -929,6 +936,8 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
     semantics_s *in = NULL;
     test_s test;
     
+    static int bob = 0;
+    
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
             nterm = (*curr)->lexeme;
@@ -938,15 +947,25 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             id = idsuffix.dot.id;
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass);
+            printf("bool: %u %u %u %u\n", evaluate.result, evaluate.evaluated, expression.value.type, ATTYPE_NOT_EVALUATED);
             if (evaluate.result && evaluate.evaluated && expression.value.type != ATTYPE_NOT_EVALUATED) {
-
+                puts("evaluating");
                 if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
+                    printf("testing syn for: %s and trying to assign\n", pda->nterm->lexeme);
+                    print_semtype(expression.value);
+                    printf("To: %s\n", id);
+                    if(!strcmp(id, "type") && !strcmp(pda->nterm->lexeme, "<factor>") && !syn) {
+                        //asm("hlt");
+                        bob = 1;
+                    }
                     if(syn) {
+                        puts("Setting Synthesized attribute");
                         setatt(syn, id, alloc_semt(expression.value));
                     }
                 }
                 else {
                     /* Setting inherited attributes */
+                    puts("setting inherited attributes");
                     p = getpnode_nterm(prod, nterm, index);
                     if(p && expression.value.type != ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, p);
@@ -975,7 +994,11 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             if (evaluate.result && evaluate.evaluated && params.ready) {
-                get_semaction(id)(curr, NULL, pda, pn, parse, params, pass, &expression);
+                if(bob && get_semaction(id) == sem_halt) {
+                    puts("about to call halt");
+                   // asm("hlt");
+                }
+                    get_semaction(id)(curr, NULL, pda, pn, parse, params, pass, &expression);
             }
             break;
         default:
@@ -1019,7 +1042,7 @@ sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated, .result = evaluate.result}, test.result || elprev);
 }
 
-sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
+sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
 {
     sem_expression_s expression;
     sem_expression__s expression_;
@@ -1044,7 +1067,7 @@ sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il, p
     return expression;
 }
 
-sem_expression__s sem_expression_ (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
+sem_expression__s sem_expression_(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
 {
     sem_expression__s expression_;
     
@@ -1078,7 +1101,7 @@ sem_expression__s sem_expression_ (parse_s *parse, token_s **curr, llist_s **il,
     return expression_;
 }
 
-sem_simple_expression_s sem_simple_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
+sem_simple_expression_s sem_simple_expression(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
 {
     sem_sign_s sign;
     sem_simple_expression_s simple_expression;
@@ -1298,8 +1321,8 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                     if(pn->curr) {
                         factor.value = getatt(pn->curr->in, idsuffix.dot.id);
                         if(factor.value.type == ATTYPE_NOT_EVALUATED) {
+                            
                             factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
-                        
                         }
                     }
                 }
@@ -1415,7 +1438,7 @@ sem_factor__s sem_factor_(parse_s *parse, token_s **curr, llist_s **il, pna_s *p
     return factor_;
 }
 
-sem_idsuffix_s sem_idsuffix (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
+sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
 {
     sem_expression_s expression;
     sem_idsuffix_s idsuffix;
@@ -1465,7 +1488,6 @@ sem_idsuffix_s sem_idsuffix (parse_s *parse, token_s **curr, llist_s **il, pda_s
             *curr = (*curr)->next;
             idsuffix.hasmap = true;
             idsuffix.hasparam = false;
-            
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected , ] [ * / + - = < > <> <= >= fi else then if . nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -1603,7 +1625,7 @@ sem_paramlist_s sem_paramlist(parse_s *parse, token_s **curr, llist_s **il, pda_
     return paramlist;
 }
 
-void sem_paramlist_ (parse_s *parse, token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
+void sem_paramlist_(parse_s *parse, token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
 {
     sem_expression_s expression;
     
@@ -1737,14 +1759,37 @@ void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     return val1;
 }
 
-void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, void *fill)
+void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill)
 {
     printf("Emit Called\n");
 }
 
-void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, void *fill)
+void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill)
 {
-    fprintf(stderr, "Type Error\n");
+    adderror(parse->listing, "Type Error", pn->curr->matched->lineno);
+}
+
+void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill)
+{
+    pnode_s *p;
+    llist_s *node;
+    sem_type_s *val, type;
+        
+    if(params.ready) {
+        node = llpop(&params.pstack);
+        val = node->ptr;
+        free(node);
+        
+        p = getpnode_nterm_copy(pn, val->str_, 1);
+        type = gettype(parse->lex, p->matched->lexeme);
+        
+        if(type.type == ATTYPE_ARRAY)
+            type.type = ATTYPE_ID;
+        else {
+            add_semerror(parse, p->matched, "attempt to index non-array identifier");
+        }
+    }
+    return alloc_semt(type);
 }
 
 void *sem_gettype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill)
@@ -1790,6 +1835,7 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
             // assert(false);
         }
         printf("Got Type: ");
+        print_semtype(type);
         return alloc_semt(type);
     }
     return NULL;
@@ -1939,4 +1985,30 @@ semantics_s *get_il(llist_s *l, pnode_s *p)
         l = l->next;
     }
     return NULL;
+}
+
+char *make_semerror(unsigned lineno, char *lexeme, char *message)
+{
+    char *msg;
+    size_t stlenl = strlen(lexeme);
+    size_t stlenm = strlen(message);
+    
+    msg = malloc(sizeof(TYPE_ERROR_PREFIX) + sizeof(TYPE_ERROR_SUFFIX) + FS_INTWIDTH_DEC(lineno) + stlenl + stlenm - 1);
+    if(!msg) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    sprintf(msg, TYPE_ERROR_PREFIX "%s" TYPE_ERROR_SUFFIX, lineno, message, lexeme);
+    msg[sizeof(TYPE_ERROR_PREFIX) + sizeof(TYPE_ERROR_SUFFIX) + FS_INTWIDTH_DEC(lineno) + stlenl + stlenm - 2] = '\n';
+    return msg;
+}
+
+void add_semerror(parse_s *p, token_s *t, char *message)
+{
+    char *err = make_semerror(t->lineno, t->lexeme, message);
+    
+    if(check_listing(p->listing, t->lineno, err))
+        free(err);
+    else
+        adderror(p->listing, err, t->lineno);
 }

@@ -115,7 +115,7 @@ void printpda(pda_s *start)
     }
 }
 
-parse_s *build_parse (const char *file, lextok_s lextok)
+parse_s *build_parse(const char *file, lextok_s lextok)
 {
     lex_s *semantics;
     parse_s *parse;
@@ -152,7 +152,7 @@ parse_s *build_parse (const char *file, lextok_s lextok)
     return parse;
 }
 
-void match_phase (lextok_s regex, token_s *cfg)
+void match_phase(lextok_s regex, token_s *cfg)
 {
     toktype_s type;
     mach_s *idmach = NULL;
@@ -230,7 +230,7 @@ pda_s *pda_(token_s *token)
     return pda;
 }
 
-production_s *addproduction (pda_s *pda)
+production_s *addproduction(pda_s *pda)
 {
     if (pda->productions)
         pda->productions = realloc(pda->productions, sizeof(*pda->productions)*(pda->nproductions + 1));
@@ -260,13 +260,13 @@ pnode_s *pnode_(token_s *token)
     return pnode;
 }
 
-void pp_start (parse_s *parse, token_s **curr)
+void pp_start(parse_s *parse, token_s **curr)
 {
     pp_nonterminal(parse, curr);
     pp_nonterminals(parse, curr);
 }
 
-void pp_nonterminal (parse_s *parse, token_s **curr)
+void pp_nonterminal(parse_s *parse, token_s **curr)
 {
     pda_s *pda = NULL;
     
@@ -295,7 +295,7 @@ void pp_nonterminal (parse_s *parse, token_s **curr)
     }
 }
 
-void pp_nonterminals (parse_s *parse, token_s **curr)
+void pp_nonterminals(parse_s *parse, token_s **curr)
 {    
     switch ((*curr)->type.val) {
         case LEXTYPE_EOL:
@@ -312,7 +312,7 @@ void pp_nonterminals (parse_s *parse, token_s **curr)
     }
 }
 
-void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
+void pp_production(parse_s *parse, token_s **curr, pda_s *pda)
 {
     pnode_s *token;
     production_s *production = NULL;
@@ -337,7 +337,7 @@ void pp_production (parse_s *parse, token_s **curr, pda_s *pda)
     }
 }
 
-void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
+void pp_productions(parse_s *parse, token_s **curr, pda_s *pda)
 {    
     switch ((*curr)->type.val) {
         case LEXTYPE_UNION:
@@ -357,7 +357,7 @@ void pp_productions (parse_s *parse, token_s **curr, pda_s *pda)
     }
 }
 
-pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda, int *count)
+pnode_s *pp_tokens(parse_s *parse, token_s **curr, pda_s *pda, int *count)
 {
     pnode_s *pnode = NULL, *token;
     
@@ -388,7 +388,7 @@ pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda, int *count)
     return pnode;
 }
 
-void pp_decoration (parse_s *parse, token_s **curr, production_s *prod)
+void pp_decoration(parse_s *parse, token_s **curr, production_s *prod)
 {
     switch ((*curr)->type.val) {
         case LEXTYPE_ANNOTATE:
@@ -411,7 +411,7 @@ void pp_decoration (parse_s *parse, token_s **curr, production_s *prod)
     }
 }
 
-ffnode_s *makeffnode (token_s *token, uint16_t prod)
+ffnode_s *makeffnode(token_s *token, uint16_t prod)
 {
     ffnode_s *ffnode;
     
@@ -425,12 +425,12 @@ ffnode_s *makeffnode (token_s *token, uint16_t prod)
     return ffnode;
 }
 
-bool isespsilon (production_s *production)
+bool isespsilon(production_s *production)
 {
     return production->start->token->type.val == LEXTYPE_EPSILON && !production->start->next;
 }
 
-bool hasepsilon (parse_s *parser, pnode_s *nonterm)
+bool hasepsilon(parse_s *parser, pnode_s *nonterm)
 {
     pda_s *pda;
     uint16_t i;
@@ -446,7 +446,7 @@ bool hasepsilon (parse_s *parser, pnode_s *nonterm)
     return false;
 }
 
-llist_s *clone_firsts (llist_s *firsts, int production)
+llist_s *clone_firsts(llist_s *firsts, int production)
 {
     llist_s *new = NULL, *start = NULL;
     
@@ -468,7 +468,7 @@ llist_s *clone_firsts (llist_s *firsts, int production)
 }
 
 
-llist_s *getfirsts (parse_s *parser, pda_s *pda)
+llist_s *getfirsts(parse_s *parser, pda_s *pda)
 {
     uint16_t i;
     pda_s *tmp;
@@ -973,12 +973,6 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
                         pcp->curr = &pcp->array[i];
                         child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass);
                         child_in = llremove_(&child_inll, find_in, pnode);
-                        if(child_in) {
-                            printf("----------------------------------Printing for: %s\n", pda->nterm->lexeme);
-                            //print_hash(child_in->table, print_pnode_hash);
-                           // puts("\n--\n");
-                            //print_pnode_hash
-                        }
                         pcp->curr->syn = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
                         sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass);
@@ -1006,7 +1000,7 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
                     }
                 }
             }
-            while (!success);
+            while(!success);
         }
     }
     sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass);

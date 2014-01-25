@@ -253,8 +253,7 @@
         <term'>.in := <factor>.type
         if <term'>.type <> void then
             <term>.type := <term'>.type
-            halt()
-        fi
+        fi        
 	}
 <term'> ->
         mulop <factor> <term'>
@@ -274,6 +273,8 @@
             else
                 <term'>.type := <term'>.in
             fi
+            
+
         }
         |
         ε
@@ -284,18 +285,20 @@
 <factor> ->
 	id <factor'>
     {
-        <factor>.type := lookup(id)
         if <factor'>.type = integer then
-
-        elif <factor'>.type <> void then
+            <factor>.type := getarray(id)
+        elif <factor'>.type = void then
+            <factor>.type := lookup(id)
+        else
             print("Type Error")
             halt()
         fi
     }
 	|
 	num
-    { 
+    {
         <factor>.type := num.type
+        <factor>.hitnum := true
     }
 	|
 	\( <expression> \)
@@ -312,6 +315,7 @@
 	\[ <expression> \]
     {
         <factor'>.type := <expression>.type
+        <factor'>.val := <expression>.val
     }
 	|
 	ε
