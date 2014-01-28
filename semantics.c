@@ -947,7 +947,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
             if(!strcmp(nterm, "<term'>") && !strcmp(id, "bob") && idsuffix.factor_.isset) {
-                for(;;)puts("this should happen.");
+                //for(;;)puts("this should happen.");
             }
             printf("bool: %u %u %u %u\n", evaluate.result, evaluate.evaluated, expression.value.type, ATTYPE_NOT_EVALUATED);
             if (evaluate.result && evaluate.evaluated && expression.value.type != ATTYPE_NOT_EVALUATED) {
@@ -970,7 +970,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
         
                     p = getpnode_nterm(prod, nterm, index);
                     if(!strcmp(nterm,"<term'>") && strcmp(id, "in")) {
-                        for(;;)printf("%u %s\n", index, id);
+                        //for(;;)printf("%u %s\n", index, id);
                     }
                     if(p && expression.value.type != ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, p);
@@ -1483,7 +1483,7 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
         case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             idsuffix.factor_ = sem_factor_(parse, curr, il, pn, syn, pass, eval);
-            idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval);
+	    idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval);
             idsuffix.hasparam = false;
             idsuffix.hasmap = false;
             break;
@@ -1501,7 +1501,8 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
             *curr = (*curr)->next;
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval);
             sem_match(curr, SEMTYPE_CLOSEBRACKET);
-            idsuffix.factor_.index = 1;
+            idsuffix.factor_.isset = true;
+	    idsuffix.factor_.index = 1;
             idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval);
             idsuffix.hasparam = false;
             idsuffix.hasmap = false;
@@ -1518,8 +1519,6 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
             assert(false);
             break;
     }
-
-    assert((unsigned)idsuffix.factor_.isset != 160);
     return idsuffix;
 }
 
