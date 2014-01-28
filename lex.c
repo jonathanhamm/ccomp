@@ -104,25 +104,25 @@ struct prxa_expression_s
     char *strval;
 };
 
-static void printlist (token_s *list);
-static void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child);
-static uint16_t bsearch_tr (idtnode_s *tnode, char key);
-static idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat);
-static tlookup_s trie_lookup (idtnode_s *trie, char *str);
-static unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *data);
+static void printlist(token_s *list);
+static void parray_insert(idtnode_s *tnode, uint8_t index, idtnode_s *child);
+static uint16_t bsearch_tr(idtnode_s *tnode, char key);
+static idtnode_s *trie_insert(idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat);
+static tlookup_s trie_lookup(idtnode_s *trie, char *str);
+static unsigned regex_annotate(token_s **tlist, char *buf, unsigned *lineno, void *data);
 
-static lex_s *lex_s_ (void);
-static idtnode_s *patch_search (llist_s *patch, char *lexeme);
-static int parseregex (lex_s *lex, token_s **curr);
-static void prx_keywords (lex_s *lex, token_s **curr, int *count);
-static void prx_tokens (lex_s *lex, token_s **curr, int *count);
-static void prx_tokens_ (lex_s *lex, token_s **curr, int *count);
-static regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count);
-static nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
-static exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
-static nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
-static nfa_s *prx_cclass (lex_s *lex, token_s **curr);
-static int prx_closure (lex_s *lex, token_s **curr);
+static lex_s *lex_s_(void);
+static idtnode_s *patch_search(llist_s *patch, char *lexeme);
+static int parseregex(lex_s *lex, token_s **curr);
+static void prx_keywords(lex_s *lex, token_s **curr, int *count);
+static void prx_tokens(lex_s *lex, token_s **curr, int *count);
+static void prx_tokens_(lex_s *lex, token_s **curr, int *count);
+static regex_ann_s *prx_texp(lex_s *lex, token_s **curr, int *count);
+static nfa_s *prx_expression(lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
+static exp__s prx_expression_(lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
+static nfa_s *prx_term(lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat);
+static nfa_s *prx_cclass(lex_s *lex, token_s **curr);
+static int prx_closure(lex_s *lex, token_s **curr);
 
 static void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback);
 static void prxa_regexdef(token_s **curr, regex_ann_s *reg);
@@ -132,20 +132,20 @@ static void prxa_assigment(token_s **curr, nfa_edge_s *edge);
 static prxa_expression_s prxa_expression(token_s **curr, nfa_edge_s *edge);
 static void prxa_expression_(token_s **curr, nfa_edge_s *edge);
 
-static void regexdef_callback (token_s **curr, mach_s *mach);
-static void nfaedge_callback (token_s **curr, nfa_edge_s *edge);
-static int prx_annotation (nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
-static int prxann_expressionlist (nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
-static int prxann_expression (nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
-static int prxann_expression_ (nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
-static void prxann_equals (nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
+static void regexdef_callback(token_s **curr, mach_s *mach);
+static void nfaedge_callback(token_s **curr, nfa_edge_s *edge);
+static int prx_annotation(nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
+static int prxann_expressionlist(nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
+static int prxann_expression(nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
+static int prxann_expression_(nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
+static void prxann_equals(nfa_edge_s *edge, token_s **curr, void *ptr, ann_callback_f callback);
 
-static int prx_tokenid (lex_s *lex, token_s **curr);
-static void addcycle (nfa_node_s *start, nfa_node_s *dest);
+static int prx_tokenid(lex_s *lex, token_s **curr);
+static void addcycle(nfa_node_s *start, nfa_node_s *dest);
 static int tokmatch(char *buf, token_s *tok, unsigned *lineno, bool negate);
-match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigned *lineno);
-static char *make_lexerr (const char *errstr, int lineno, char *lexeme);
-static void mscan (lexargs_s *args);
+match_s nfa_match(lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigned *lineno);
+static char *make_lexerr(const char *errstr, int lineno, char *lexeme);
+static void mscan(lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
  
 static int addtok_(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype, bool unlimited);
@@ -169,7 +169,7 @@ static int addtok_(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type
  
  */
 
-lex_s *buildlex (const char *file)
+lex_s *buildlex(const char *file)
 {
     token_s *list;
     lex_s *lex;
@@ -180,7 +180,7 @@ lex_s *buildlex (const char *file)
     return lex;
 }
 
-token_s *lexspec (const char *file, annotation_f af, void *data)
+token_s *lexspec(const char *file, annotation_f af, void *data)
 {
     unsigned i, j, lineno, tmp, bpos;
     char *buf;
@@ -394,7 +394,7 @@ doublebreak_:
     return list;
 }
 
-unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *data)
+unsigned regex_annotate(token_s **tlist, char *buf, unsigned *lineno, void *data)
 {
     unsigned i = 0, bpos = 0;
     char tmpbuf[MAX_LEXLEN+1];
@@ -451,7 +451,7 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *dat
     return i+1;
 }
 
-int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype)
+int addtok(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype)
 {
     token_s *ntok;
     
@@ -475,7 +475,7 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
     return 0;
 }
 
-void printlist (token_s *list)
+void printlist(token_s *list)
 {
     while (list) {
         printf("%s\n", list->lexeme);
@@ -483,7 +483,7 @@ void printlist (token_s *list)
     }
 }
 
-int parseregex (lex_s *lex, token_s **list)
+int parseregex(lex_s *lex, token_s **list)
 {
     int types = LEXID_START;
     
@@ -503,7 +503,7 @@ int parseregex (lex_s *lex, token_s **list)
     return types;
 }
 
-void prx_keywords (lex_s *lex, token_s **curr, int *counter)
+void prx_keywords(lex_s *lex, token_s **curr, int *counter)
 {
     char *lexeme;
     idtnode_s *node;
@@ -520,13 +520,13 @@ void prx_keywords (lex_s *lex, token_s **curr, int *counter)
     ++*counter;
 }
 
-void prx_tokens (lex_s *lex, token_s **curr, int *count)
+void prx_tokens(lex_s *lex, token_s **curr, int *count)
 {
     prx_texp(lex, curr, count);
     prx_tokens_(lex, curr, count);
 }
 
-void prx_tokens_ (lex_s *lex, token_s **curr, int *count)
+void prx_tokens_(lex_s *lex, token_s **curr, int *count)
 {
     regex_ann_s *reg;
     mach_s *mach;
@@ -558,17 +558,17 @@ void prx_tokens_ (lex_s *lex, token_s **curr, int *count)
     }
 }
 /*********************************** EXPERIMENTAL NEW ROUTINES *************************************/
-static inline nfa_s *nfa_ (void)
+static inline nfa_s *nfa_(void)
 {
     return calloc(1, sizeof(nfa_s));
 }
 
-static inline nfa_node_s *nfa_node_s_ (void)
+static inline nfa_node_s *nfa_node_s_(void)
 {
     return calloc(1, sizeof(nfa_node_s));
 }
 
-token_s *make_epsilon (void)
+token_s *make_epsilon(void)
 {
     token_s *new;
     
@@ -600,7 +600,7 @@ nfa_edge_s *nfa_edge_s_(token_s *token, nfa_node_s *state)
     return edge;
 }
 
-void addedge (nfa_node_s *start, nfa_edge_s *edge)
+void addedge(nfa_node_s *start, nfa_edge_s *edge)
 {
     if (start->nedges)
         start->edges = realloc(start->edges, sizeof(*start->edges) * (start->nedges+1));
@@ -614,7 +614,7 @@ void addedge (nfa_node_s *start, nfa_edge_s *edge)
     start->nedges++;
 }
 
-void reparent (nfa_node_s *parent, nfa_node_s *oldparent)
+void reparent(nfa_node_s *parent, nfa_node_s *oldparent)
 {
     uint16_t i;
     
@@ -622,7 +622,7 @@ void reparent (nfa_node_s *parent, nfa_node_s *oldparent)
         addedge (parent, oldparent->edges[i]);
 }
 
-void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
+void insert_at_branch(nfa_s *unfa, nfa_s *concat, nfa_s *insert)
 {
     int i;
     
@@ -637,7 +637,7 @@ void insert_at_branch (nfa_s *unfa, nfa_s *concat, nfa_s *insert)
     }
 }
 
-regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
+regex_ann_s *prx_texp(lex_s *lex, token_s **curr, int *count)
 {
     idtnode_s *tnode = NULL;
     nfa_s *uparent = NULL, *concat = NULL;
@@ -680,7 +680,7 @@ regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
     return reg;
 }
 
-nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
+nfa_s *prx_expression(lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
     exp__s exp_;
     nfa_s *un_nfa, *clos_nfa, *term;
@@ -744,7 +744,7 @@ nfa_s *prx_expression (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
     return term;
 }
 
-exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
+exp__s prx_expression_(lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
     if ((*curr)->type.val == LEXTYPE_UNION) {
         *curr = (*curr)->next;
@@ -778,7 +778,7 @@ exp__s prx_expression_ (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat
     }
 }
 
-nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
+nfa_s *prx_term(lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
 {
     bool isclass = false;
     exp__s exp_;
@@ -866,7 +866,7 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
     return nfa;
 }
 
-nfa_s *prx_cclass (lex_s *lex, token_s **curr)
+nfa_s *prx_cclass(lex_s *lex, token_s **curr)
 {
     nfa_s *class;
     nfa_node_s *n1, *n2;
@@ -902,7 +902,7 @@ nfa_s *prx_cclass (lex_s *lex, token_s **curr)
 }
 
 
-int prx_closure (lex_s *lex, token_s **curr)
+int prx_closure(lex_s *lex, token_s **curr)
 {
         int type;
     
@@ -1153,7 +1153,7 @@ void prxa_expression_(token_s **curr, nfa_edge_s *edge)
     }
 }
 
-lex_s *lex_s_ (void)
+lex_s *lex_s_(void)
 {
     lex_s *lex;
     
@@ -1168,7 +1168,7 @@ lex_s *lex_s_ (void)
     return lex;
 }
 
-idtnode_s *patch_search (llist_s *patch, char *lexeme)
+idtnode_s *patch_search(llist_s *patch, char *lexeme)
 {
     while (patch) {
         if (((idtnode_s *)patch->ptr)->tdat.is_string) {
@@ -1180,7 +1180,7 @@ idtnode_s *patch_search (llist_s *patch, char *lexeme)
     return NULL;
 }
 
-idtable_s *idtable_s_ (void)
+idtable_s *idtable_s_(void)
 {
     idtable_s *table;
     
@@ -1210,12 +1210,12 @@ void idtable_set(idtable_s *table, char *str, tdat_s tdat)
     lookup.node->tdat = tdat;
 }
 
-tlookup_s idtable_lookup (idtable_s *table, char *str)
+tlookup_s idtable_lookup(idtable_s *table, char *str)
 {
     return trie_lookup(table->root, str);
 }
 
-idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
+idtnode_s *trie_insert(idtable_s *table, idtnode_s *trie, char *str, tdat_s tdat)
 {
     int search;
     idtnode_s *nnode;
@@ -1246,7 +1246,7 @@ idtnode_s *trie_insert (idtable_s *table, idtnode_s *trie, char *str, tdat_s tda
     return trie_insert(table, trie->children[search], str+1, tdat);
 }
 
-void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child)
+void parray_insert(idtnode_s *tnode, uint8_t index, idtnode_s *child)
 {
     uint8_t i, j, n;
     idtnode_s **children;
@@ -1263,7 +1263,7 @@ void parray_insert (idtnode_s *tnode, uint8_t index, idtnode_s *child)
     tnode->nchildren++;
 }
 
-tlookup_s trie_lookup (idtnode_s *trie, char *str)
+tlookup_s trie_lookup(idtnode_s *trie, char *str)
 {
     uint16_t search;
     
@@ -1275,7 +1275,7 @@ tlookup_s trie_lookup (idtnode_s *trie, char *str)
     return trie_lookup(trie->children[search], str+1);
 }
 
-uint16_t bsearch_tr (idtnode_s *tnode, char key)
+uint16_t bsearch_tr(idtnode_s *tnode, char key)
 {
 	int16_t mid, low, high;
     
@@ -1294,7 +1294,7 @@ uint16_t bsearch_tr (idtnode_s *tnode, char key)
     return mid;
 }
 
-int ntstrcmp (char *nterm, char *str)
+int ntstrcmp(char *nterm, char *str)
 {
     int i, result;
     char *ptr;
@@ -1307,7 +1307,7 @@ int ntstrcmp (char *nterm, char *str)
     return result;
 }
 
-void addmachine (lex_s *lex, token_s *tok)
+void addmachine(lex_s *lex, token_s *tok)
 {
     mach_s *nm;
     
@@ -1354,7 +1354,7 @@ int tokmatch(char *buf, token_s *tok, unsigned *lineno, bool negate)
     }
 }
 
-match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigned *lineno)
+match_s nfa_match(lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigned *lineno)
 {
     size_t tmatch, tmpmatch;
     uint16_t i;
@@ -1432,7 +1432,7 @@ match_s nfa_match (lex_s *lex, nfa_s *nfa, nfa_node_s *state, char *buf, unsigne
     return curr;
 }
 
-lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
+lextok_s lexf(lex_s *lex, char *buf, uint32_t linestart, bool listing)
 {
     int lcheck;
     bool unlimited;
@@ -1587,7 +1587,7 @@ lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing)
     return (lextok_s){.lex = lex, .lines = lineno, .tokens = head};
 }
 
-char *make_lexerr (const char *errmsg, int lineno, char *lexeme)
+char *make_lexerr(const char *errmsg, int lineno, char *lexeme)
 {
     char *error;
     size_t errsize;
@@ -1636,7 +1636,7 @@ sem_type_s gettype(lex_s *lex, char *id)
     return tdat.type;
 }
 
-toktype_s gettoktype (lex_s *lex, char *id)
+toktype_s gettoktype(lex_s *lex, char *id)
 {
     toktype_s type;
     size_t len;

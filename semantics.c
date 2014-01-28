@@ -910,8 +910,8 @@ sem_statements_s sem_statements(parse_s *parse, token_s **curr, llist_s **il, pd
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_ID:
-            sem_statement(parse, curr, il, pda, prod, pn, syn, pass, evaluate, elprev);
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate, elprev);
+            sem_statement(parse, curr, il, pda, prod, pn, syn, pass, evaluate, false);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate, false);
         case SEMTYPE_FI:
         case SEMTYPE_ELSE:
         case SEMTYPE_ELIF:
