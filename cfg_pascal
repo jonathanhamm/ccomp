@@ -97,9 +97,9 @@
 <arguments> ->
 	\( <parameter_list> \)
 <parameter_list> ->
-	id : <type> <parameter_list'> { addtype(id.entry, <type>.type) }
+	id : <type> <parameter_list'> { addtype(id, <type>.type) }
 <parameter_list'> ->
-	; id : <type> <parameter_list'> { addtype(id.entry, <type>.type) }
+	; id : <type> <parameter_list'> { addtype(id, <type>.type) }
 	|
 	ε
 	
@@ -280,7 +280,6 @@
                 <term'>.type := real
             else
                 print("type error")
-                halt()
             fi
 
             if <term'>[1].type <> void then
@@ -303,6 +302,7 @@
         elif <factor'>.type = void then
             <factor>.type := lookup(id)
         else
+            <factor>.type := getarray(id)
             error(id, "Non-integer type used in array index")
         fi
     }

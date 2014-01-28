@@ -946,32 +946,15 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             id = idsuffix.dot.id;
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
-            if(!strcmp(nterm, "<term'>") && !strcmp(id, "bob") && idsuffix.factor_.isset) {
-                for(;;)printf("this should happen. %u\n", idsuffix.factor_.isset);
-            }
-           // printf("bool: %u %u %u %u\n", evaluate.result, evaluate.evaluated, expression.value.type, ATTYPE_NOT_EVALUATED);
             if (evaluate.result && evaluate.evaluated && expression.value.type != ATTYPE_NOT_EVALUATED) {
                 if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
-                    printf("testing syn for: %s and trying to assign\n", pda->nterm->lexeme);
-                    print_semtype(expression.value);
-                    printf("To: %s\n", id);
-                    if(!strcmp(id, "type") && !strcmp(pda->nterm->lexeme, "<factor>") && !syn) {
-                        //asm("hlt");
-                        bob = 1;
-                    }
                     if(syn) {
-                        puts("Setting Synthesized attribute");
                         setatt(syn, id, alloc_semt(expression.value));
                     }
                 }
                 else {
                     /* Setting inherited attributes */
-                    printf("setting inherited attributes %s\n", id);
-        
                     p = getpnode_nterm(prod, nterm, index);
-                    if(!strcmp(nterm,"<term'>") && strcmp(id, "in")) {
-                        //for(;;)printf("%u %s\n", index, id);
-                    }
                     if(p && expression.value.type != ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, p);
                         if(!in) {
@@ -999,11 +982,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             if (evaluate.result && evaluate.evaluated && params.ready) {
-                if(bob && get_semaction(id) == sem_halt) {
-                    puts("about to call halt");
-                   // asm("hlt");
-                }
-                    get_semaction(id)(curr, NULL, pda, pn, parse, params, pass, &expression, evaluate.evaluated && evaluate.result);
+                get_semaction(id)(curr, NULL, pda, pn, parse, params, pass, &expression, evaluate.evaluated && evaluate.result);
             }
             break;
         default:
@@ -1335,14 +1314,11 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval);
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
-	if (idsuffix.dot.id) {
-		printf("idsuffix: %s %s %u\n", factor.value.str_, pda->nterm->lexeme, idsuffix.factor_.isset);
-		if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
-
+            if (idsuffix.dot.id) {
+                if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
                     if(pn->curr) {
                         factor.value = getatt(pn->curr->in, idsuffix.dot.id);
                         if(factor.value.type == ATTYPE_NOT_EVALUATED) {
-
                             factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
                         }
                     }
@@ -1494,7 +1470,7 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
             idsuffix.params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass, eval);
             idsuffix.factor_.index = 1;
             idsuffix.factor_.isset = false;
-	    idsuffix.dot.id = NULL;
+            idsuffix.dot.id = NULL;
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             break;
         case SEMTYPE_OPENBRACKET:
@@ -1512,7 +1488,7 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
             idsuffix.hasmap = true;
             idsuffix.hasparam = false;
             idsuffix.dot.id = NULL;
-	    idsuffix.factor_.isset = false;
+            idsuffix.factor_.isset = false;
 	    break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected , ] [ * / + - = < > <> <= >= fi else then if . nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -1831,6 +1807,10 @@ void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_
             type.type = ATTYPE_ID;
         else if(eval) {
             add_semerror(parse, p->matched, "attempt to index non-array identifier");
+            if(type.type == ATTYPE_NULL) {
+                add_semerror(parse, p->matched, "undeclared identifier");
+
+            }
         }
     }
     return alloc_semt(type);
@@ -1861,7 +1841,8 @@ void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     printf("Halt Called in %s\n", pda->nterm->lexeme);
     fflush(stderr);
     fflush(stdout);
-    assert(false);
+  //  assert(false);
+    asm("hlt");
 }
 
 void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval)
