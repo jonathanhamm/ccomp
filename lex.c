@@ -940,7 +940,7 @@ void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback)
         if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_FAKEEOF)
             *curr = (*curr)->next;
         else {
-            printf("Syntax Error at line %d: Expected } but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected } but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
         }
     }
@@ -1032,14 +1032,14 @@ void prxa_assignment(token_s **curr, nfa_edge_s *edge)
         }
     }
     else {
-        printf("Error at line %d: Unexpected %s\n", (*curr)->lineno, (*curr)->lexeme);
+        fprintf(stderr, "Error at line %d: Unexpected %s\n", (*curr)->lineno, (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
     
     str = (*curr)->lexeme;
     if (!strcasecmp(str, "attcount")) {
         if (edge->annotation.attribute != -1) {
-            printf("Error at line %d at %s: Incompatible attribute type combination.\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Error at line %d at %s: Incompatible attribute type combination.\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
         }
         edge->annotation.attcount = true;
@@ -1083,7 +1083,7 @@ void prxa_edgestart(token_s **curr, nfa_edge_s *edge)
                 break;
             case LEXATTR_NUM:
                 if (edge->annotation.attribute != -1) {
-                    printf("Error at line %d: Edge attribute value %s assigned more than once.", (*curr)->lineno, (*curr)->lexeme);
+                    fprintf(stderr, "Error at line %d: Edge attribute value %s assigned more than once.", (*curr)->lineno, (*curr)->lexeme);
                     exit(EXIT_FAILURE);
                 }
                 edge->annotation.attribute = safe_atol((*curr)->lexeme);
@@ -1092,7 +1092,7 @@ void prxa_edgestart(token_s **curr, nfa_edge_s *edge)
         }
     }
     else {
-        printf("Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
+        fprintf(stderr, "Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
 }
@@ -1118,14 +1118,14 @@ prxa_expression_s prxa_expression(token_s **curr, nfa_edge_s *edge)
                     prxa_expression_(curr, edge);
                 }
                 else {
-                    printf("Error parsing regex annotation at line %d : %s\n", (*curr)->lineno, (*curr)->lexeme);
+                    fprintf(stderr, "Error parsing regex annotation at line %d : %s\n", (*curr)->lineno, (*curr)->lexeme);
                     exit(EXIT_FAILURE);
                 }
                 break;
             case LEXATTR_FAKEEOF:
                 return (prxa_expression_s){.isint = true, .ival = -1, .strval = NULL};
             default:
-                printf("Syntax error at line %d: Expected = or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                fprintf(stderr, "Syntax error at line %d: Expected = or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
                 assert(false);
         }
     }
@@ -1143,12 +1143,12 @@ void prxa_expression_(token_s **curr, nfa_edge_s *edge)
             case LEXATTR_FAKEEOF:
                 break;
             default:
-                printf("Syntax error at line %d: Expected , or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                fprintf(stderr, "Syntax error at line %d: Expected , or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
                 assert(false);
         }
     }
     else {
-        printf("Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
+        fprintf(stderr, "Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
         assert(false);
     }
 }
@@ -1609,7 +1609,7 @@ mach_s *getmach(lex_s *lex, char *id)
     
     for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, id); iter = iter->next);
     if (!iter) {
-        printf("Regex Error: Regex %s never defined", id);
+        fprintf(stderr, "Regex Error: Regex %s never defined", id);
         exit(EXIT_FAILURE);
     }
     return iter;
