@@ -948,9 +948,9 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
             if(!strcmp(nterm, "<term'>") && !strcmp(id, "bob") && idsuffix.factor_.isset) {
-                for(;;)puts("this should happen.");
+                for(;;)printf("this should happen. %u\n", idsuffix.factor_.isset);
             }
-            printf("bool: %u %u %u %u\n", evaluate.result, evaluate.evaluated, expression.value.type, ATTYPE_NOT_EVALUATED);
+           // printf("bool: %u %u %u %u\n", evaluate.result, evaluate.evaluated, expression.value.type, ATTYPE_NOT_EVALUATED);
             if (evaluate.result && evaluate.evaluated && expression.value.type != ATTYPE_NOT_EVALUATED) {
 
                 if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
@@ -1815,7 +1815,7 @@ void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_
 {
     pnode_s *p;
     llist_s *node;
-    sem_type_s *val, type;
+    sem_type_s *val, type; 
     
     if(params.ready) {
         node = llpop(&params.pstack);
