@@ -867,7 +867,7 @@ void print_firfol (parse_s *parse, FILE *stream)
 }
 
 
-void parse (parse_s *parse, lextok_s lex)
+void parse(parse_s *parse, lextok_s lex)
 {
     int index;
     size_t errsize;
@@ -912,7 +912,7 @@ int match(token_s **curr, pnode_s *p)
     return 0;
 }
 
-semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index)
+semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index)
 {
     int result, i;
     pda_s *nterm;
@@ -973,12 +973,20 @@ semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *
                         pcp->curr = &pcp->array[i];
                         child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass);
                         child_in = llremove_(&child_inll, find_in, pnode);
+                        if(child_in) {
+                            printf("----------------------------------Printing for: %s  %p\n", nterm->nterm->lexeme, pcp->curr);
+                            print_hash(child_in->table, print_pnode_hash);
+                            puts("\n--\n");
+                            //print_pnode_hash
+                        }
+                        
                         pcp->curr->syn = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
                         sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass);
                     }
                 }
                 else {
+                    pcp->curr = &pcp->array[i];
                     pcp->array[i].matched = *curr;
                     pcp->array[i].pass = true;
                     result = match(curr, pnode);

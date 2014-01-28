@@ -252,7 +252,6 @@
 <term> ->
 	<factor> <term'>
 	{
-        <term>.type := <factor>.type
         <term'>.in := <factor>.type
         if <term'>.type <> void then
             <term>.type := <term'>.type
@@ -261,7 +260,14 @@
 <term'> ->
         mulop <factor> <term'>
         {
-            <factor>.bob := true
+            if <term'>.bob <> null then
+                <factor>.bob := true
+
+            fi
+
+            <term'>[1].bob := true
+
+
 
             if (<term'>.in = integer) and (<factor>.type = integer) then
                 <term'>[1].in := integer
@@ -304,6 +310,11 @@
 	num
     {
         <factor>.type := num.type
+        
+        if <factor>.bob <> null then
+            print(num.val)
+            halt()
+        fi
     }
 	|
 	\( <expression> \)

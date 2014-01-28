@@ -947,9 +947,12 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             id = idsuffix.dot.id;
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
+            if(!strcmp(nterm, "<term'>") && !strcmp(id, "bob") && idsuffix.factor_.isset) {
+                for(;;)puts("this should happen.");
+            }
             printf("bool: %u %u %u %u\n", evaluate.result, evaluate.evaluated, expression.value.type, ATTYPE_NOT_EVALUATED);
             if (evaluate.result && evaluate.evaluated && expression.value.type != ATTYPE_NOT_EVALUATED) {
-                puts("evaluating");
+
                 if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
                     printf("testing syn for: %s and trying to assign\n", pda->nterm->lexeme);
                     print_semtype(expression.value);
@@ -965,8 +968,12 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
                 }
                 else {
                     /* Setting inherited attributes */
-                    puts("setting inherited attributes");
+                    printf("setting inherited attributes %s\n", id);
+        
                     p = getpnode_nterm(prod, nterm, index);
+                    if(!strcmp(nterm,"<term'>") && strcmp(id, "in")) {
+                        for(;;)printf("%u %s\n", index, id);
+                    }
                     if(p && expression.value.type != ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, p);
                         if(!in) {
@@ -1332,6 +1339,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             factor.access.attribute = idsuffix.dot.id;
             if (idsuffix.dot.id) {
                 if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
+
                     if(pn->curr) {
                         factor.value = getatt(pn->curr->in, idsuffix.dot.id);
                         if(factor.value.type == ATTYPE_NOT_EVALUATED) {
@@ -1512,7 +1520,7 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
     return idsuffix;
 }
 
-sem_dot_s sem_dot (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_dot_s sem_dot(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
 {
     sem_dot_s dot;
     
@@ -1549,7 +1557,7 @@ sem_dot_s sem_dot (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, sema
     return dot;
 }
 
-sem_range_s sem_range (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_range_s sem_range(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
 {
     unsigned index;
     token_s *id1, *id2;
@@ -1662,7 +1670,7 @@ void sem_paramlist_(parse_s *parse, token_s **curr, llist_s **il, sem_paramlist_
     }
 }
 
-sem_sign_s sem_sign (token_s **curr)
+sem_sign_s sem_sign(token_s **curr)
 {
     sem_sign_s sign;
     
@@ -1677,7 +1685,7 @@ sem_sign_s sem_sign (token_s **curr)
     }
 }
 
-bool sem_match (token_s **curr, int type)
+bool sem_match(token_s **curr, int type)
 {
     if ((*curr)->type.val == type) {
         *curr = (*curr)->next;
@@ -1845,6 +1853,9 @@ void *sem_gettype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
 
 void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, void *fill, bool eval)
 {
+    if(!eval)
+        return NULL;
+    
     printf("Halt Called in %s\n", pda->nterm->lexeme);
     fflush(stderr);
     fflush(stdout);
@@ -2038,7 +2049,6 @@ void add_semerror(parse_s *p, token_s *t, char *message)
 {
     char *err = make_semerror(t->lineno, t->lexeme, message);
     
-    //asm("hlt");
     if(check_listing(p->listing, t->lineno, err))
         free(err);
     else
