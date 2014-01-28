@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define REGEX_DECORATIONS_FILE "/Users/jhamm/compilers/pcomp/pcomp/regex_decorations"
+#define REGEX_DECORATIONS_FILE "regex_decorations"
 #define MACHID_START            37
 
 #define SEMSIGN_POS 0

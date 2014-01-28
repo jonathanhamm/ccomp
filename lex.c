@@ -240,9 +240,7 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 }
                 break;
             case '{':
-              //  printf("before %u\n", lineno);
                 tmp = af(&list, &buf[i], &lineno, data);
-               // printf("after %u\n", lineno);
                 if (tmp)
                     i += tmp;
                 else {
@@ -445,7 +443,7 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *dat
             addtok(tlist, ",", *lineno, LEXTYPE_ANNOTATE, LEXATTR_COMMA, NULL);
         }
         else {
-            printf("Illegal character sequence in annotation at line %u: %c\n", *lineno, buf[i]);
+            fprintf(stderr, "Illegal character sequence in annotation at line %u: %c\n", *lineno, buf[i]);
             exit(EXIT_FAILURE);
         }
     }
@@ -457,7 +455,6 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
 {
     token_s *ntok;
     
-    //printf("token: %s %u %u\n", lexeme, type, attribute);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");
@@ -492,14 +489,14 @@ int parseregex (lex_s *lex, token_s **list)
     
     prx_keywords(lex, list, &types);
     if ((*list)->type.val != LEXTYPE_EOL) {
-        printf("Syntax Error at line %u: Expected EOL but got %s\n", (*list)->lineno, (*list)->lexeme);
+        fprintf(stderr, "Syntax Error at line %u: Expected EOL but got %s\n", (*list)->lineno, (*list)->lexeme);
         assert(false);
     }
 
     *list = (*list)->next;
     prx_tokens(lex, list, &types);
     if ((*list)->type.val != LEXTYPE_EOF) {
-        printf("Syntax Error at line %u: Expected $ but got %s\n", (*list)->lineno, (*list)->lexeme);
+        fprintf(stderr, "Syntax Error at line %u: Expected $ but got %s\n", (*list)->lineno, (*list)->lexeme);
         assert(false);
     }
     lex->idtable = idtable_s_();
@@ -547,12 +544,11 @@ void prx_tokens_ (lex_s *lex, token_s **curr, int *count)
         reg = mcurr->ptr;
         for (miter = reg->matchlist; miter; miter = miter->next) {
             for (mach = lex->machs; mach; mach = mach->next) {
-                printf("Comparing %s %s\n", mach->nterm->lexeme, miter->ptr);
                 if (!ntstrcmp(mach->nterm->lexeme, miter->ptr))
                     break;
             }
             if (!mach) {
-                printf("Error: regex %s not found.\n", miter->ptr);
+                fprintf(stderr, "Error: regex %s not found.\n", miter->ptr);
                 exit(EXIT_FAILURE);
             }
             mach->nterm->type = reg->mach->nterm->type;
@@ -673,12 +669,12 @@ regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
                 lex->machs->nfa = uparent;
         }
         else {
-            printf("Syntax Error at line %u: Expected '->' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %u: Expected '->' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
         }
     }
     else {
-        printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+        fprintf(stderr, "Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
         assert(false);
     }
     return reg;
@@ -795,7 +791,7 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             backup1 = *unfa;
             nfa = prx_expression(lex, curr, &unfa_, &concat_);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN) {
-                printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                fprintf(stderr, "Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
                 assert(false);
             }
             *curr = (*curr)->next;
