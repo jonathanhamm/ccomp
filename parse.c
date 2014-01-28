@@ -136,8 +136,6 @@ parse_s *build_parse(const char *file, lextok_s lextok)
     head = list;
     parse = parse_();
     parse->listing = lextok.lex->listing;
-    for (iter = head; iter; iter = iter->next)
-        printf("%s\n", iter->lexeme);
     pp_start(parse, &list);
     compute_firstfollows(parse);
     firsts = getfirsts(parse, get_pda(parse, parse->start->nterm->lexeme));
@@ -974,9 +972,8 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                         child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass);
                         child_in = llremove_(&child_inll, find_in, pnode);
                         if(child_in) {
-                            printf("----------------------------------Printing for: %s  %p\n", nterm->nterm->lexeme, pcp->curr);
-                            print_hash(child_in->table, print_pnode_hash);
-                            puts("\n--\n");
+                            //print_hash(child_in->table, print_pnode_hash);
+                            //puts("\n--\n");
                             //print_pnode_hash
                         }
                         
@@ -1140,7 +1137,6 @@ uint16_t str_hashf (void *key)
 
 bool find_in(void *k1, void *k2)
 {
-    printf("PTR: %s %s\n", ((semantics_s *)k1)->n->token->lexeme, ((pnode_s *)k2)->token->lexeme);
     return ((semantics_s *)k1)->n == k2;
 }
 
@@ -1148,7 +1144,5 @@ void print_pnode_hash(void *key, void *data)
 {
     extern void print_semtype(sem_type_s value);
 
-    printf("{ %s -> ", (char *)key);
     print_semtype(*(sem_type_s *)data);
-    puts(" }");
 }

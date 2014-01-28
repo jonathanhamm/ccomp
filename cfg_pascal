@@ -260,12 +260,12 @@
 <term'> ->
         mulop <factor> <term'>
         {
+	    <term'>[1].bob := true
             if <term'>.bob <> null then
                 <factor>.bob := true
 
             fi
 
-            <term'>[1].bob := true
 
 
 
@@ -313,7 +313,6 @@
         
         if <factor>.bob <> null then
             print(num.val)
-            halt()
         fi
     }
 	|

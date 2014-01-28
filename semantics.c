@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define REGEX_DECORATIONS_FILE "/Users/jhamm/compilers/pcomp/pcomp/regex_decorations"
+#define REGEX_DECORATIONS_FILE "regex_decorations"
 #define MACHID_START            37
 
 #define SEMSIGN_POS 0
@@ -342,7 +342,6 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     regex_match_s match;
     
     
-    printf("Not SType:\n");
     s.str_ = NULL;
     s.low = 0 ;
     s.high = 0;
@@ -952,7 +951,6 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             }
            // printf("bool: %u %u %u %u\n", evaluate.result, evaluate.evaluated, expression.value.type, ATTYPE_NOT_EVALUATED);
             if (evaluate.result && evaluate.evaluated && expression.value.type != ATTYPE_NOT_EVALUATED) {
-
                 if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
                     printf("testing syn for: %s and trying to assign\n", pda->nterm->lexeme);
                     print_semtype(expression.value);
@@ -972,7 +970,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
         
                     p = getpnode_nterm(prod, nterm, index);
                     if(!strcmp(nterm,"<term'>") && strcmp(id, "in")) {
-                        for(;;)printf("%u %s\n", index, id);
+                        //for(;;)printf("%u %s\n", index, id);
                     }
                     if(p && expression.value.type != ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, p);
@@ -1337,8 +1335,9 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval);
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
-            if (idsuffix.dot.id) {
-                if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
+	if (idsuffix.dot.id) {
+		printf("idsuffix: %s %s %u\n", factor.value.str_, pda->nterm->lexeme, idsuffix.factor_.isset);
+		if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
 
                     if(pn->curr) {
                         factor.value = getatt(pn->curr->in, idsuffix.dot.id);
@@ -1484,7 +1483,7 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
         case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
             idsuffix.factor_ = sem_factor_(parse, curr, il, pn, syn, pass, eval);
-            idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval);
+	    idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval);
             idsuffix.hasparam = false;
             idsuffix.hasmap = false;
             break;
@@ -1494,14 +1493,16 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
             idsuffix.hasmap = false;
             idsuffix.params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass, eval);
             idsuffix.factor_.index = 1;
-            idsuffix.dot.id = NULL;
+            idsuffix.factor_.isset = false;
+	    idsuffix.dot.id = NULL;
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             break;
         case SEMTYPE_OPENBRACKET:
             *curr = (*curr)->next;
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval);
             sem_match(curr, SEMTYPE_CLOSEBRACKET);
-            idsuffix.factor_.index = 1;
+            idsuffix.factor_.isset = true;
+	    idsuffix.factor_.index = 1;
             idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval);
             idsuffix.hasparam = false;
             idsuffix.hasmap = false;
@@ -1510,13 +1511,14 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
             *curr = (*curr)->next;
             idsuffix.hasmap = true;
             idsuffix.hasparam = false;
-            break;
+            idsuffix.dot.id = NULL;
+	    idsuffix.factor_.isset = false;
+	    break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected , ] [ * / + - = < > <> <= >= fi else then if . nonterm or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
     }
-
     return idsuffix;
 }
 

@@ -240,9 +240,7 @@ token_s *lexspec (const char *file, annotation_f af, void *data)
                 }
                 break;
             case '{':
-              //  printf("before %u\n", lineno);
                 tmp = af(&list, &buf[i], &lineno, data);
-               // printf("after %u\n", lineno);
                 if (tmp)
                     i += tmp;
                 else {
@@ -445,7 +443,7 @@ unsigned regex_annotate (token_s **tlist, char *buf, unsigned *lineno, void *dat
             addtok(tlist, ",", *lineno, LEXTYPE_ANNOTATE, LEXATTR_COMMA, NULL);
         }
         else {
-            printf("Illegal character sequence in annotation at line %u: %c\n", *lineno, buf[i]);
+            fprintf(stderr, "Illegal character sequence in annotation at line %u: %c\n", *lineno, buf[i]);
             exit(EXIT_FAILURE);
         }
     }
@@ -457,7 +455,6 @@ int addtok (token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint1
 {
     token_s *ntok;
     
-    //printf("token: %s %u %u\n", lexeme, type, attribute);
     ntok = calloc(1, sizeof(*ntok));
     if (!ntok) {
         perror("Memory Allocation Error");
@@ -492,14 +489,14 @@ int parseregex (lex_s *lex, token_s **list)
     
     prx_keywords(lex, list, &types);
     if ((*list)->type.val != LEXTYPE_EOL) {
-        printf("Syntax Error at line %u: Expected EOL but got %s\n", (*list)->lineno, (*list)->lexeme);
+        fprintf(stderr, "Syntax Error at line %u: Expected EOL but got %s\n", (*list)->lineno, (*list)->lexeme);
         assert(false);
     }
 
     *list = (*list)->next;
     prx_tokens(lex, list, &types);
     if ((*list)->type.val != LEXTYPE_EOF) {
-        printf("Syntax Error at line %u: Expected $ but got %s\n", (*list)->lineno, (*list)->lexeme);
+        fprintf(stderr, "Syntax Error at line %u: Expected $ but got %s\n", (*list)->lineno, (*list)->lexeme);
         assert(false);
     }
     lex->idtable = idtable_s_();
@@ -547,12 +544,11 @@ void prx_tokens_ (lex_s *lex, token_s **curr, int *count)
         reg = mcurr->ptr;
         for (miter = reg->matchlist; miter; miter = miter->next) {
             for (mach = lex->machs; mach; mach = mach->next) {
-                printf("Comparing %s %s\n", mach->nterm->lexeme, miter->ptr);
                 if (!ntstrcmp(mach->nterm->lexeme, miter->ptr))
                     break;
             }
             if (!mach) {
-                printf("Error: regex %s not found.\n", miter->ptr);
+                fprintf(stderr, "Error: regex %s not found.\n", miter->ptr);
                 exit(EXIT_FAILURE);
             }
             mach->nterm->type = reg->mach->nterm->type;
@@ -673,12 +669,12 @@ regex_ann_s *prx_texp (lex_s *lex, token_s **curr, int *count)
                 lex->machs->nfa = uparent;
         }
         else {
-            printf("Syntax Error at line %u: Expected '->' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %u: Expected '->' but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
         }
     }
     else {
-        printf("Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+        fprintf(stderr, "Syntax Error at line %u: Expected nonterminal: <...>, but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
         assert(false);
     }
     return reg;
@@ -795,7 +791,7 @@ nfa_s *prx_term (lex_s *lex, token_s **curr, nfa_s **unfa, nfa_s **concat)
             backup1 = *unfa;
             nfa = prx_expression(lex, curr, &unfa_, &concat_);
             if ((*curr)->type.val != LEXTYPE_CLOSEPAREN) {
-                printf("Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                fprintf(stderr, "Syntax Error at line %u: Expected ')' , but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
                 assert(false);
             }
             *curr = (*curr)->next;
@@ -944,7 +940,7 @@ void prxa_annotation(token_s **curr, void *ptr, regex_callback_f callback)
         if (ISANNOTATE(curr) && (*curr)->type.attribute == LEXATTR_FAKEEOF)
             *curr = (*curr)->next;
         else {
-            printf("Syntax Error at line %d: Expected } but got %s\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Syntax Error at line %d: Expected } but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
         }
     }
@@ -1036,14 +1032,14 @@ void prxa_assignment(token_s **curr, nfa_edge_s *edge)
         }
     }
     else {
-        printf("Error at line %d: Unexpected %s\n", (*curr)->lineno, (*curr)->lexeme);
+        fprintf(stderr, "Error at line %d: Unexpected %s\n", (*curr)->lineno, (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
     
     str = (*curr)->lexeme;
     if (!strcasecmp(str, "attcount")) {
         if (edge->annotation.attribute != -1) {
-            printf("Error at line %d at %s: Incompatible attribute type combination.\n", (*curr)->lineno, (*curr)->lexeme);
+            fprintf(stderr, "Error at line %d at %s: Incompatible attribute type combination.\n", (*curr)->lineno, (*curr)->lexeme);
             exit(EXIT_FAILURE);
         }
         edge->annotation.attcount = true;
@@ -1087,7 +1083,7 @@ void prxa_edgestart(token_s **curr, nfa_edge_s *edge)
                 break;
             case LEXATTR_NUM:
                 if (edge->annotation.attribute != -1) {
-                    printf("Error at line %d: Edge attribute value %s assigned more than once.", (*curr)->lineno, (*curr)->lexeme);
+                    fprintf(stderr, "Error at line %d: Edge attribute value %s assigned more than once.", (*curr)->lineno, (*curr)->lexeme);
                     exit(EXIT_FAILURE);
                 }
                 edge->annotation.attribute = safe_atol((*curr)->lexeme);
@@ -1096,7 +1092,7 @@ void prxa_edgestart(token_s **curr, nfa_edge_s *edge)
         }
     }
     else {
-        printf("Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
+        fprintf(stderr, "Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
         exit(EXIT_FAILURE);
     }
 }
@@ -1122,14 +1118,14 @@ prxa_expression_s prxa_expression(token_s **curr, nfa_edge_s *edge)
                     prxa_expression_(curr, edge);
                 }
                 else {
-                    printf("Error parsing regex annotation at line %d : %s\n", (*curr)->lineno, (*curr)->lexeme);
+                    fprintf(stderr, "Error parsing regex annotation at line %d : %s\n", (*curr)->lineno, (*curr)->lexeme);
                     exit(EXIT_FAILURE);
                 }
                 break;
             case LEXATTR_FAKEEOF:
                 return (prxa_expression_s){.isint = true, .ival = -1, .strval = NULL};
             default:
-                printf("Syntax error at line %d: Expected = or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                fprintf(stderr, "Syntax error at line %d: Expected = or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
                 assert(false);
         }
     }
@@ -1147,12 +1143,12 @@ void prxa_expression_(token_s **curr, nfa_edge_s *edge)
             case LEXATTR_FAKEEOF:
                 break;
             default:
-                printf("Syntax error at line %d: Expected , or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
+                fprintf(stderr, "Syntax error at line %d: Expected , or } but got: %s\n", (*curr)->lineno, (*curr)->lexeme);
                 assert(false);
         }
     }
     else {
-        printf("Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
+        fprintf(stderr, "Error parsing regex annotation at line %d: %s\n", (*curr)->lineno, (*curr)->lexeme);
         assert(false);
     }
 }
@@ -1613,7 +1609,7 @@ mach_s *getmach(lex_s *lex, char *id)
     
     for (iter = lex->machs; iter && strcmp(iter->nterm->lexeme, id); iter = iter->next);
     if (!iter) {
-        printf("Regex Error: Regex %s never defined", id);
+        fprintf(stderr, "Regex Error: Regex %s never defined", id);
         exit(EXIT_FAILURE);
     }
     return iter;
