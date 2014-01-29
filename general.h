@@ -103,6 +103,7 @@ enum atypes {
     ATTYPE_ID,
     ATTYPE_NOT_EVALUATED,
     ATTYPE_VOID,
+    ATTYPE_ERROR,
 };
 
 extern long safe_atol (char *str);

@@ -892,7 +892,7 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
     return result;
 }
 
-llist_s *sem_start(semantics_s *in, parse_s *parse, mach_s *machs, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass)
+llist_s *sem_start(semantics_s *in, parse_s *parse, mach_s *machs, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool islast)
 {
     token_s *iter = prod->annot;
     llist_s *ilist = NULL;

@@ -944,7 +944,7 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
     pnode = pda->productions[index].start;
     if (pnode->token->type.val == LEXTYPE_EPSILON) {
         pcp->curr = pcp->array;
-        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass);
+        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass, true);
         pnode->pass = true;
         return synhash;
     }
@@ -969,7 +969,7 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                          hashes corresponding to each child nonterminal.
                          */
                         pcp->curr = &pcp->array[i];
-                        child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass);
+                        child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass, false);
                         child_in = llremove_(&child_inll, find_in, pnode);
                         if(child_in) {
                             //print_hash(child_in->table, print_pnode_hash);
@@ -979,7 +979,7 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                         
                         pcp->curr->syn = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
-                        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass);
+                        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass, false);
                     }
                 }
                 else {
@@ -1008,7 +1008,7 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
             while(!success);
         }
     }
-    sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass);
+    sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass, true);
     return synhash;
 }
 

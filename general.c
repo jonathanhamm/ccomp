@@ -491,7 +491,6 @@ bool check_listing(linetable_s *linelist, unsigned lineno, char *str)
     llist_s *list;
     
     assert(lineno <= linelist->nlines);
-    
     list = linelist->table[--lineno].errors;
     while(list) {
         if(!strcmp(list->ptr, str))
