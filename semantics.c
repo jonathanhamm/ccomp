@@ -53,7 +53,7 @@
 #define FTABLE_SIZE (sizeof(ftable) / sizeof(ftable[0]))
 
 enum semantic_types_ {
-    SEMTYPE_IF = LEXID_START+1, //Guarantees that lexical and semantics token types are disjoin
+    SEMTYPE_IF = LEXID_START+1, //Guarantees that lexical and semantics token types are disjoint
     SEMTYPE_THEN,
     SEMTYPE_ELSE,
     SEMTYPE_FI,
@@ -66,7 +66,7 @@ enum semantic_types_ {
     SEMTYPE_OPENBRACKET,
     SEMTYPE_CLOSEBRACKET,
     SEMTYPE_ELIF,
-    /*^ When removing one of these, subtract 1 from MACHID_START */
+    /* When removing one of these, subtract 1 from MACHID_START */
     
     /*gap for id types*/
     SEMTYPE_ID = MACHID_START,
@@ -935,8 +935,6 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
     semantics_s *in = NULL;
     test_s test;
     
-    static int bob = 0;
-    
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
             nterm = (*curr)->lexeme;
@@ -973,6 +971,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             sem_match(curr, SEMTYPE_THEN);
             test = test_semtype(expression.value);
             sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = test.result && evaluate.result}, false);
+            evaluate.evaluated = evaluate.evaluated && test.evaluated;
             sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test.result);
             break;
         case SEMTYPE_ID:
@@ -997,7 +996,7 @@ sem_else_s sem_else(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated, .result = evaluate.result && !elprev}, false);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated, .result = !elprev}, false);
             sem_match(curr, SEMTYPE_FI);
             break;
         case SEMTYPE_FI:
@@ -1023,7 +1022,7 @@ sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     sem_match(curr, SEMTYPE_THEN);
     test = test_semtype(expression.value);
     sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result && test.result && !elprev}, false);
-    sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated, .result = evaluate.result}, test.result || elprev);
+    sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result}, test.result || elprev);
 }
 
 sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)

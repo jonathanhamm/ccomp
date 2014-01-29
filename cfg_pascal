@@ -126,7 +126,15 @@
 	<variable> assignop <expression> 
     {
         if <variable>.type = integer then
-            print(<variable>.type)
+            if <expression>.type <> integer then
+                error(assignop, "Invalid assignment to integer type")
+            fi
+        elif <variable>.type = real then 
+            if (<expression>.type <> real) and (<expression>.type <> integer) then
+                error(assignop, "Invalid assigment to real type")
+            fi
+        else 
+            error(assignop, "Invalid type used in assignment")
         fi
     }
 	|
@@ -233,10 +241,7 @@
         elif (<simple_expression'>.in = real) and (<term>.type = real) then
             <simple_expression'>[1].in := real
         else
-            print(<simple_expression'>.in)
-            print(<term>.type)
-            print("type error")
-            halt()
+            error(addop, "Invalid type used in addop expression")
         fi
         if <simple_expression'>[1].type <> void then
             <simple_expression'>.type := <simple_expression'>[1].type
@@ -253,6 +258,7 @@
 	<factor> <term'>
 	{
         <term'>.in := <factor>.type
+        <term>.type := <factor>.type
         if <term'>.type <> void then
             <term>.type := <term'>.type
         fi
@@ -260,33 +266,23 @@
 <term'> ->
         mulop <factor> <term'>
         {
-	    <term'>[1].bob := true
-            if <term'>.bob <> null then
-                <factor>.bob := true
-
-            fi
-
-
-
-
             if (<term'>.in = integer) and (<factor>.type = integer) then
                 <term'>[1].in := integer
                 <term'>.type := integer
             elif (<term'>.in = integer) and (<factor>.type = real) then
-                <term'>[i].in := real
+                <term'>[1].in := real
                 <term'>.type := real
             elif (<term'>.in = real ) and (<factor>.type = integer) then
-                <term'>[i].in := real
+                <term'>[1].in := real
                 <term'>.type := real
             else
-                print("type error")
+                error(mulop, "Invalid type used in mulop expression")
             fi
 
             if <term'>[1].type <> void then
                 <term'>.type := <term'>[1].type
                 print(<term'>[1].type)
             fi
-
         }
         |
         ε
@@ -297,7 +293,9 @@
 <factor> ->
 	id <factor'>
     {
+
         if <factor'>.type = integer then
+
             <factor>.type := getarray(id)
         elif <factor'>.type = void then
             <factor>.type := lookup(id)
@@ -305,12 +303,14 @@
             <factor>.type := getarray(id)
             error(id, "Non-integer type used in array index")
         fi
+        
+
     }
 	|
 	num
     {
         <factor>.type := num.type
-        
+
         if <factor>.bob <> null then
             print(num.val)
         fi
@@ -330,6 +330,7 @@
 	\[ <expression> \]
     {
         <factor'>.type := <expression>.type
+
         <factor'>.val := <expression>.val
     }
 	|
