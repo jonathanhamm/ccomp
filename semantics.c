@@ -108,7 +108,7 @@ typedef struct sem_sign_s sem_sign_s;
 typedef struct ftable_s ftable_s;
 typedef struct test_s test_s;
 
-typedef void *(*sem_action_f)(token_s **, semantics_s *, pda_s *, pna_s *, parse_s *, sem_paramlist_s, unsigned , void *, bool);
+typedef void *(*sem_action_f)(token_s **, semantics_s *, pda_s *, pna_s *, parse_s *, sem_paramlist_s, unsigned , void *, bool, bool);
 
 struct access_s
 {
@@ -253,23 +253,23 @@ static pnode_s *getpnode_token(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm_copy(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index);
 static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
-static sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev);
-static sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev);
-static sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev);
-static sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev);
-static sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il,  pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_expression__s sem_expression_ (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_simple_expression_s sem_simple_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_simple_expression__s sem_simple_expression_ (parse_s *parse, token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_term_s sem_term (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_term__s sem_term_ (parse_s *parse, token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_factor__s sem_factor_ (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_idsuffix_s sem_idsuffix (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_dot_s sem_dot (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_range_s sem_range (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static sem_paramlist_s sem_paramlist (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
-static void sem_paramlist_ (parse_s *parse, token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval);
+static sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
+static sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
+static sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
+static sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
+static sem_expression_s sem_expression (parse_s *parse, token_s **curr, llist_s **il,  pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_expression__s sem_expression_ (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_simple_expression_s sem_simple_expression (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_simple_expression__s sem_simple_expression_ (parse_s *parse, token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_term_s sem_term (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_term__s sem_term_ (parse_s *parse, token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_factor_s sem_factor (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_factor__s sem_factor_ (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_idsuffix_s sem_idsuffix (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_dot_s sem_dot (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_range_s sem_range (parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static sem_paramlist_s sem_paramlist (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
+static void sem_paramlist_ (parse_s *parse, token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal);
 static sem_sign_s sem_sign (token_s **curr);
 static bool sem_match (token_s **curr, int type);
 
@@ -277,15 +277,15 @@ static sem_type_s *alloc_semt(sem_type_s value);
 static att_s *att_s_ (void *data, unsigned tid);
 static void setatt(semantics_s *s, char *id, sem_type_s *data);
 static sem_type_s getatt(semantics_s *s, char *id);
-static void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *fill, bool eval);
-static void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval);
-static void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval);
-static void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval);
-static void *sem_gettype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval);
-static void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval);
-static void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval);
-static void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval);
-static void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval);
+static void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *fill, bool eval, bool isfinal);
+static void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal);
+static void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal);
+static void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal);
+static void *sem_gettype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal);
+static void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal);
+static void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal);
+static void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal);
+static void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static int ftable_strcmp(char *key, ftable_s *b);
 static sem_action_f get_semaction(char *str);
 static char *sem_tostring(sem_type_s type);
@@ -900,18 +900,18 @@ llist_s *sem_start(semantics_s *in, parse_s *parse, mach_s *machs, pda_s *pda, p
     if(!iter)
         return NULL;
     
-    sem_statements(parse, &iter, &ilist, pda, prod, pn, syn, pass, (test_s){true, true}, false);
+    sem_statements(parse, &iter, &ilist, pda, prod, pn, syn, pass, (test_s){true, true}, false, islast);
     return ilist;
 }
 
-sem_statements_s sem_statements(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev)
+sem_statements_s sem_statements(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_IF:
         case SEMTYPE_NONTERM:
         case SEMTYPE_ID:
-            sem_statement(parse, curr, il, pda, prod, pn, syn, pass, evaluate, false);
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate, false);
+            sem_statement(parse, curr, il, pda, prod, pn, syn, pass, evaluate, false, isfinal);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate, false, isfinal);
         case SEMTYPE_FI:
         case SEMTYPE_ELSE:
         case SEMTYPE_ELIF:
@@ -924,7 +924,7 @@ sem_statements_s sem_statements(parse_s *parse, token_s **curr, llist_s **il, pd
     }
 }
 
-sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev)
+sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal)
 {
     pnode_s *p;
     char *id, *nterm;
@@ -939,11 +939,11 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
         case SEMTYPE_NONTERM:
             nterm = (*curr)->lexeme;
             *curr = (*curr)->next;
-            idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
+            idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result, isfinal);
             index = idsuffix.factor_.index;
             id = idsuffix.dot.id;
             sem_match(curr, SEMTYPE_ASSIGNOP);
-            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
+            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result, isfinal);
             if (evaluate.result && evaluate.evaluated && expression.value.type != ATTYPE_NOT_EVALUATED) {
                 if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
                     if(syn) {
@@ -967,21 +967,21 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             break;
         case SEMTYPE_IF:
             *curr = (*curr)->next;
-            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
+            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result, isfinal);
             sem_match(curr, SEMTYPE_THEN);
             test = test_semtype(expression.value);
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = test.result && evaluate.result}, false);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = test.result && evaluate.result}, false, isfinal);
             evaluate.evaluated = evaluate.evaluated && test.evaluated;
-            sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test.result);
+            sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test.result, isfinal);
             break;
         case SEMTYPE_ID:
             id = (*curr)->lexeme;
             *curr = (*curr)->next;
             sem_match(curr, SEMTYPE_OPENPAREN);
-            params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
+            params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result, isfinal);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             if (evaluate.result && evaluate.evaluated && params.ready) {
-                get_semaction(id)(curr, NULL, pda, pn, parse, params, pass, &expression, evaluate.evaluated && evaluate.result);
+                get_semaction(id)(curr, NULL, pda, pn, parse, params, pass, &expression, evaluate.evaluated && evaluate.result, isfinal);
             }
             break;
         default:
@@ -991,19 +991,19 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
     }
 }
 
-sem_else_s sem_else(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev)
+sem_else_s sem_else(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal)
 {
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated, .result = !elprev}, false);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated, .result = !elprev}, false, isfinal);
             sem_match(curr, SEMTYPE_FI);
             break;
         case SEMTYPE_FI:
             *curr = (*curr)->next;
             break;
         case SEMTYPE_ELIF:
-            sem_elif(parse, curr, il, pda, prod, pn, syn, pass, evaluate, elprev);
+            sem_elif(parse, curr, il, pda, prod, pn, syn, pass, evaluate, elprev, isfinal);
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected else or fi but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -1012,20 +1012,20 @@ sem_else_s sem_else(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     }
 }
 
-sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev)
+sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal)
 {
     test_s test;
     sem_expression_s expression;
     
     sem_match(curr, SEMTYPE_ELIF);
-    expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result);
+    expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result, isfinal);
     sem_match(curr, SEMTYPE_THEN);
     test = test_semtype(expression.value);
-    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result && test.result && !elprev}, false);
-    sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result}, test.result || elprev);
+    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result && test.result && !elprev}, false, isfinal);
+    sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result}, test.result || elprev, isfinal);
 }
 
-sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     sem_expression_s expression;
     sem_expression__s expression_;
@@ -1034,8 +1034,8 @@ sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pd
     expression.value.str_= NULL;
     expression.value.str_ = NULL;
     simple_expression.value.str_ = NULL;
-    simple_expression = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass, eval);
-    expression_ = sem_expression_(parse, curr, il, pda, prod, pn, syn, pass, eval);
+    simple_expression = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
+    expression_ = sem_expression_(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
     if (expression_.op != OPTYPE_NOP) {
        /* printf("Comparing:\n");
         print_semtype(simple_expression.value);
@@ -1050,7 +1050,7 @@ sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pd
     return expression;
 }
 
-sem_expression__s sem_expression_(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_expression__s sem_expression_(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     sem_expression__s expression_;
     
@@ -1059,7 +1059,7 @@ sem_expression__s sem_expression_(parse_s *parse, token_s **curr, llist_s **il, 
         case SEMTYPE_RELOP:
             expression_.op = torelop((*curr)->type.attribute);
             *curr = (*curr)->next;
-            expression_.value = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass, eval).value;
+            expression_.value = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal).value;
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_FI:
@@ -1084,7 +1084,7 @@ sem_expression__s sem_expression_(parse_s *parse, token_s **curr, llist_s **il, 
     return expression_;
 }
 
-sem_simple_expression_s sem_simple_expression(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_simple_expression_s sem_simple_expression(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     sem_sign_s sign;
     sem_simple_expression_s simple_expression;
@@ -1097,7 +1097,7 @@ sem_simple_expression_s sem_simple_expression(parse_s *parse, token_s **curr, ll
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
             sign = sem_sign(curr);
-            simple_expression = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            simple_expression = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             if (sign.value == SEMSIGN_NEG) {
                 if(simple_expression.value.type == ATTYPE_NUMINT)
                     simple_expression.value.int_ = -simple_expression.value.int_;
@@ -1113,8 +1113,8 @@ sem_simple_expression_s sem_simple_expression(parse_s *parse, token_s **curr, ll
         case SEMTYPE_NONTERM:
         case SEMTYPE_OPENPAREN:
         case SEMTYPE_CODE:
-            term = sem_term(parse, curr, il, pda, prod, pn, syn, pass, eval);
-            simple_expression_ = sem_simple_expression_(parse, curr, il, &term.value, pda, prod, pn, syn, pass, eval);
+            term = sem_term(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
+            simple_expression_ = sem_simple_expression_(parse, curr, il, &term.value, pda, prod, pn, syn, pass, eval, isfinal);
             simple_expression.value = term.value;
             break;
         default:
@@ -1125,7 +1125,7 @@ sem_simple_expression_s sem_simple_expression(parse_s *parse, token_s **curr, ll
     return simple_expression;
 }
 
-sem_simple_expression__s sem_simple_expression_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_simple_expression__s sem_simple_expression_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     unsigned op;
     sem_term_s term;
@@ -1138,9 +1138,9 @@ sem_simple_expression__s sem_simple_expression_(parse_s *parse, token_s **curr, 
         case SEMTYPE_ADDOP:
             op = toaddop((*curr)->type.attribute);
             *curr = (*curr)->next;
-            term = sem_term(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            term = sem_term(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             *accum = sem_op(*accum, term.value, op);
-            simple_expression__ = sem_simple_expression_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval);
+            simple_expression__ = sem_simple_expression_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval, isfinal);
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_RELOP:
@@ -1165,7 +1165,7 @@ sem_simple_expression__s sem_simple_expression_(parse_s *parse, token_s **curr, 
     return simple_expression_;
 }
 
-sem_term_s sem_term(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_term_s sem_term(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     sem_term_s term;
     sem_factor_s factor;
@@ -1174,14 +1174,14 @@ sem_term_s sem_term(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     term.value.str_ = NULL;
     factor.value.str_= NULL;
     term_.value.str_ = NULL;
-    factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval);
-    term_ = sem_term_(parse, curr, il, &factor.value, pda, prod, pn, syn, pass, eval);
+    factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
+    term_ = sem_term_(parse, curr, il, &factor.value, pda, prod, pn, syn, pass, eval, isfinal);
     term.value = factor.value;
     //term.value = sem_op(factor.value, term_.value, term_.op);
     return term;
 }
 
-sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *accum, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     unsigned op;
     sem_factor_s factor;
@@ -1194,9 +1194,9 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
         case SEMTYPE_MULOP:
             op = tomulop((*curr)->type.attribute);
             *curr = (*curr)->next;
-            factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             *accum = sem_op(*accum, factor.value, op);
-            term_ = sem_term_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval);
+            term_ = sem_term_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval, isfinal);
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_ADDOP:
@@ -1223,7 +1223,7 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
     return term_;
 }
 
-sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     char strtype;
     token_s *id;
@@ -1241,7 +1241,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             id = *curr;
             factor.value.str_ = id->lexeme;
             *curr = (*curr)->next;
-            idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             //attadd (semantics_s *s, char *id, sem_type_s *data)
             if (idsuffix.dot.id) {
                 if (!strcmp(idsuffix.dot.id, "entry")) {
@@ -1288,7 +1288,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             }
             else if (idsuffix.hasparam) {
                 if(idsuffix.params.ready) {
-                    factor.value = *(sem_type_s *)get_semaction(id->lexeme)(curr, NULL, pda, pn, parse, idsuffix.params, pass, &factor.value, eval);
+                    factor.value = *(sem_type_s *)get_semaction(id->lexeme)(curr, NULL, pda, pn, parse, idsuffix.params, pass, &factor.value, eval, isfinal);
                 }
             }
             else {
@@ -1310,7 +1310,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             factor.value.str_ = (*curr)->lexeme;
             factor.access.base = (*curr)->lexeme;
             *curr = (*curr)->next;
-            idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
             if (idsuffix.dot.id) {
@@ -1356,7 +1356,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
         case SEMTYPE_NOT:
             *curr = (*curr)->next;
             id = *curr;
-            factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             switch(factor.value.type) {
                 case ATTYPE_ID:
                     fprintf(stderr, "Type Error: Cannot apply logical not to string type.");
@@ -1380,7 +1380,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             break;
         case SEMTYPE_OPENPAREN:
             *curr = (*curr)->next;
-            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             sem_match(curr, SEMTYPE_CLOSEPAREN);
             factor.value = expression.value;
             break;
@@ -1397,7 +1397,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
     return factor;
 }
 
-sem_factor__s sem_factor_(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_factor__s sem_factor_(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     sem_factor__s factor_;
 
@@ -1434,7 +1434,7 @@ sem_factor__s sem_factor_(parse_s *parse, token_s **curr, llist_s **il, pna_s *p
     return factor_;
 }
 
-sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     sem_expression_s expression;
     sem_idsuffix_s idsuffix;
@@ -1457,8 +1457,8 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
         case SEMTYPE_ID:
         case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
-            idsuffix.factor_ = sem_factor_(parse, curr, il, pn, syn, pass, eval);
-	    idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval);
+            idsuffix.factor_ = sem_factor_(parse, curr, il, pn, syn, pass, eval, isfinal);
+            idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval, isfinal);
             idsuffix.hasparam = false;
             idsuffix.hasmap = false;
             break;
@@ -1466,7 +1466,7 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
             *curr = (*curr)->next;
             idsuffix.hasparam = true;
             idsuffix.hasmap = false;
-            idsuffix.params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            idsuffix.params = sem_paramlist(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             idsuffix.factor_.index = 1;
             idsuffix.factor_.isset = false;
             idsuffix.dot.id = NULL;
@@ -1474,11 +1474,11 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
             break;
         case SEMTYPE_OPENBRACKET:
             *curr = (*curr)->next;
-            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             sem_match(curr, SEMTYPE_CLOSEBRACKET);
             idsuffix.factor_.isset = true;
 	    idsuffix.factor_.index = 1;
-            idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval);
+            idsuffix.dot = sem_dot(parse, curr, il, pn, syn, pass, eval, isfinal);
             idsuffix.hasparam = false;
             idsuffix.hasmap = false;
             break;
@@ -1497,7 +1497,7 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
     return idsuffix;
 }
 
-sem_dot_s sem_dot(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_dot_s sem_dot(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     sem_dot_s dot;
     
@@ -1506,7 +1506,7 @@ sem_dot_s sem_dot(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, seman
             *curr = (*curr)->next;
             dot.id = (*curr)->lexeme;
             sem_match(curr, SEMTYPE_ID);
-            dot.range = sem_range(parse, curr, il, pn, syn, pass, eval);
+            dot.range = sem_range(parse, curr, il, pn, syn, pass, eval, isfinal);
             break;
         case SEMTYPE_MULOP:
         case SEMTYPE_ADDOP:
@@ -1534,7 +1534,7 @@ sem_dot_s sem_dot(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, seman
     return dot;
 }
 
-sem_range_s sem_range(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_range_s sem_range(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     unsigned index;
     token_s *id1, *id2;
@@ -1590,7 +1590,7 @@ sem_range_s sem_range(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, s
     return range;
 }
 
-sem_paramlist_s sem_paramlist(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+sem_paramlist_s sem_paramlist(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     sem_paramlist_s paramlist;
     sem_expression_s expression;
@@ -1607,12 +1607,12 @@ sem_paramlist_s sem_paramlist(parse_s *parse, token_s **curr, llist_s **il, pda_
         case SEMTYPE_OPENPAREN:
         case SEMTYPE_ID:
         case SEMTYPE_NONTERM:
-            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             if(expression.value.type == ATTYPE_NOT_EVALUATED || expression.value.type == ATTYPE_NULL)
                 paramlist.ready = false;
             else
                 llpush(&paramlist.pstack, alloc_semt(expression.value));
-            sem_paramlist_(parse, curr, il, &paramlist, pda, prod, pn, syn, pass, eval);
+            sem_paramlist_(parse, curr, il, &paramlist, pda, prod, pn, syn, pass, eval, isfinal);
             break;
         case SEMTYPE_CLOSEPAREN:
             break;
@@ -1624,19 +1624,19 @@ sem_paramlist_s sem_paramlist(parse_s *parse, token_s **curr, llist_s **il, pda_
     return paramlist;
 }
 
-void sem_paramlist_(parse_s *parse, token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval)
+void sem_paramlist_(parse_s *parse, token_s **curr, llist_s **il, sem_paramlist_s *list, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
     sem_expression_s expression;
     
     switch ((*curr)->type.val) {
         case SEMTYPE_COMMA:
             *curr = (*curr)->next;
-            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval);
+            expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             if(expression.value.type == ATTYPE_NOT_EVALUATED || expression.value.type == ATTYPE_NULL)
                 list->ready = false;
             else if (list->ready)
                 llpush(&list->pstack, alloc_semt(expression.value));
-            sem_paramlist_(parse, curr, il, list, pda, prod, pn, syn, pass, eval);
+            sem_paramlist_(parse, curr, il, list, pda, prod, pn, syn, pass, eval, isfinal);
             break;
         case SEMTYPE_CLOSEPAREN:
             break;
@@ -1732,7 +1732,7 @@ sem_type_s getatt(semantics_s *s, char *id)
     return *data;
 }
 
-void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, sem_type_s *fill, bool eval)
+void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, sem_type_s *fill, bool eval, bool isfinal)
 {
     llist_s *node;
     sem_type_s *val1, *val2;
@@ -1758,12 +1758,12 @@ void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     return val1;
 }
 
-void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval)
+void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
     printf("Emit Called\n");
 }
 
-void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval)
+void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
     char *str;
     pnode_s *p;
@@ -1788,7 +1788,7 @@ void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     return NULL;
 }
 
-void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval)
+void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
     pnode_s *p;
     llist_s *node;
@@ -1815,7 +1815,7 @@ void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_
     return alloc_semt(type);
 }
 
-void *sem_gettype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval)
+void *sem_gettype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
     llist_s *node;
     sem_type_s *val;
@@ -1832,7 +1832,7 @@ void *sem_gettype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     }
 }
 
-void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, void *fill, bool eval)
+void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
     if(!eval)
         return NULL;
@@ -1844,7 +1844,7 @@ void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     asm("hlt");
 }
 
-void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval)
+void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
     pnode_s *p;
     llist_s *node;
@@ -1867,7 +1867,7 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
     return NULL;
 }
 
-void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, void *fill, bool eval)
+void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
     llist_s *node;
     sem_type_s *val;
@@ -1893,7 +1893,7 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     return NULL;
 }
 
-void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval)
+void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
     llist_s *node;
     pnode_s *pnode;
