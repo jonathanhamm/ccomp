@@ -35,13 +35,13 @@
 <declarations> ->
 	var id : <type> ; <declarations'> 
     {
-        addtype(id, <type>.type)
+        addtype(id.entry, <type>.type)
 
     }
 <declarations'> ->
 	var id : <type> ; <declarations'>
     {
-        addtype(id, <type>.type)
+        addtype(id.entry, <type>.type)
     }
 	|
 	ε
@@ -97,9 +97,9 @@
 <arguments> ->
 	\( <parameter_list> \)
 <parameter_list> ->
-	id : <type> <parameter_list'> { addtype(id, <type>.type) }
+	id : <type> <parameter_list'> { addtype(id.entry, <type>.type) }
 <parameter_list'> ->
-	; id : <type> <parameter_list'> { addtype(id, <type>.type) }
+	; id : <type> <parameter_list'> { addtype(id.entry, <type>.type) }
 	|
 	ε
 	
@@ -243,6 +243,7 @@
         else
             error(addop, "Invalid type used in addop expression")
         fi
+
         if <simple_expression'>[1].type <> void then
             <simple_expression'>.type := <simple_expression'>[1].type
         fi

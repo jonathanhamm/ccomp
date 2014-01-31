@@ -450,6 +450,7 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
         s.type = ATTYPE_ID;
         s.str_ = token->lexeme;
     }
+    s.lexeme = token->lexeme;
     return s;
 }
 
@@ -1247,10 +1248,10 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                 if (!strcmp(idsuffix.dot.id, "entry")) {
                     pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
                     if(pnode && pnode->pass) {
-                        printf("pnode->matched: %s\n", pnode->matched->lexeme);
-                        factor.value = sem_type_s_(parse, pnode->matched);
+                       // factor.value = sem_type_s_(parse, pnode->matched);
+                        factor.value = gettype(parse->lex, pnode->matched->lexeme);
                         if(factor.value.type != ATTYPE_NOT_EVALUATED && factor.value.type != ATTYPE_NULL) {
-                            print_semtype(factor.value);
+                             print_semtype(factor.value);
                             putchar('\n');
                         }
                         else {
@@ -1265,7 +1266,10 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                             factor.value.high = idsuffix.dot.range.value;
                         }
                     }
+                    else {
+                        //factor.value = sem_type_s_(parse, pnode->matched);
 
+                    }
                 }
                 else if (!strcmp(idsuffix.dot.id, "val")) {
                     pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
@@ -1854,6 +1858,7 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
         node = llpop(&params.pstack);
         val = node->ptr;
         free(node);
+        
         p = getpnode_nterm_copy(pn, val->str_, 1);
         printf("getting type for: %s from %s\n", p->matched->lexeme, val->str_);
         type = gettype(parse->lex, p->matched->lexeme);
@@ -1898,7 +1903,7 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     llist_s *node;
     pnode_s *pnode;
     sem_type_s *t, *id;
-    
+
     if(!(params.ready && eval))
         return NULL;
     
@@ -1910,10 +1915,11 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     id = node->ptr;
     free(node);
     
-    pnode = getpnode_nterm_copy(pn, id->str_, 1);
-    print_semtype(*t);
+  //  pnode = getpnode_nterm_copy(pn, id->str_, 1);
+    //print_semtype(*t);
     putchar('\n');
-    settype(p->lex, pnode->matched->lexeme, *t);
+    for(;;)printf("%s\n", t->lexeme);
+    settype(p->lex, t->lexeme, *t);
     return NULL;
 }
 

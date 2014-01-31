@@ -303,7 +303,7 @@ void pp_nonterminals(parse_s *parse, token_s **curr)
             break;
         case LEXTYPE_EOF:
             break;
-        default:
+         default:
             fprintf(stderr, "Syntax Error at line %d: Expected EOL or $ but got %s\n", (*curr)->lineno, (*curr)->lexeme);
             assert(false);
             break;
