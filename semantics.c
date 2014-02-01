@@ -1252,6 +1252,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                         factor.value.str_ = pnode->matched->lexeme;
                         factor.value.lexeme = pnode->matched->lexeme;
                         factor.value.type = ATTYPE_ID;
+                        printf("matched: %s\n", factor.value.lexeme);
                        /*// for(;;)printf("%s %s\n", pnode->matched->lexeme, pnode->matched->stype);
                         factor.value = sem_type_s_(parse, pnode->matched);
                         //factor.value = gettype(parse->lex, pnode->matched->lexeme);
@@ -1921,8 +1922,8 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
   //  pnode = getpnode_nterm_copy(pn, id->str_, 1);
     //print_semtype(*t);
     putchar('\n');
-    for(;;)printf("%s\n", t->lexeme);
-    settype(p->lex, t->lexeme, *t);
+    //for(;;)printf("%s\n", t->lexeme);
+    settype(p->lex, id->lexeme, *t);
     return NULL;
 }
 
