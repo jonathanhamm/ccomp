@@ -345,7 +345,9 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     s.str_ = NULL;
     s.low = 0 ;
     s.high = 0;
+    
     if(!token->stype) {
+
         res = idtable_lookup(parse->lex->idtable, token->lexeme);
         if(res.is_found) {
             s = res.tdat.type;
@@ -450,7 +452,7 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
         s.type = ATTYPE_ID;
         s.str_ = token->lexeme;
     }
-    s.lexeme = token->lexeme;
+    //s.lexeme = token->lexeme;
     return s;
 }
 
@@ -1226,7 +1228,6 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
 
 sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
-    char strtype;
     token_s *id;
     pnode_s *pnode, *ptmp;
     semantics_s *in;
@@ -1248,15 +1249,16 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                 if (!strcmp(idsuffix.dot.id, "entry")) {
                     pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
                     if(pnode && pnode->pass) {
-                       // factor.value = sem_type_s_(parse, pnode->matched);
-                        factor.value = gettype(parse->lex, pnode->matched->lexeme);
+                        factor.value.str_ = pnode->matched->lexeme;
+                        factor.value.lexeme = pnode->matched->lexeme;
+                        factor.value.type = ATTYPE_ID;
+                       /*// for(;;)printf("%s %s\n", pnode->matched->lexeme, pnode->matched->stype);
+                        factor.value = sem_type_s_(parse, pnode->matched);
+                        //factor.value = gettype(parse->lex, pnode->matched->lexeme);
                         if(factor.value.type != ATTYPE_NOT_EVALUATED && factor.value.type != ATTYPE_NULL) {
-                             print_semtype(factor.value);
+                            for(;;)print_semtype(factor.value);
                             putchar('\n');
-                        }
-                        else {
-                            print_semtype(factor.value);
-                        }
+                        }*/
                     }
                     if (idsuffix.dot.range.isset && idsuffix.dot.range.isready) {
                         factor.value.type = ATTYPE_RANGE;
@@ -1806,6 +1808,7 @@ void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_
         p = getpnode_nterm_copy(pn, val->str_, 1);
         type = gettype(parse->lex, p->matched->lexeme);
         
+        
         if(type.type == ATTYPE_ARRAY)
             type.type = ATTYPE_ID;
         else if(eval) {
@@ -1903,7 +1906,7 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     llist_s *node;
     pnode_s *pnode;
     sem_type_s *t, *id;
-
+    
     if(!(params.ready && eval))
         return NULL;
     
@@ -1914,7 +1917,7 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     node = llpop(&params.pstack);
     id = node->ptr;
     free(node);
-    
+        
   //  pnode = getpnode_nterm_copy(pn, id->str_, 1);
     //print_semtype(*t);
     putchar('\n');
