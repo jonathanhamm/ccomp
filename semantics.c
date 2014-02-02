@@ -1952,18 +1952,36 @@ void *sem_addargs(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_
 
 void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
-    for(;;)printf("appending");
-    //for(;;)printf("LIST APPEND CALLED");
+    llist_s *listparam, *argparam;
+    sem_type_s *arglist, *arg;
+    
+    argparam = llpop(&params.pstack);
+    arg = argparam->ptr;
+    free(argparam);
+    
+    listparam = llpop(&params.pstack);
+    arglist = listparam->ptr;
+    free(listparam);
+        
+    enqueue(arglist->q, arg);
+    return NULL;
 }
 
 void *sem_makelist(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
-    sem_type_s t;
+    llist_s *node;
+    sem_type_s *t, list;
     
-    t.type = ATTYPE_ID;
-    t.lexeme = "haha";
-    t.str_ = "derrrp";
-    return alloc_semt(t);
+    node = llpop(&params.pstack);
+    
+    t = node->ptr;
+    free(node);
+    
+    list.type = ATTYPE_ARGLIST;
+    list.q = queue_s_();
+    list.lexeme = "--ARGLIST--";
+    enqueue(list.q, t);
+    return alloc_semt(list);
 }
 
 int ftable_strcmp(char *key, ftable_s *b)
