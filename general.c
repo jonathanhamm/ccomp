@@ -575,6 +575,12 @@ void *dequeu(queue_s *q)
     return ptr;
 }
 
+void free_queue(queue_s *q)
+{
+    while(dequeu(q));
+    free(q);
+}
+
 /* 
  Substandard function for debugging purposes.
  Mainly needed for an ugly hack for differentiating 

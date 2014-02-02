@@ -163,5 +163,6 @@ extern bool is_allocated(const void *ptr);
 extern queue_s *queue_s_(void);
 extern void enqueue(queue_s *q, void *ptr);
 extern void *dequeu(queue_s *q);
+extern void free_queue(queue_s *q);
 
 #endif
