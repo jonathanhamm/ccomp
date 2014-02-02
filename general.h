@@ -89,6 +89,7 @@ struct sem_type_s
         char *str_;
         char *tuple;
     };
+    struct token_s *tok;
     long low, high;
 };
 

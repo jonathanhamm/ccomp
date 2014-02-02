@@ -51,6 +51,7 @@ struct production_s
 
 struct pnode_s
 {
+    pnode_s *self;
     token_s *token;
     token_s *matched;
     token_s *annotation;

@@ -254,6 +254,7 @@ pnode_s *pnode_(token_s *token)
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
+    pnode->self = pnode;
     pnode->token = token;
     return pnode;
 }

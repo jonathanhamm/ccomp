@@ -91,15 +91,33 @@
 	procedure id <subprogram_head'>;
 <subprogram_head'> ->
 	<arguments>
+    {
+        <subprogram_head'>.args := <arguments>.args
+    }
 	|
 	ε
 
 <arguments> ->
 	\( <parameter_list> \)
+    {
+        <arguments>.args := <parameter_list>.args
+    }
 <parameter_list> ->
-	id : <type> <parameter_list'> { addtype(id.entry, <type>.type) }
+	id : <type> <parameter_list'> 
+    { 
+        addtype(id.entry, <type>.type) 
+        <parameter_list>.args := makelist(<type>.type)
+        <parameter_list'>.args := id.entry
+        <parameter_list'>.type := integer
+
+    }
 <parameter_list'> ->
-	; id : <type> <parameter_list'> { addtype(id.entry, <type>.type) }
+	; id : <type> <parameter_list'> 
+    { 
+        addtype(id.entry, <type>.type) 
+        listappend(<parameter_list'>.args, <type>.type)
+        <parameter_list'>[1].args := <parameter_list'>.args
+    }
 	|
 	ε
 	
@@ -158,6 +176,7 @@
         elif <variable'>.type = void then
             <variable>.type := lookup(id)
         else
+            <variable>.type := getarray(id)
             error(id, "Non-integer type used in array index")
         fi
 
