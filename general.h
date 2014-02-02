@@ -34,6 +34,7 @@ typedef struct hashiterator_s hashiterator_s;
 typedef struct ltablerec_s ltablerec_s;
 typedef struct linetable_s linetable_s;
 typedef struct sem_type_s sem_type_s;
+typedef struct queue_s queue_s;
 
 struct llist_s
 {
@@ -93,6 +94,12 @@ struct sem_type_s
     long low, high;
 };
 
+struct queue_s
+{
+    llist_s *head;
+    llist_s *tail;
+};
+
 enum atypes {
     ATTYPE_NULL,
     ATTYPE_NUMREAL,
@@ -105,6 +112,7 @@ enum atypes {
     ATTYPE_NOT_EVALUATED,
     ATTYPE_VOID,
     ATTYPE_ERROR,
+    ATTYPE_ARGLIST,
 };
 
 extern long safe_atol (char *str);
@@ -150,6 +158,10 @@ extern void print_listing(linetable_s *table, void *stream);
 extern bool check_listing(linetable_s *table, unsigned lineno, char *str);
 extern void free_listing(linetable_s *table);
 
-extern bool is_allocated (const void *ptr);
+extern bool is_allocated(const void *ptr);
+
+extern queue_s *queue_s_(void);
+extern void enqueue(queue_s *q, void *ptr);
+extern void *dequeu(queue_s *q);
 
 #endif

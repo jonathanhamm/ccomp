@@ -967,20 +967,12 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
                     p = getpnode_nterm(prod, nterm, index);
                     if(p && expression.value.type != ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, p);
-
                         if(!in) {
                             in = semantics_s_(NULL, NULL);
                             in->n = p;
                             llpush(il, in);
-                            printf("Added with %s.%s to: %p from %p\n", nterm, id, in, p);
-
                         }
-                        if(!strcmp(nterm, "<parameter_list'>") && !strcmp(id, "type")) {
-                            printf("@@@@@@@@@@@@@@@@@@Set at %p with pnode %p with lexeme %s %u\n", in, p, p->token->lexeme, pass);
-                        }
-
                         setatt(in, id, alloc_semt(expression.value));
-
                     }
                 }
             }
@@ -1960,6 +1952,7 @@ void *sem_addargs(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_
 
 void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
+    for(;;)printf("appending");
     //for(;;)printf("LIST APPEND CALLED");
 }
 

@@ -528,6 +528,53 @@ void free_listing(linetable_s *table)
     free(table);
 }
 
+queue_s *queue_s_(void)
+{
+    queue_s *q;
+    
+    q = calloc(1, sizeof(*q));
+    if(!q) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    return q;
+}
+
+void enqueue(queue_s *q, void *ptr)
+{
+    llist_s *l;
+    
+    l = malloc(sizeof(*l));
+    if(!l) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    l->ptr = ptr;
+    l->next = NULL;
+    if(!q->head) {
+        q->head = l;
+        q->tail = l;
+    }
+    else {
+        q->tail->next = l;
+        q->tail = l;
+    }
+}
+
+void *dequeu(queue_s *q)
+{
+    void *ptr;
+    llist_s *l;
+    
+    if(!q->head)
+        return NULL;
+    l = q->head;
+    q->head = q->head->next;
+    ptr = l->ptr;
+    free(l);
+    return ptr;
+}
+
 /* 
  Substandard function for debugging purposes.
  Mainly needed for an ugly hack for differentiating 

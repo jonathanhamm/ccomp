@@ -25,7 +25,7 @@ enum term_args_ {
 
 #define DEFAULT_REGEX   "regex_pascal"
 #define DEFAULT_CFG     "cfg_pascal"
-#define DEFAULT_SOURCE  "samples/workingtest"
+#define DEFAULT_SOURCE  "samples/smallworking.pas"
 
 #define COMP_HELP       "Usage: \n" \
                         "pc [--help] [<sourcefile>] [-s <sourcefile> | --source=<sourcefile>] " \
