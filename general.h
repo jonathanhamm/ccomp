@@ -97,6 +97,7 @@ struct sem_type_s
 
 struct queue_s
 {
+    char hello[10];
     llist_s *head;
     llist_s *tail;
 };

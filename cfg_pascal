@@ -61,7 +61,6 @@
 	integer
     {
         <standard_type>.type := integer
-
     }
 	|
 	real
@@ -89,10 +88,13 @@
 
 <subprogram_head> ->
 	procedure id <subprogram_head'>;
+    {
+        addtype(id.entry, <subprogram_head'>.type)
+    }
 <subprogram_head'> ->
 	<arguments>
     {
-        <subprogram_head'>.args := <arguments>.args
+        <subprogram_head'>.type := <arguments>.args
     }
 	|
 	ε
@@ -107,9 +109,7 @@
     { 
         addtype(id.entry, <type>.type) 
         <parameter_list>.args := makelist(<type>.type)
-        <parameter_list'>.args := id.entry
-        <parameter_list'>.type := integer
-
+        <parameter_list'>.args := <parameter_list>.args
     }
 <parameter_list'> ->
 	; id : <type> <parameter_list'> 
@@ -195,15 +195,31 @@
 
 <procedure_statement> ->
 	call id <procedure_statement'>
+    {
+        if lookup(id) = <procedure_statement'>.type then
+            halt()
+        fi
+    }
 <procedure_statement'> ->
 	\( <expression_list> \)
+    {
+        <procedure_statement'>.type := <expression_list>.args
+    }
 	|
 	ε
 	
 <expression_list> ->
 	<expression> <expression_list'>
+    {
+        <expression_list>.args := makelist(<expression>.type)
+        <expression_list'>.args := <expression>.args
+    }
 <expression_list'> ->
 	, <expression> <expression_list'>
+    {
+        listappend(<expression_list'>.args, <expression>.type)
+        <expression_list'>[1].args := <expression_list'>.args
+    }
 	|
 	ε
 	
@@ -315,7 +331,6 @@
     {
 
         if <factor'>.type = integer then
-
             <factor>.type := getarray(id)
         elif <factor'>.type = void then
             <factor>.type := lookup(id)
@@ -323,17 +338,11 @@
             <factor>.type := getarray(id)
             error(id, "Non-integer type used in array index")
         fi
-        
-
     }
 	|
 	num
     {
         <factor>.type := num.type
-
-        if <factor>.bob <> null then
-            print(num.val)
-        fi
     }
 	|
 	\( <expression> \)

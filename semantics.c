@@ -492,6 +492,9 @@ void print_semtype(sem_type_s value)
         case ATTYPE_NOT_EVALUATED:
             printf("not evaluated");
             break;
+        case ATTYPE_ARGLIST:
+            
+            break;
         default:
             puts("ILLEGAL STATE");
             assert(false);
@@ -840,6 +843,8 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
                 result.int_ = v1.real_ == v2.int_;
             else if(v1.type == ATTYPE_ARRAY || v2.type == ATTYPE_ARRAY) {
                 result.int_ = (v2.type == ATTYPE_ARRAY && v1.low == v2.low && v1.high == v2.high);
+            }
+            else if(v1.type == ATTYPE_ARGLIST || v2.type == ATTYPE_ARGLIST) {
             }
             else
                 result.int_ = v1.real_ == v2.real_;
@@ -1962,8 +1967,10 @@ void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
     listparam = llpop(&params.pstack);
     arglist = listparam->ptr;
     free(listparam);
-        
+    
     enqueue(arglist->q, arg);
+    printf("queue: %s\n", arglist->q->hello);
+    asm("hlt");
     return NULL;
 }
 
@@ -1979,7 +1986,8 @@ void *sem_makelist(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse
     
     list.type = ATTYPE_ARGLIST;
     list.q = queue_s_();
-    list.lexeme = "--ARGLIST--";
+    strcmp(list.q->hello, "hello");
+    //list.lexeme = "--ARGLIST--";
     enqueue(list.q, t);
     return alloc_semt(list);
 }
