@@ -252,7 +252,7 @@ static inline unsigned torelop(unsigned val);
 static pnode_s *getpnode_token(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm_copy(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index);
-static sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op);
+static sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, int op);
 static sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
 static sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
 static sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
@@ -288,7 +288,10 @@ static void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, p
 static void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_addargs(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
-static void *sem_makelist(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+static void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+static void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+
+static void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual);
 
 static int ftable_strcmp(char *key, ftable_s *b);
 static sem_action_f get_semaction(char *str);
@@ -313,7 +316,8 @@ static ftable_s ftable[] = {
     {"halt", sem_halt},
     {"listappend", (sem_action_f)sem_listappend},
     {"lookup", sem_lookup},
-    {"makelist", (sem_action_f)sem_makelist},
+    {"makelista", (sem_action_f)sem_makelista},
+    {"makelistf", (sem_action_f)sem_makelistf},
     {"print", sem_print}
 };
 
@@ -492,7 +496,8 @@ void print_semtype(sem_type_s value)
         case ATTYPE_NOT_EVALUATED:
             printf("not evaluated");
             break;
-        case ATTYPE_ARGLIST:
+        case ATTYPE_ARGLIST_FORMAL:
+        case ATTYPE_ARGLIST_ACTUAL:
             
             break;
         default:
@@ -651,7 +656,7 @@ pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index)
 }
 
 /* performs basic arithmetic operations with implicit type coercion */
-sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
+sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, int op)
 {
     sem_type_s result;
     result.str_ = NULL;
@@ -844,7 +849,8 @@ sem_type_s sem_op(sem_type_s v1, sem_type_s v2, int op)
             else if(v1.type == ATTYPE_ARRAY || v2.type == ATTYPE_ARRAY) {
                 result.int_ = (v2.type == ATTYPE_ARRAY && v1.low == v2.low && v1.high == v2.high);
             }
-            else if(v1.type == ATTYPE_ARGLIST || v2.type == ATTYPE_ARGLIST) {
+            else if((v1.type == ATTYPE_ARGLIST_FORMAL || v1.type == ATTYPE_ARGLIST_ACTUAL) || (v2.type == ATTYPE_ARGLIST_FORMAL || v2.type == ATTYPE_ARGLIST_ACTUAL)) {
+                
             }
             else
                 result.int_ = v1.real_ == v2.real_;
@@ -1062,7 +1068,7 @@ sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pd
            // for(;;)printf("%u\n", expression_.value.type);
         puts("\n\n");*/
     }
-    expression.value = sem_op(simple_expression.value, expression_.value, expression_.op);
+    expression.value = sem_op(parse, pn->curr->matched, simple_expression.value, expression_.value, expression_.op);
 
     return expression;
 }
@@ -1156,7 +1162,7 @@ sem_simple_expression__s sem_simple_expression_(parse_s *parse, token_s **curr, 
             op = toaddop((*curr)->type.attribute);
             *curr = (*curr)->next;
             term = sem_term(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
-            *accum = sem_op(*accum, term.value, op);
+            *accum = sem_op(parse, pn->curr->matched, *accum, term.value, op);
             simple_expression__ = sem_simple_expression_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval, isfinal);
             break;
         case SEMTYPE_COMMA:
@@ -1212,7 +1218,7 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
             op = tomulop((*curr)->type.attribute);
             *curr = (*curr)->next;
             factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
-            *accum = sem_op(*accum, factor.value, op);
+            *accum = sem_op(parse, pn->curr->matched, *accum, factor.value, op);
             term_ = sem_term_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval, isfinal);
             break;
         case SEMTYPE_COMMA:
@@ -1974,7 +1980,7 @@ void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
     return NULL;
 }
 
-void *sem_makelist(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
+void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
     llist_s *node;
     sem_type_s *t, list;
@@ -1984,12 +1990,35 @@ void *sem_makelist(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse
     t = node->ptr;
     free(node);
     
-    list.type = ATTYPE_ARGLIST;
+    list.type = ATTYPE_ARGLIST_ACTUAL;
     list.q = queue_s_();
     strcmp(list.q->hello, "hello");
     //list.lexeme = "--ARGLIST--";
     enqueue(list.q, t);
     return alloc_semt(list);
+}
+
+void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
+{
+    llist_s *node;
+    sem_type_s *t, list;
+    
+    node = llpop(&params.pstack);
+    
+    t = node->ptr;
+    free(node);
+    
+    list.type = ATTYPE_ARGLIST_FORMAL;
+    list.q = queue_s_();
+    strcmp(list.q->hello, "hello");
+    //list.lexeme = "--ARGLIST--";
+    enqueue(list.q, t);
+    return alloc_semt(list);
+}
+
+void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
+{
+    
 }
 
 int ftable_strcmp(char *key, ftable_s *b)

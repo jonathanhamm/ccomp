@@ -114,7 +114,8 @@ enum atypes {
     ATTYPE_NOT_EVALUATED,
     ATTYPE_VOID,
     ATTYPE_ERROR,
-    ATTYPE_ARGLIST,
+    ATTYPE_ARGLIST_FORMAL,
+    ATTYPE_ARGLIST_ACTUAL,
 };
 
 extern long safe_atol (char *str);
