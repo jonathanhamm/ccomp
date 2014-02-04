@@ -498,7 +498,7 @@ void print_semtype(sem_type_s value)
             break;
         case ATTYPE_ARGLIST_FORMAL:
         case ATTYPE_ARGLIST_ACTUAL:
-            
+            printf("arg list");
             break;
         default:
             puts("ILLEGAL STATE");
@@ -507,6 +507,7 @@ void print_semtype(sem_type_s value)
             break;
     }
     puts("\n~~~~~~~~~~~~~~~\n");
+    fflush(stdout);
 }
 
 test_s test_semtype(sem_type_s value)
@@ -850,7 +851,10 @@ sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, in
                 result.int_ = (v2.type == ATTYPE_ARRAY && v1.low == v2.low && v1.high == v2.high);
             }
             else if((v1.type == ATTYPE_ARGLIST_FORMAL || v1.type == ATTYPE_ARGLIST_ACTUAL) || (v2.type == ATTYPE_ARGLIST_FORMAL || v2.type == ATTYPE_ARGLIST_ACTUAL)) {
-                
+                if(v1.type == ATTYPE_ARGLIST_FORMAL)
+                    arglist_cmp(parse, tok, v1, v2);
+                else
+                    arglist_cmp(parse, tok, v2, v1);
             }
             else
                 result.int_ = v1.real_ == v2.real_;
@@ -972,6 +976,22 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
                     if(syn) {
                         setatt(syn, id, alloc_semt(expression.value));
                     }
+                    else {
+                        //Nasty hack to fix the attribute system when assigning data to the current nonterminal production.
+                        if(pn->curr) {
+                            if(!pn->curr->in) {
+                                pn->curr->in = semantics_s_(parse, NULL);
+                                pn->curr->in->n = malloc(sizeof(*pn->curr->in->n));
+                                if(!pn->curr->in->n) {
+                                    perror("Memory Allocation Error");
+                                    exit(EXIT_FAILURE);
+                                }
+                                pn->curr->in->n->token = pda->nterm;
+                            }
+                            setatt(pn->curr->in, id, alloc_semt(expression.value));
+                        }
+                    }
+                    
                 }
                 else {
                     /* Setting inherited attributes */
@@ -1341,18 +1361,33 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
+            char *nonterm = factor.value.str_;
+            
             if (idsuffix.dot.id) {
+
                 if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
                     if(pn->curr) {
-                        factor.value = getatt(pn->curr->in, idsuffix.dot.id);
+
+                        factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
+
                         if(factor.value.type == ATTYPE_NOT_EVALUATED) {
-                            factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
+                            
+                            factor.value = getatt(pn->curr->in, idsuffix.dot.id);
+    
+                            if(factor.value.type == ATTYPE_NOT_EVALUATED) {
+                                printf("gettng from syn: %p\n", syn);
+                                factor.value = getatt(syn, idsuffix.dot.id);
+                                //assert(factor.value.type != ATTYPE_NOT_EVALUATED);
+                            }
+                            if(!strcmp(nonterm, "<expression_list'>") && !strcmp(idsuffix.dot.id, "args")) {
+                                printf("type not evaluated %u and factor.value.type = %u\n", ATTYPE_NOT_EVALUATED, factor.value.type);
+                            }
+
                         }
                     }
                     else {
-                        factor.value.type = ATTYPE_NOT_EVALUATED;
+                        factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
                     }
-
                 }
                 else {
 
@@ -1361,7 +1396,6 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                     pnode = getpnode_token(pn, factor.value.str_, idsuffix.factor_.index);
                     char *tmp = factor.value.str_;
                     if(pnode) {
-
                         factor.value = getatt(pnode->syn, idsuffix.dot.id);
 
                     }
@@ -1932,7 +1966,7 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
 {
     llist_s *node;
     pnode_s *pnode;
-    sem_type_s *t, *id;
+    sem_type_s *t, *id, test;
     
     if(!(params.ready && eval))
         return NULL;
@@ -1949,6 +1983,10 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     //print_semtype(*t);
     putchar('\n');
     //for(;;)printf("%s\n", t->lexeme);
+    test = gettype(p->lex, id->lexeme);
+    if(test.type != ATTYPE_NOT_EVALUATED) {
+        //redeclaration error here
+    }
     settype(p->lex, id->lexeme, *t);
     return NULL;
 }
@@ -1966,6 +2004,7 @@ void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
     llist_s *listparam, *argparam;
     sem_type_s *arglist, *arg;
     
+    
     argparam = llpop(&params.pstack);
     arg = argparam->ptr;
     free(argparam);
@@ -1975,8 +2014,6 @@ void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
     free(listparam);
     
     enqueue(arglist->q, arg);
-    printf("queue: %s\n", arglist->q->hello);
-    asm("hlt");
     return NULL;
 }
 
@@ -1992,8 +2029,7 @@ void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     
     list.type = ATTYPE_ARGLIST_ACTUAL;
     list.q = queue_s_();
-    strcmp(list.q->hello, "hello");
-    //list.lexeme = "--ARGLIST--";
+    list.lexeme = "--ARGLIST--";
     enqueue(list.q, t);
     return alloc_semt(list);
 }
@@ -2010,15 +2046,26 @@ void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     
     list.type = ATTYPE_ARGLIST_FORMAL;
     list.q = queue_s_();
-    strcmp(list.q->hello, "hello");
-    //list.lexeme = "--ARGLIST--";
+    list.lexeme = "--ARGLIST--";
     enqueue(list.q, t);
     return alloc_semt(list);
 }
 
 void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
 {
+    llist_s *lf, *la;
+    sem_type_s *a, *f;
     
+    la = actual.q->head;
+    for(lf = formal.q->head; lf; lf = lf->next) {
+        f = lf->ptr;
+        a = lf->ptr;
+        printf("%s vs %s\n", f->str_, a->str_);
+        if(la)
+            la = la->next;
+        else
+            break;
+    }
 }
 
 int ftable_strcmp(char *key, ftable_s *b)
