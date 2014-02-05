@@ -57,50 +57,50 @@ struct tfind_s
     token_s *token;
 };
 
-static void match_phase (lextok_s regex, token_s *cfg);
+static void match_phase(lextok_s regex, token_s *cfg);
 static tfind_s findtok(mach_s *mlist, char *lexeme);
 static parse_s *parse_(void);
 static pda_s *pda_(token_s *token);
-static production_s *addproduction (pda_s *pda);
+static production_s *addproduction(pda_s *pda);
 static pnode_s *pnode_(token_s *token);
 
-static void pp_start (parse_s *parse, token_s **curr);
-static void pp_nonterminal (parse_s *parse, token_s **curr);
-static void pp_nonterminals (parse_s *parse, token_s **curr);
-static void pp_production (parse_s *parse, token_s **curr, pda_s *pda);
-static void pp_productions (parse_s *parse, token_s **curr, pda_s *pda);
-static pnode_s *pp_tokens (parse_s *parse, token_s **curr, pda_s *pda, int *count);
-static void pp_decoration (parse_s *parse, token_s **curr, production_s *prod);
+static void pp_start(parse_s *parse, token_s **curr);
+static void pp_nonterminal(parse_s *parse, token_s **curr);
+static void pp_nonterminals(parse_s *parse, token_s **curr);
+static void pp_production(parse_s *parse, token_s **curr, pda_s *pda);
+static void pp_productions(parse_s *parse, token_s **curr, pda_s *pda);
+static pnode_s *pp_tokens(parse_s *parse, token_s **curr, pda_s *pda, int *count);
+static void pp_decoration(parse_s *parse, token_s **curr, production_s *prod);
 
 static ffnode_s *makeffnode (token_s *token, uint16_t prod);
-static bool isespsilon (production_s *production);
-static bool hasepsilon (parse_s *parser, pnode_s *nonterm);
-static llist_s *clone_firsts (llist_s *firsts, int production);
-static llist_s *getfirsts (parse_s *parser, pda_s *pda);
-static void getfollows (follow_s *fparams);
-static inline ffnode_s *makeEOF (void);
-static inline token_s *tmakeEOF (void);
+static bool isespsilon(production_s *production);
+static bool hasepsilon(parse_s *parser, pnode_s *nonterm);
+static llist_s *clone_firsts(llist_s *firsts, int production);
+static llist_s *getfirsts(parse_s *parser, pda_s *pda);
+static void getfollows(follow_s *fparams);
+static inline ffnode_s *makeEOF(void);
+static inline token_s *tmakeEOF(void);
 static follow_s *get_neighbor_params (follow_s *table, pda_s *pda);
 static llist_s *lldeep_concat_foll (llist_s *first, llist_s *second);
 static bool llpnode_contains(llist_s *list, token_s *tok);
-static void add_inherit (follow_s *nonterm, follow_s *dependent);
-static llist_s *inherit_follows (follow_s *params, llist_s **stack);
-static void compute_firstfollows (parse_s *parser);
+static void add_inherit(follow_s *nonterm, follow_s *dependent);
+static llist_s *inherit_follows(follow_s *params, llist_s **stack);
+static void compute_firstfollows(parse_s *parser);
 
-static bool lllex_contains (llist_s *list, char *lex);
-static void build_parse_table (parse_s *parse, token_s *tokens);
-static void print_parse_table (parsetable_s *ptable, FILE *stream);
-static void print_firfol (parse_s *parse, FILE *stream);
+static bool lllex_contains(llist_s *list, char *lex);
+static void build_parse_table(parse_s *parse, token_s *tokens);
+static void print_parse_table(parsetable_s *ptable, FILE *stream);
+static void print_firfol(parse_s *parse, FILE *stream);
 
-static int match (token_s **curr, pnode_s *p);
-static semantics_s *nonterm (parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index);
-static int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr);
-static size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
-static char *make_synerr (pda_s *pda, token_s **curr);
-static void panic_recovery (llist_s *follow, token_s **curr);
+static int match(token_s **curr, pnode_s *p);
+static semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *machs, token_s **curr, pda_s *pda, int index);
+static int get_production(parsetable_s *ptable, pda_s *pda, token_s **curr);
+static size_t errbuf_check(char **buffer, size_t *bsize, size_t *errsize, char *lexeme);
+static char *make_synerr(pda_s *pda, token_s **curr);
+static void panic_recovery(llist_s *follow, token_s **curr);
 static void print_pnode_hash(void *key, void *data);
 
-static uint16_t str_hashf (void *key);
+static uint16_t str_hashf(void *key);
 static bool find_in(void *k1, void *k2);
 
 void printpda(pda_s *start)
@@ -928,6 +928,8 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
     
     assert(!pda->productions[index].annot || pda->productions[index].annot->prev->type.val == LEXTYPE_ANNOTATE);
     
+    grstack_push();
+    
     pcp = malloc(sizeof(*pcp) + pda->productions[index].nnodes * sizeof(pnode_s));
     if(!pcp) {
         perror("Memory Allocation Error");
@@ -947,6 +949,7 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
         pcp->curr = pcp->array;
         sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass, true);
         pnode->pass = true;
+        grstack_pop();
         return synhash;
     }
     else {
@@ -960,8 +963,10 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                     if (result < 0) {
                         adderror(parse->listing, make_synerr(nterm, curr), (*curr)->lineno);
                         success = NULL;
-                        if ((*curr)->type.val == LEXTYPE_EOF)
+                        if ((*curr)->type.val == LEXTYPE_EOF) {
+                            grstack_pop();
                             return NULL;
+                        }
                         *curr = (*curr)->next;
                     }
                     else {
@@ -970,7 +975,7 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                          hashes corresponding to each child nonterminal.
                          */
                         pcp->curr = &pcp->array[i];
-                        child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass, false);
+                        child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass, false);
                         child_in = llremove_(&child_inll, find_in, pnode);
                         if(child_in) {
                             //print_hash(child_in->table, print_pnode_hash);
@@ -980,7 +985,7 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                         
                         pcp->curr->syn = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
-                        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, NULL, ++pass, false);
+                        sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass, false);
                     }
                 }
                 else {
@@ -1000,8 +1005,10 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                         synerr[errsize-1] = '\n';
                         adderror(parse->listing, synerr, (*curr)->lineno);
                         success = false;
-                        if ((*curr)->type.val == LEXTYPE_EOF)
+                        if ((*curr)->type.val == LEXTYPE_EOF) {
+                            grstack_pop();
                             return NULL;
+                        }
                         *curr = (*curr)->next;
                     }
                 }
@@ -1010,6 +1017,7 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
         }
     }
     sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass, true);
+    grstack_pop();
     return synhash;
 }
 

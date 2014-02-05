@@ -179,7 +179,6 @@
             <variable>.type := getarray(id)
             error(id, "Non-integer type used in array index")
         fi
-
     }
 <variable'> ->
 	\[ <expression> \]
@@ -217,9 +216,6 @@
 <expression_list'> ->
 	, <expression> <expression_list'>
     {
-        if <expression_list'>.args <> null then
-            print(<expression_list'>.args)
-        fi
         listappend(<expression_list'>.args, <expression>.type)
         <expression_list'>[1].args := <expression_list'>.args
     }

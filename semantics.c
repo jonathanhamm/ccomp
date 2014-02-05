@@ -244,6 +244,10 @@ struct test_s
     bool result;
 };
 
+llist_s *grammar_stack;
+
+static uint16_t semgrammar_hashf(void *key);
+static bool semgrammar_isequalf(void *key1, void *key2);
 static sem_type_s sem_type_s_(parse_s *parse, token_s *token);
 static test_s test_semtype(sem_type_s value);
 static inline unsigned toaddop(unsigned val);
@@ -321,30 +325,28 @@ static ftable_s ftable[] = {
     {"print", sem_print}
 };
 
-/*
- enum lex_attr_relop {
- LEXATTR_EQ,
- LEXATTR_NEQ,
- LEXATTR_LE,
- LEXATTR_LEQ,
- LEXATTR_GEQ,
- LEXATTR_GE
- };
- 
- enum lex_attr_addop {
- LEXATTR_PLUS,
- LEXATTR_MINUS,
- LEXATTR_OR
- };
- 
- enum lex_attr_mulop {
- LEXATTR_MULT,
- LEXATTR_DIV1,
- LEXATTR_DIV2,
- LEXATTR_MOD,
- LEXATTR_AND
- };
- */
+inline void grstack_push(void)
+{
+    hash_s *h = hash_(semgrammar_hashf, semgrammar_isequalf);
+    llpush(&grammar_stack, h);
+}
+
+inline void grstack_pop(void)
+{
+    llist_s *l = llpop(&grammar_stack);
+    free_hash(l->ptr);
+    free(l);
+}
+
+uint16_t semgrammar_hashf(void *key)
+{
+    return (uint16_t)((intptr_t)key % HTABLE_SIZE);
+}
+
+bool semgrammar_isequalf(void *key1, void *key2)
+{
+    return key1 == key2;
+}
 
 sem_type_s sem_type_s_(parse_s *parse, token_s *token)
 {
@@ -469,7 +471,7 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
 
 void print_semtype(sem_type_s value)
 {
-    printf("printing value: ");
+    //printf("printing value: ");
     switch (value.type) {
         case ATTYPE_NUMINT:
             printf("%ld", value.int_);
@@ -479,7 +481,8 @@ void print_semtype(sem_type_s value)
             break;
         case ATTYPE_ID:
         case ATTYPE_CODE:
-            printf("string: %s", value.str_);
+            //printf("string: %s", value.str_);
+            printf("%s", value.str_);
             break;
         case ATTYPE_RANGE:
             printf("%ld..%ld", value.low, value.high);
@@ -506,7 +509,7 @@ void print_semtype(sem_type_s value)
             /*illegal*/
             break;
     }
-    puts("\n~~~~~~~~~~~~~~~\n");
+   // puts("\n~~~~~~~~~~~~~~~\n");
     fflush(stdout);
 }
 
@@ -978,7 +981,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
                     }
                     else {
                         //Nasty hack to fix the attribute system when assigning data to the current nonterminal production.
-                        if(pn->curr) {
+                      /*  if(pn->curr) {
                             if(!pn->curr->in) {
                                 pn->curr->in = semantics_s_(parse, NULL);
                                 pn->curr->in->n = malloc(sizeof(*pn->curr->in->n));
@@ -989,7 +992,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
                                 pn->curr->in->n->token = pda->nterm;
                             }
                             setatt(pn->curr->in, id, alloc_semt(expression.value));
-                        }
+                        }*/
                     }
                     
                 }
@@ -2004,6 +2007,11 @@ void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
     llist_s *listparam, *argparam;
     sem_type_s *arglist, *arg;
     
+    if(hashlookup(grammar_stack->ptr, *curr))
+        return NULL;
+    
+    if(!(params.ready && eval))
+        return NULL;
     
     argparam = llpop(&params.pstack);
     arg = argparam->ptr;
@@ -2013,7 +2021,24 @@ void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
     arglist = listparam->ptr;
     free(listparam);
     
+    printf("enqueing: %p to %p in ", arg, arglist->q);
+    if(arglist->type == ATTYPE_ARGLIST_ACTUAL)
+        puts("actual paramater.");
+    else
+        puts("formal parameter.");
+    
+    
     enqueue(arglist->q, arg);
+    
+    llist_s *iter = arglist->q->head;
+    for(; iter; iter = iter->next) {
+        print_semtype(*(sem_type_s *)iter->ptr);
+        printf(", ");
+    }
+    puts("");
+
+    hashinsert(grammar_stack->ptr, *curr, *curr);
+    
     return NULL;
 }
 
@@ -2021,6 +2046,9 @@ void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
 {
     llist_s *node;
     sem_type_s *t, list;
+    
+    if(!(params.ready && eval))
+        return NULL;
     
     node = llpop(&params.pstack);
     
@@ -2047,6 +2075,7 @@ void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     list.type = ATTYPE_ARGLIST_FORMAL;
     list.q = queue_s_();
     list.lexeme = "--ARGLIST--";
+    
     enqueue(list.q, t);
     return alloc_semt(list);
 }
@@ -2066,6 +2095,7 @@ void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s act
         else
             break;
     }
+    asm("hlt");
 }
 
 int ftable_strcmp(char *key, ftable_s *b)

@@ -31,6 +31,11 @@ struct pna_s
     pnode_s array[];
 };
 
+extern llist_s *grammar_stack;
+
+extern inline void grstack_push(void);
+extern inline void grstack_pop(void);
+
 extern semantics_s *semantics_s_(parse_s *parse, mach_s *machs);
 extern void free_sem(semantics_s *s);
 
