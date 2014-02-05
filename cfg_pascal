@@ -90,6 +90,7 @@
 	procedure id <subprogram_head'>;
     {
         addtype(id.entry, <subprogram_head'>.type)
+        <subprogram_head>.scope := id.entry
     }
 <subprogram_head'> ->
 	<arguments>
@@ -329,7 +330,6 @@
 <factor> ->
 	id <factor'>
     {
-
         if <factor'>.type = integer then
             <factor>.type := getarray(id)
         elif <factor'>.type = void then

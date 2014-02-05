@@ -854,6 +854,7 @@ sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, in
                 result.int_ = (v2.type == ATTYPE_ARRAY && v1.low == v2.low && v1.high == v2.high);
             }
             else if((v1.type == ATTYPE_ARGLIST_FORMAL || v1.type == ATTYPE_ARGLIST_ACTUAL) || (v2.type == ATTYPE_ARGLIST_FORMAL || v2.type == ATTYPE_ARGLIST_ACTUAL)) {
+                printf("\ntypes: %u %u v1: %u -- v2: %u\n", ATTYPE_ARGLIST_ACTUAL, ATTYPE_ARGLIST_FORMAL, v1.type, v2.type);
                 if(v1.type == ATTYPE_ARGLIST_FORMAL)
                     arglist_cmp(parse, tok, v1, v2);
                 else
@@ -1367,25 +1368,14 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             char *nonterm = factor.value.str_;
             
             if (idsuffix.dot.id) {
-
                 if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
                     if(pn->curr) {
-
                         factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
-
                         if(factor.value.type == ATTYPE_NOT_EVALUATED) {
-                            
                             factor.value = getatt(pn->curr->in, idsuffix.dot.id);
-    
                             if(factor.value.type == ATTYPE_NOT_EVALUATED) {
-                                printf("gettng from syn: %p\n", syn);
                                 factor.value = getatt(syn, idsuffix.dot.id);
-                                //assert(factor.value.type != ATTYPE_NOT_EVALUATED);
                             }
-                            if(!strcmp(nonterm, "<expression_list'>") && !strcmp(idsuffix.dot.id, "args")) {
-                                printf("type not evaluated %u and factor.value.type = %u\n", ATTYPE_NOT_EVALUATED, factor.value.type);
-                            }
-
                         }
                     }
                     else {
@@ -1393,14 +1383,10 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                     }
                 }
                 else {
-
                     factor.value.type = ATTYPE_NOT_EVALUATED;
-                    printf("factor string: %s %u\n", factor.value.str_, idsuffix.factor_.index);
                     pnode = getpnode_token(pn, factor.value.str_, idsuffix.factor_.index);
-                    char *tmp = factor.value.str_;
                     if(pnode) {
                         factor.value = getatt(pnode->syn, idsuffix.dot.id);
-
                     }
                     if(factor.value.type == ATTYPE_NOT_EVALUATED) {
                         in = get_il(*il, pnode);
@@ -2045,7 +2031,10 @@ void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
 void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
     llist_s *node;
-    sem_type_s *t, list;
+    sem_type_s *t, *final, list;
+    
+    if((final = hashlookup(grammar_stack->ptr, *curr)))
+        return final;
     
     if(!(params.ready && eval))
         return NULL;
@@ -2059,13 +2048,22 @@ void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     list.q = queue_s_();
     list.lexeme = "--ARGLIST--";
     enqueue(list.q, t);
-    return alloc_semt(list);
+    
+    final = alloc_semt(list);
+    hashinsert(grammar_stack->ptr, *curr, final);
+    return final;
 }
 
 void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
     llist_s *node;
-    sem_type_s *t, list;
+    sem_type_s *t, *final, list;
+    
+    if((final = hashlookup(grammar_stack->ptr, *curr)))
+        return final;
+    
+    if(!(params.ready && eval))
+        return NULL;
     
     node = llpop(&params.pstack);
     
@@ -2077,15 +2075,17 @@ void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     list.lexeme = "--ARGLIST--";
     
     enqueue(list.q, t);
-    return alloc_semt(list);
+    final = alloc_semt(list);
+    hashinsert(grammar_stack->ptr, *curr, final);
+    return final;
 }
 
 void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
 {
     llist_s *lf, *la;
     sem_type_s *a, *f;
-    
-    la = actual.q->head;
+    putchar('\n');
+   /* la = actual.q->head;
     for(lf = formal.q->head; lf; lf = lf->next) {
         f = lf->ptr;
         a = lf->ptr;
@@ -2094,7 +2094,13 @@ void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s act
             la = la->next;
         else
             break;
+    }*/
+    llist_s *l;
+    for(l = formal.q->head; l; l = l->next) {
+        print_semtype(*(sem_type_s *)l->ptr);
+        printf(", ");
     }
+    putchar('\n');
     asm("hlt");
 }
 
