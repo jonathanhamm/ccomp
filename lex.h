@@ -242,17 +242,23 @@ struct regex_match_s
 
 struct scope_s
 {
-    char *id;
     struct {
         char *entry;
         int address;
+        sem_type_s type;
     } *entries;
+    
+    struct {
+        sem_type_s type;
+        scope_s *child;
+    } *children;
+    
+    char *id;
     int last_local_addr;
     int last_arg_addr;
     unsigned nentries;
     unsigned nchildren;
     scope_s *parent;
-    scope_s **children;
 };
 
 struct check_id_s

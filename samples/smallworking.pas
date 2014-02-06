@@ -11,5 +11,6 @@ begin
     herp[tom] := 1 + 32 + tom + 432 + herp[3*3*3.3];
     tom := herp[tom];
     call lolwut(1.1,2,3,4);
+    a := b+c;
     tom := tom /kimjongun[2]
 end.

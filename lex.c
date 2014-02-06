@@ -1736,7 +1736,7 @@ void push_scope(char *id)
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
-    scope_tree->children[scope_tree->nchildren++] = s;
+    scope_tree->children[scope_tree->nchildren++].child = s;
     scope_tree = s;
 }
 
@@ -1757,6 +1757,10 @@ check_id_s check_id(char *id, bool debug)
             if(!strcmp(iter->entries[i].entry, id))
                 return (check_id_s){.isfound = true, .address = iter->entries[i].address};
         }
+        for(i = 0; i < iter->nchildren; i++) {
+            if(!strcmp(iter->children[i].child->id, id))
+                return (check_id_s){.isfound = true, .address = 0};
+        }
     }
     return (check_id_s){.isfound = false, .address = 0};
 }
@@ -1765,7 +1769,6 @@ void add_id(char *id, sem_type_s type, bool islocal)
 {
     long difference;
     unsigned index;
-    
 
     index = scope_tree->nentries;
     if(scope_tree->nentries)
@@ -1847,4 +1850,3 @@ void print_scope(void *stream)
 {
     FILE *f = stream;
 }
-

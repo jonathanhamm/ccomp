@@ -82,6 +82,7 @@
 	<compound_statement>
     {
         if <compound_statement>.type = void then
+            popscope()
         fi
     }
 <subprogram_declaration'> ->
@@ -328,6 +329,8 @@
                 if (<term'>.in <> integer) or (<factor>.type <> integer) then
                     error(mulop, "Expected integer operands for modulo operation")
                 fi
+            elif mulop.entry = "/" then
+                halt()
             fi
             if (<term'>.in = integer) and (<factor>.type = integer) then
                 <term'>[1].in := integer
