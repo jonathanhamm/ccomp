@@ -1842,7 +1842,6 @@ void setatt(semantics_s *s, char *id, sem_type_s *data)
         print_semtype(*data);
         printf("to: %s with attribute: %s\n", s->n->token->lexeme, id);
         hashinsert_(s->table, id, data);
-
     }
 }
 
@@ -1936,9 +1935,9 @@ void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_
         
         if(type.type == ATTYPE_ARRAY) {
             type.type = ATTYPE_ID;
-            check = check_id(p->matched->lexeme, false);
+            check = check_id(p->matched->lexeme);
             if(!check.isfound && isfinal) {
-                check = check_id(p->matched->lexeme, true);
+                check = check_id(p->matched->lexeme);
                 add_semerror(parse, p->matched, "undeclared identifier");
             }
         }
@@ -1995,7 +1994,7 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
         p = getpnode_nterm_copy(pn, val->str_, 1);
         printf("getting type for: %s from %s\n", p->matched->lexeme, val->str_);
         type = gettype(parse->lex, p->matched->lexeme);
-        if((type.type == ATTYPE_NULL || !check_id(p->matched->lexeme, false).isfound) && eval && isfinal) {
+        if((type.type == ATTYPE_NULL || !check_id(p->matched->lexeme).isfound) && eval && isfinal) {
             add_semerror(parse, p->matched, "undeclared identifier");
         }
         printf("Got Type: ");

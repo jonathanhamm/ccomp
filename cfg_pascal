@@ -9,11 +9,8 @@
 
 <program'> ->
 	<declarations> <dec>
-	{
-    }
 	|
 	<subprogram_declarations>
-	{}
 	|
 	ε
 
@@ -24,8 +21,9 @@
 
 <identifier_list> ->
 	id <identifier_list'>
-	{
-	}
+    {
+    }
+
 <identifier_list'> ->
 	, id <identifier_list'>
 	{

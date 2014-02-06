@@ -155,26 +155,6 @@ static int addtok_(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type
 
 static void print_frame(scope_s *s);
 
-/*
- rule1:
-    rule2 | rule3 | rule4 
- 
- rule2:
-    nonterm1
- 
- rule3:
-    nonterm2
- 
- rule4: 
-    nonterm4
-    |
-    rule5
- 
- rule5:
-    nonterm5
- 
- */
-
 lex_s *buildlex(const char *file)
 {
     token_s *list;
@@ -1623,23 +1603,26 @@ mach_s *getmach(lex_s *lex, char *id)
 
 void settype(lex_s *lex, char *id, sem_type_s type)
 {
-    tdat_s tdat;
+   /* tdat_s tdat;
     
     tdat = idtable_lookup(lex->idtable, id).tdat;
     tdat.type = type;
-    idtable_set(lex->idtable, id, tdat);
+    idtable_set(lex->idtable, id, tdat);*/
+    check_id_s check = check_id(id);
+    if(check.isfound)
+        *check.type = type;
 }
 
 sem_type_s gettype(lex_s *lex, char *id)
 {
-    tdat_s tdat;
-    tlookup_s tlook;
+    check_id_s check;
+    sem_type_s init = {0};
     
-    
-    tlook = idtable_lookup(lex->idtable, id);
-    
-    tdat = tlook.tdat;
-    return tdat.type;
+    init.type = ATTYPE_NOT_EVALUATED;
+    check = check_id(id);
+    if(check.isfound)
+        return *check.type;
+    return init;
 }
 
 toktype_s gettoktype(lex_s *lex, char *id)
@@ -1717,7 +1700,9 @@ regex_match_s lex_matches(lex_s *lex, char *machid, char *str)
 void push_scope(char *id)
 {
     scope_s *s;
+    sem_type_s init = {0};
     
+    init.type = ATTYPE_NOT_EVALUATED;
     s = calloc(1, sizeof(*s));
     if(!s) {
         perror("Memory Allocation Error");
@@ -1736,7 +1721,8 @@ void push_scope(char *id)
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
-    scope_tree->children[scope_tree->nchildren++].child = s;
+    scope_tree->children[scope_tree->nchildren].child = s;
+    scope_tree->children[scope_tree->nchildren++].type = init;
     scope_tree = s;
 }
 
@@ -1746,23 +1732,23 @@ void pop_scope(void)
         scope_tree = scope_tree->parent;
 }
 
-check_id_s check_id(char *id, bool debug)
+check_id_s check_id(char *id)
 {
     unsigned i;
     scope_s *iter;
     
     for(iter = scope_tree; iter; iter = iter->parent) {
         for(i = 0; i < iter->nentries; i++) {
-            if(debug)printf("Comparing: %s with %s\n", id, iter->entries[i].entry);
+          //  printf("Comparing: %s with %s\n", id, iter->entries[i].entry);
             if(!strcmp(iter->entries[i].entry, id))
-                return (check_id_s){.isfound = true, .address = iter->entries[i].address};
+                return (check_id_s){.isfound = true, .address = iter->entries[i].address, .type = &iter->entries[i].type};
         }
         for(i = 0; i < iter->nchildren; i++) {
             if(!strcmp(iter->children[i].child->id, id))
-                return (check_id_s){.isfound = true, .address = 0};
+                return (check_id_s){.isfound = true, .address = 0, .type = &iter->children[i].type};
         }
     }
-    return (check_id_s){.isfound = false, .address = 0};
+    return (check_id_s){.isfound = false, .address = 0, .type = NULL};
 }
 
 void add_id(char *id, sem_type_s type, bool islocal)
