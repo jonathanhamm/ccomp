@@ -104,6 +104,8 @@ struct prxa_expression_s
     char *strval;
 };
 
+scope_s *scope_tree;
+
 static void printlist(token_s *list);
 static void parray_insert(idtnode_s *tnode, uint8_t index, idtnode_s *child);
 static uint16_t bsearch_tr(idtnode_s *tnode, char key);
@@ -1706,4 +1708,123 @@ regex_match_s lex_matches(lex_s *lex, char *machid, char *str)
             
     }
     return ret;
+}
+
+void push_scope(char *id)
+{
+    scope_s *s;
+    
+    s = calloc(1, sizeof(*s));
+    if(!s) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    s->id = id;
+    s->parent = scope_tree;
+    
+    if(!scope_tree)
+        scope_tree = s;
+    if(scope_tree->nchildren)
+        scope_tree->children = realloc(scope_tree->children, (scope_tree->nchildren + 1) * sizeof(*scope_tree->children));
+    else
+        scope_tree->children = malloc(sizeof(*scope_tree->children));
+    if(!scope_tree->children) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    scope_tree->children[scope_tree->nchildren++] = s;
+    scope_tree = s;
+}
+
+void pop_scope(void)
+{
+    if(scope_tree && scope_tree->parent)
+        scope_tree = scope_tree->parent;
+}
+
+check_id_s check_id(char *id)
+{
+    unsigned i;
+    scope_s *iter;
+    
+    for(iter = scope_tree; iter; iter = iter->parent) {
+        for(i = 0; i < iter->nentries; i++) {
+            printf("Comparing: %s with %s\n", id, iter->entries[i].entry);
+            if(!strcmp(iter->entries[i].entry, id))
+                return (check_id_s){.isfound = true, .address = iter->entries[i].address};
+        }
+    }
+    return (check_id_s){.isfound = false, .address = 0};
+}
+
+void add_id(char *id, sem_type_s type, bool islocal)
+{
+    long difference;
+    unsigned index;
+    
+
+    index = scope_tree->nentries;
+    if(scope_tree->nentries)
+        scope_tree->entries = realloc(scope_tree->entries, (index + 1) * sizeof(*scope_tree->entries));
+    else
+        scope_tree->entries = malloc(sizeof(*scope_tree->entries));
+    if(!scope_tree->entries) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    scope_tree->entries[index].entry = id;
+    if(type.type == ATTYPE_ID) {
+        if(!strcmp(type.str_, "integer")) {
+            if(islocal) {
+                scope_tree->entries[index].address = scope_tree->last_local_addr;
+                scope_tree->last_local_addr += INTEGER_WIDTH;
+            }
+            else {
+                scope_tree->entries[index].address = scope_tree->last_arg_addr;
+                scope_tree->last_arg_addr -= INTEGER_WIDTH;
+            }
+        }
+        else if(!strcmp(type.str_, "real")) {
+            if(islocal) {
+                scope_tree->entries[index].address = scope_tree->last_local_addr;
+                scope_tree->last_local_addr += REAL_WIDTH;
+            }
+            else {
+                scope_tree->entries[index].address = scope_tree->last_arg_addr;
+                scope_tree->last_arg_addr -= REAL_WIDTH;
+            }
+        }
+        else {
+            scope_tree->entries[index].address = 0;
+        }
+    }
+    else if(type.type == ATTYPE_ARRAY) {
+        difference = type.high - type.low;
+        if(difference < 0)
+            difference = 0;
+        if(!strcmp(type.str_, "integer")) {
+            if(islocal) {
+                scope_tree->entries[index].address = scope_tree->last_local_addr;
+                scope_tree->last_local_addr += INTEGER_WIDTH*difference;
+            }
+            else {
+                scope_tree->entries[index].address = scope_tree->last_arg_addr;
+                scope_tree->last_arg_addr -= INTEGER_WIDTH*difference;
+            }
+        }
+        else if(!strcmp(type.str_, "real")) {
+            if(islocal) {
+                scope_tree->entries[index].address = scope_tree->last_local_addr;
+                scope_tree->last_local_addr += REAL_WIDTH*difference;
+            }
+            else {
+                scope_tree->entries[index].address = scope_tree->last_arg_addr;
+                scope_tree->last_arg_addr -= REAL_WIDTH*difference;
+            }
+        }
+        else {
+            scope_tree->entries[index].address = 0;
+        }
+    }
+    scope_tree->nentries++;
 }

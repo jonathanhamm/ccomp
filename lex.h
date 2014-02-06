@@ -11,6 +11,9 @@
 #ifndef LEX_H_
 #define LEX_H_
 
+#define INTEGER_WIDTH 4
+#define REAL_WIDTH 8
+
 #include "general.h"
 
 enum lex_attr_ {
@@ -116,6 +119,8 @@ typedef struct mach_s mach_s;
 typedef struct lextok_s lextok_s;
 typedef struct iditer_s iditer_s;
 typedef struct regex_match_s regex_match_s;
+typedef struct scope_s scope_s;
+typedef struct check_id_s check_id_s;
 
 typedef unsigned (*annotation_f) (token_s **, char *, unsigned *, void *);
 
@@ -235,6 +240,29 @@ struct regex_match_s
     unsigned attribute;
 };
 
+struct scope_s
+{
+    char *id;
+    struct {
+        char *entry;
+        int address;
+    } *entries;
+    int last_local_addr;
+    int last_arg_addr;
+    unsigned nentries;
+    unsigned nchildren;
+    scope_s *parent;
+    scope_s **children;
+};
+
+struct check_id_s
+{
+    bool isfound;
+    int address;
+};
+
+extern scope_s *scope_tree;
+
 extern lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing);
 extern lex_s *buildlex (const char *file);
 extern token_s *lexspec (const char *file, annotation_f af, void *data);
@@ -252,5 +280,10 @@ extern void settype(lex_s *lex, char *id, sem_type_s type);
 extern sem_type_s gettype(lex_s *lex, char *id);
 extern toktype_s gettoktype (lex_s *lex, char *id);
 extern regex_match_s lex_matches(lex_s *lex, char *machid, char *str);
+
+extern void push_scope(char *id);
+extern void pop_scope(void);
+extern check_id_s check_id(char *id);
+extern void add_id(char *id, sem_type_s type, bool islocal);
 
 #endif

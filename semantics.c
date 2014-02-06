@@ -290,11 +290,12 @@ static void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pa
 static void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal);
 static void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal);
 static void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
-static void *sem_addargs(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+static void *sem_addarg(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+static void *sem_popscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 
 static int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual);
 
@@ -311,7 +312,7 @@ void print_semtype(sem_type_s value);
 
 /* Must be alphabetized */
 static ftable_s ftable[] = {
-    {"addargs", (sem_action_f)sem_addargs},
+    {"addarg", (sem_action_f)sem_addarg},
     {"addtype", (sem_action_f)sem_addtype},
     {"array", (sem_action_f)sem_array},
     {"emit", sem_emit},
@@ -323,6 +324,7 @@ static ftable_s ftable[] = {
     {"lookup", sem_lookup},
     {"makelista", (sem_action_f)sem_makelista},
     {"makelistf", (sem_action_f)sem_makelistf},
+    {"popscope", (sem_action_f)sem_popscope},
     {"print", sem_print},
     {"pushscope", (sem_action_f)sem_pushscope}
 };
@@ -1312,6 +1314,7 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
 
 sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
 {
+    long difference;
     token_s *id;
     pnode_s *pnode, *ptmp;
     semantics_s *in;
@@ -1354,23 +1357,41 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                             factor.value.low = safe_atol(pnode->matched->lexeme);
                             factor.value.high = idsuffix.dot.range.value;
                             factor.value.tok = pnode->matched;
+                            difference = factor.value.high - factor.value.low;
+                            if(difference < 0)
+                                add_semerror(parse, pnode->matched, "Invalid array range. Upper bound is less than lower bound.");
                         }
                     }
 
                 }
                 else if (!strcmp(idsuffix.dot.id, "val")) {
                     pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
-                    if(pnode->matched->stype) {
-                        if(!strcmp(pnode->matched->stype, "integer")) {
-                            factor.value.type = ATTYPE_NUMINT;
-                            factor.value.int_ = safe_atol(pnode->matched->lexeme);
+                    if (idsuffix.dot.range.isset && idsuffix.dot.range.isready) {
+                        factor.value.type = ATTYPE_RANGE;
+                        pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
+                        if(pnode && pnode->pass) {
+                            factor.value.low = safe_atol(pnode->matched->lexeme);
+                            factor.value.high = idsuffix.dot.range.value;
+                            factor.value.tok = pnode->matched;
+                            difference = factor.value.high - factor.value.low;
+                            if(difference < 0)
+                                add_semerror(parse, pnode->matched, "Invalid array range. Upper bound is less than lower bound.");
                         }
-                        else if(!strcmp(pnode->matched->stype, "real")) {
-                            factor.value.type = ATTYPE_NUMREAL;
-                            factor.value.real_ = safe_atod(pnode->matched->lexeme);
-                        }
-                        factor.value.tok = pnode->matched;
                     }
+                    else {
+                        if(pnode->matched->stype) {
+                            if(!strcmp(pnode->matched->stype, "integer")) {
+                                factor.value.type = ATTYPE_NUMINT;
+                                factor.value.int_ = safe_atol(pnode->matched->lexeme);
+                            }
+                            else if(!strcmp(pnode->matched->stype, "real")) {
+                                factor.value.type = ATTYPE_NUMREAL;
+                                factor.value.real_ = safe_atod(pnode->matched->lexeme);
+                            }
+                            factor.value.tok = pnode->matched;
+                        }
+                    }
+
 
                 }
                 else if(!strcmp(idsuffix.dot.id, "type")) {
@@ -1857,9 +1878,7 @@ void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     strcpy(val1->lexeme, val1->str_);
     val1->low = val2->low;
     val1->high = val2->high;
-
     val1->type = ATTYPE_ARRAY;
-    
     return val1;
 }
 
@@ -1897,7 +1916,8 @@ void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_
 {
     pnode_s *p;
     llist_s *node;
-    sem_type_s *val, type; 
+    sem_type_s *val, type;
+    check_id_s check;
     
     if(params.ready) {
         node = llpop(&params.pstack);
@@ -1907,8 +1927,12 @@ void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_
         p = getpnode_nterm_copy(pn, val->str_, 1);
         type = gettype(parse->lex, p->matched->lexeme);
         
-        if(type.type == ATTYPE_ARRAY)
+        if(type.type == ATTYPE_ARRAY) {
             type.type = ATTYPE_ID;
+            check = check_id(type.str_);
+            if(!check.isfound && eval && isfinal)
+                add_semerror(parse, p->matched, "undeclared identifier");
+        }
         else if(eval) {
             if(type.type == ATTYPE_NULL)
                 add_semerror(parse, p->matched, "undeclared identifier");
@@ -1962,7 +1986,7 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
         p = getpnode_nterm_copy(pn, val->str_, 1);
         printf("getting type for: %s from %s\n", p->matched->lexeme, val->str_);
         type = gettype(parse->lex, p->matched->lexeme);
-        if(type.type == ATTYPE_NULL && eval) {
+        if((type.type == ATTYPE_NULL || !check_id(p->matched->lexeme).isfound) && eval && isfinal) {
             add_semerror(parse, p->matched, "undeclared identifier");
         }
         printf("Got Type: ");
@@ -2025,15 +2049,40 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     }
     t->tok = id->tok;
     settype(p->lex, id->lexeme, *t);
+    add_id(id->lexeme, *t, true);
+
     return NULL;
 }
 
-void *sem_addargs(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
+void *sem_addarg(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *p, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
-    if(!(params.ready && eval)) {
-        return NULL;
-    }
+    llist_s *node;
+    pnode_s *pnode;
+    sem_type_s *t, *id, test;
     
+    if(!(params.ready && eval))
+        return NULL;
+    
+    node = llpop(&params.pstack);
+    t = node->ptr;
+    free(node);
+    
+    node = llpop(&params.pstack);
+    id = node->ptr;
+    free(node);
+    
+    //  pnode = getpnode_nterm_copy(pn, id->str_, 1);
+    //print_semtype(*t);
+    putchar('\n');
+    //for(;;)printf("%s\n", t->lexeme);
+    test = gettype(p->lex, id->lexeme);
+    if(test.type != ATTYPE_NOT_EVALUATED) {
+        //redeclaration error here
+    }
+    t->tok = id->tok;
+    settype(p->lex, id->lexeme, *t);
+    add_id(id->lexeme, *t, false);
+    return NULL;
 }
 
 void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
@@ -2130,7 +2179,38 @@ void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
 
 void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
+    llist_s *node;
+    sem_type_s *final, *arg;
     
+    if((final = hashlookup(grammar_stack->ptr, *curr)))
+        return final;
+    
+    if(!(params.ready && eval))
+        return NULL;
+    
+    node = llpop(&params.pstack);
+    arg = node->ptr;
+    free(node);
+    
+    push_scope(arg->str_);
+    final = (sem_type_s *)1;
+    hashinsert(grammar_stack->ptr, *curr, final);
+    return NULL;
+}
+
+void *sem_popscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
+{
+    sem_type_s *final;
+    
+    if((final = hashlookup(grammar_stack->ptr, *curr)))
+        return final;
+    
+    if(!(params.ready && eval))
+        return NULL;
+    pop_scope();
+    final = (sem_type_s *)1;
+    hashinsert(grammar_stack->ptr, *curr, final);
+    return NULL;
 }
 
 int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)

@@ -1,5 +1,6 @@
 program bob (input, output);
 var tom : integer; var ted : real; var herp : array[1..2321] of real;
+var kimjongun : array[1..0] of integer;
 procedure lolwut (a : integer; b : real; c : real);
     var x : integer; var y : real;
     begin
