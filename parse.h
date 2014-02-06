@@ -71,6 +71,8 @@ struct parsetable_s
     int32_t **table;
 };
 
+extern token_s *tok_lastmatched;
+
 extern parse_s *build_parse (const char *file, lextok_s lextok);
 extern pda_s *get_pda (parse_s *parser, char *name);
 extern bool hash_pda (parse_s *parser, char *name, pda_s *pda);

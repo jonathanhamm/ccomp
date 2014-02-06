@@ -4,6 +4,7 @@
 	<compound_statement>
 	\.
 	{
+        pushscope(id.entry)
 	}
 
 <program'> ->

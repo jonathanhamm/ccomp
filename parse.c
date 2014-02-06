@@ -57,6 +57,8 @@ struct tfind_s
     token_s *token;
 };
 
+token_s *tok_lastmatched;
+
 static void match_phase(lextok_s regex, token_s *cfg);
 static tfind_s findtok(mach_s *mlist, char *lexeme);
 static parse_s *parse_(void);
@@ -902,6 +904,7 @@ int match(token_s **curr, pnode_s *p)
 {
     if ((*curr)->type.val == p->token->type.val) {
         p->matched = *curr;
+        tok_lastmatched = *curr;
         if ((*curr)->type.val != LEXTYPE_EOF) {
             *curr = (*curr)->next;
             return 1;

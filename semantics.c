@@ -294,6 +294,7 @@ static void *sem_addargs(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna,
 static void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+static void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 
 static void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual);
 
@@ -322,7 +323,8 @@ static ftable_s ftable[] = {
     {"lookup", sem_lookup},
     {"makelista", (sem_action_f)sem_makelista},
     {"makelistf", (sem_action_f)sem_makelistf},
-    {"print", sem_print}
+    {"print", sem_print},
+    {"pushscope", (sem_action_f)sem_pushscope}
 };
 
 inline void grstack_push(void)
@@ -917,6 +919,9 @@ sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, in
             assert(false);
             break;
     }
+    result.tok = v1.tok;
+    if(!result.tok)
+        result.tok = v2.tok;
     putchar('\n');
     return result;
 }
@@ -1080,7 +1085,9 @@ sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pd
     
     expression.value.str_= NULL;
     expression.value.str_ = NULL;
+    expression.value.tok = NULL;
     simple_expression.value.str_ = NULL;
+    simple_expression.value.tok = NULL;
     simple_expression = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
     expression_ = sem_expression_(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
     if (expression_.op != OPTYPE_NOP) {
@@ -1093,7 +1100,13 @@ sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pd
         puts("\n\n");*/
     }
     expression.value = sem_op(parse, pn->curr->matched, simple_expression.value, expression_.value, expression_.op);
-
+    
+    if(!expression.value.tok) {
+        expression.value.tok = expression_.value.tok;
+        if(!expression.value.tok)
+            expression.value.tok = simple_expression.value.tok;
+    }
+    while(!expression.value.tok);
     return expression;
 }
 
@@ -1101,6 +1114,7 @@ sem_expression__s sem_expression_(parse_s *parse, token_s **curr, llist_s **il, 
 {
     sem_expression__s expression_;
     
+    expression_.value.tok = NULL;
     expression_.value.str_ = NULL;
     switch((*curr)->type.val) {
         case SEMTYPE_RELOP:
@@ -1139,8 +1153,11 @@ sem_simple_expression_s sem_simple_expression(parse_s *parse, token_s **curr, ll
     sem_simple_expression__s simple_expression_;
     
     simple_expression.value.str_ = NULL;
+    simple_expression.value.tok = NULL;
     term.value.str_ = NULL;
+    term.value.tok = NULL;
     simple_expression_.value.str_ = NULL;
+    simple_expression_.value.tok = NULL;
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
             sign = sem_sign(curr);
@@ -1163,6 +1180,8 @@ sem_simple_expression_s sem_simple_expression(parse_s *parse, token_s **curr, ll
             term = sem_term(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             simple_expression_ = sem_simple_expression_(parse, curr, il, &term.value, pda, prod, pn, syn, pass, eval, isfinal);
             simple_expression.value = term.value;
+            if(!simple_expression.value.tok)
+                simple_expression.value.tok = simple_expression_.value.tok;
             break;
         default:
             fprintf(stderr, "Syntax Error at line %d: Expected + - not number or identifier but got %s\n", (*curr)->lineno, (*curr)->lexeme);
@@ -1179,8 +1198,11 @@ sem_simple_expression__s sem_simple_expression_(parse_s *parse, token_s **curr, 
     sem_simple_expression__s simple_expression_, simple_expression__;
     
     term.value.str_ = NULL;
+    term.value.tok = NULL;
     simple_expression_.value.str_ = NULL;
+    simple_expression_.value.tok = NULL;
     simple_expression__.value.str_ = NULL;
+    simple_expression__.value.tok = NULL;
     switch((*curr)->type.val) {
         case SEMTYPE_ADDOP:
             op = toaddop((*curr)->type.attribute);
@@ -1188,6 +1210,11 @@ sem_simple_expression__s sem_simple_expression_(parse_s *parse, token_s **curr, 
             term = sem_term(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             *accum = sem_op(parse, pn->curr->matched, *accum, term.value, op);
             simple_expression__ = sem_simple_expression_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval, isfinal);
+            if(!simple_expression_.value.tok) {
+                simple_expression_.value.tok = simple_expression__.value.tok;
+                if(!simple_expression_.value.tok)
+                    simple_expression_.value.tok = term.value.tok;
+            }
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_RELOP:
@@ -1219,12 +1246,16 @@ sem_term_s sem_term(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     sem_term__s term_;
     
     term.value.str_ = NULL;
+    term.value.tok = NULL;
     factor.value.str_= NULL;
+    factor.value.tok = NULL;
     term_.value.str_ = NULL;
+    term_.value.tok = NULL;
     factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
     term_ = sem_term_(parse, curr, il, &factor.value, pda, prod, pn, syn, pass, eval, isfinal);
     term.value = factor.value;
-    //term.value = sem_op(factor.value, term_.value, term_.op);
+    if(!term.value.tok)
+        term.value.tok = term_.value.tok;
     return term;
 }
 
@@ -1237,6 +1268,8 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
     factor.value.str_ = NULL;
     term_.value.str_ = NULL;
     term__.value.str_ = NULL;
+    term_.value.tok = NULL;
+    term__.value.tok = NULL;
     switch((*curr)->type.val) {
         case SEMTYPE_MULOP:
             op = tomulop((*curr)->type.attribute);
@@ -1244,6 +1277,11 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
             factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             *accum = sem_op(parse, pn->curr->matched, *accum, factor.value, op);
             term_ = sem_term_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval, isfinal);
+            if(!term_.value.tok) {
+                term_.value.tok = factor.value.tok;
+                if(!term_.value.tok)
+                    term_.value.tok = accum->tok;
+            }
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_ADDOP:
@@ -1312,12 +1350,10 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                         if(pnode && pnode->pass) {
                             factor.value.low = safe_atol(pnode->matched->lexeme);
                             factor.value.high = idsuffix.dot.range.value;
+                            factor.value.tok = pnode->matched;
                         }
                     }
-                    else {
-                        //factor.value = sem_type_s_(parse, pnode->matched);
 
-                    }
                 }
                 else if (!strcmp(idsuffix.dot.id, "val")) {
                     pnode = getpnode_token(pn, id->lexeme, idsuffix.factor_.index);
@@ -1330,17 +1366,23 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                             factor.value.type = ATTYPE_NUMREAL;
                             factor.value.real_ = safe_atod(pnode->matched->lexeme);
                         }
+                        factor.value.tok = pnode->matched;
                     }
+
                 }
                 else if(!strcmp(idsuffix.dot.id, "type")) {
                     ptmp = getpnode_token(pn, id->lexeme, 1);
                     factor.value = sem_type_s_(parse, ptmp->matched);
+                    factor.value.tok = ptmp->matched;
                 }
                 //attadd(s, //id->lexeme, pnode-);
             }
             else if (idsuffix.hasparam) {
                 if(idsuffix.params.ready) {
                     factor.value = *(sem_type_s *)get_semaction(id->lexeme)(curr, NULL, pda, pn, parse, idsuffix.params, pass, &factor.value, eval, isfinal);
+                }
+                if(!factor.value.tok) {
+                    factor.value.tok = tok_lastmatched;
                 }
             }
             else {
@@ -1355,6 +1397,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                 else {
                     factor.value = sem_type_s_(parse, id);
                 }
+                factor.value.tok = tok_lastmatched;
             }
             break;
         case SEMTYPE_NONTERM:
@@ -1365,8 +1408,6 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             factor.access.offset = idsuffix.factor_.index;
             factor.access.attribute = idsuffix.dot.id;
-            char *nonterm = factor.value.str_;
-            
             if (idsuffix.dot.id) {
                 if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
                     if(pn->curr) {
@@ -1377,6 +1418,8 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                                 factor.value = getatt(syn, idsuffix.dot.id);
                             }
                         }
+                        if(!factor.value.tok)
+                            factor.value.tok = *curr;
                     }
                     else {
                         factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
@@ -1393,7 +1436,6 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                         factor.value = getatt(in, idsuffix.dot.id);
                     }
                 }
-
             }
             break;
         case SEMTYPE_NUM:
@@ -1407,6 +1449,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                 factor.value.lexeme = (*curr)->lexeme;
                 factor.value.real_ = safe_atod((*curr)->lexeme);
             }
+            factor.value.tok = *curr;
             *curr = (*curr)->next;
             break;
         case SEMTYPE_NOT:
@@ -1443,6 +1486,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
         case SEMTYPE_CODE:
             factor.value.type = ATTYPE_CODE;
             factor.value.str_ = (*curr)->lexeme_;
+            factor.value.tok = *curr;
             *curr = (*curr)->next;
             break;
         default:
@@ -1976,6 +2020,7 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     if(test.type != ATTYPE_NOT_EVALUATED) {
         //redeclaration error here
     }
+    t->tok = id->tok;
     settype(p->lex, id->lexeme, *t);
     return NULL;
 }
@@ -2080,28 +2125,65 @@ void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     return final;
 }
 
+void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
+{
+    
+}
+
 void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
 {
+    char *errstr;
     llist_s *lf, *la;
     sem_type_s *a, *f;
-    putchar('\n');
-   /* la = actual.q->head;
+    
+    
+    la = actual.q->head;
     for(lf = formal.q->head; lf; lf = lf->next) {
         f = lf->ptr;
-        a = lf->ptr;
-        printf("%s vs %s\n", f->str_, a->str_);
+        a = la->ptr;
+        
+        if(f->type == ATTYPE_ID){
+            
+            if(a->type == ATTYPE_ID){
+                if(!strcmp(f->str_, "real")){
+                    if(strcmp(a->str_, "real") && strcmp(a->str_, "integer"))
+                        add_semerror(parse, a->tok, "Expected real or integer but got different type");
+                }
+                else if(!strcmp(f->str_, "integer")){
+                    if(strcmp(a->str_, "integer"))
+                        add_semerror(parse, a->tok, "Expected integer but got different type");
+                }
+            }
+            else if(a->type == ATTYPE_ARRAY){
+                add_semerror(parse, a->tok, "Expected real or integer but got array");
+            }
+            else{
+                add_semerror(parse, a->tok, "Expected real or integer but got different type");
+            }
+        }
+        else if(f->type == ATTYPE_ARRAY){
+            if(a->type == ATTYPE_ARRAY){
+                
+            }
+            else if(a->type == ATTYPE_ID){
+                
+            }
+            else{
+                
+            }
+        }
+        
         if(la)
             la = la->next;
         else
             break;
-    }*/
-    llist_s *l;
-    for(l = formal.q->head; l; l = l->next) {
-        print_semtype(*(sem_type_s *)l->ptr);
-        printf(", ");
     }
-    putchar('\n');
-    asm("hlt");
+    
+    //sprintf(errstr, "Excess Parameters Used in function call %s");
+    if(la)
+        add_semerror(parse, ((sem_type_s *)la->ptr)->tok, "Excess Parameters Used in function call");
+    else if(lf)
+        add_semerror(parse, ((sem_type_s *)la->ptr)->tok, "Not Enough Arguments Used in function call");
 }
 
 int ftable_strcmp(char *key, ftable_s *b)
