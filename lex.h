@@ -283,7 +283,7 @@ extern regex_match_s lex_matches(lex_s *lex, char *machid, char *str);
 
 extern void push_scope(char *id);
 extern void pop_scope(void);
-extern check_id_s check_id(char *id);
+extern check_id_s check_id(char *id, bool debug);
 extern void add_id(char *id, sem_type_s type, bool islocal);
 extern void print_scope(void *stream);
 

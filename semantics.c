@@ -1936,9 +1936,11 @@ void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_
         
         if(type.type == ATTYPE_ARRAY) {
             type.type = ATTYPE_ID;
-            check = check_id(type.str_);
-            if(!check.isfound && eval && isfinal)
+            check = check_id(p->matched->lexeme, false);
+            if(!check.isfound && isfinal) {
+                check = check_id(p->matched->lexeme, true);
                 add_semerror(parse, p->matched, "undeclared identifier");
+            }
         }
         else if(eval) {
             if(type.type == ATTYPE_NULL)
@@ -1993,7 +1995,7 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
         p = getpnode_nterm_copy(pn, val->str_, 1);
         printf("getting type for: %s from %s\n", p->matched->lexeme, val->str_);
         type = gettype(parse->lex, p->matched->lexeme);
-        if((type.type == ATTYPE_NULL || !check_id(p->matched->lexeme).isfound) && eval && isfinal) {
+        if((type.type == ATTYPE_NULL || !check_id(p->matched->lexeme, false).isfound) && eval && isfinal) {
             add_semerror(parse, p->matched, "undeclared identifier");
         }
         printf("Got Type: ");

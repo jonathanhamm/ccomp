@@ -82,7 +82,6 @@
 	<compound_statement>
     {
         if <compound_statement>.type = void then
-            popscope()
         fi
     }
 <subprogram_declaration'> ->
