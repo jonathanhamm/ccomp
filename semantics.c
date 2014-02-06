@@ -1329,7 +1329,6 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
     switch((*curr)->type.val) {
         case SEMTYPE_ID:
             id = *curr;
-            factor.value.str_ = id->lexeme;
             *curr = (*curr)->next;
             idsuffix = sem_idsuffix(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
             //attadd (semantics_s *s, char *id, sem_type_s *data)
@@ -1399,7 +1398,12 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                     factor.value = sem_type_s_(parse, ptmp->matched);
                     factor.value.tok = ptmp->matched;
                 }
-                //attadd(s, //id->lexeme, pnode-);
+                else {
+                    factor.value.str_ = id->lexeme;
+                    factor.value.lexeme = id->lexeme;
+                    factor.value.type = ATTYPE_ID;
+                    factor.value.tok = id;
+                }
             }
             else if (idsuffix.hasparam) {
                 if(idsuffix.params.ready) {
@@ -1419,7 +1423,10 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                     factor.value.str_ = "void";
                 }
                 else {
-                    factor.value = sem_type_s_(parse, id);
+                    //factor.value = sem_type_s_(parse, id);
+                    factor.value.str_ = id->lexeme;
+                    factor.value.lexeme = id->lexeme;
+                    factor.value.type = ATTYPE_ID;
                 }
                 factor.value.tok = tok_lastmatched;
             }
@@ -1894,7 +1901,7 @@ void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     llist_s *node;
     sem_type_s *val, *id;
     
-    if(params.ready) {
+    if(params.ready && eval) {
         node = llpop(&params.pstack);
         val = node->ptr;
         free(node);
@@ -1919,7 +1926,7 @@ void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_
     sem_type_s *val, type;
     check_id_s check;
     
-    if(params.ready) {
+    if(params.ready && eval) {
         node = llpop(&params.pstack);
         val = node->ptr;
         free(node);

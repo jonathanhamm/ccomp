@@ -37,7 +37,6 @@
 	var id : <type> ; <declarations'> 
     {
         addtype(id.entry, <type>.type)
-
     }
 <declarations'> ->
 	var id : <type> ; <declarations'>
@@ -81,6 +80,11 @@
 	<subprogram_head>
 	<subprogram_declaration'>
 	<compound_statement>
+    {
+        if <compound_statement>.type = void then
+            popscope()
+        fi
+    }
 <subprogram_declaration'> ->
 	<declarations> <dec>
 	|
@@ -136,8 +140,9 @@
 	<compound_statement'>
 	end
     {
-        popscope()
+        <compound_statement>.type := void
     }
+
 <compound_statement'> ->
 	<optional_statements>
 	|
@@ -320,6 +325,11 @@
 <term'> ->
         mulop <factor> <term'>
         {
+            if mulop.entry = mod then
+                if (<term'>.in <> integer) or (<factor>.type <> integer) then
+                    error(mulop, "Expected integer operands for modulo operation")
+                fi
+            fi
             if (<term'>.in = integer) and (<factor>.type = integer) then
                 <term'>[1].in := integer
                 <term'>.type := integer

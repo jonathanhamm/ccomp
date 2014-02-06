@@ -105,6 +105,7 @@ struct prxa_expression_s
 };
 
 scope_s *scope_tree;
+static scope_s *scope_root;
 
 static void printlist(token_s *list);
 static void parray_insert(idtnode_s *tnode, uint8_t index, idtnode_s *child);
@@ -151,6 +152,9 @@ static void mscan(lexargs_s *args);
 static mach_s *getmach(lex_s *lex, char *id);
  
 static int addtok_(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype, bool unlimited);
+
+static void print_frame(scope_s *s);
+
 /*
  rule1:
     rule2 | rule3 | rule4 
@@ -1723,7 +1727,7 @@ void push_scope(char *id)
     s->parent = scope_tree;
     
     if(!scope_tree)
-        scope_tree = s;
+        scope_root = scope_tree = s;
     if(scope_tree->nchildren)
         scope_tree->children = realloc(scope_tree->children, (scope_tree->nchildren + 1) * sizeof(*scope_tree->children));
     else
@@ -1828,3 +1832,19 @@ void add_id(char *id, sem_type_s type, bool islocal)
     }
     scope_tree->nentries++;
 }
+
+void print_frame(scope_s *s)
+{
+    unsigned i, j;
+    char *copy[s->nentries];
+    
+    for(i = 0, j = 0; i < s->nentries; i++) {
+      //  if(s->entries[i].address < 0)
+    }
+}
+
+void print_scope(void *stream)
+{
+    FILE *f = stream;
+}
+
