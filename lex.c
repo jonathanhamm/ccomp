@@ -1618,7 +1618,7 @@ sem_type_s gettype(lex_s *lex, char *id)
     check_id_s check;
     sem_type_s init = {0};
     
-    init.type = ATTYPE_NOT_EVALUATED;
+    init.type = ATTYPE_NULL;
     check = check_id(id);
     if(check.isfound)
         return *check.type;
@@ -1702,7 +1702,7 @@ void push_scope(char *id)
     scope_s *s;
     sem_type_s init = {0};
     
-    init.type = ATTYPE_NOT_EVALUATED;
+    init.type = ATTYPE_NULL;
     s = calloc(1, sizeof(*s));
     if(!s) {
         perror("Memory Allocation Error");

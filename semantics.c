@@ -2035,6 +2035,10 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     llist_s *node;
     pnode_s *pnode;
     sem_type_s *t, *id, test;
+    token_s *temp;
+    
+    if(hashlookup(grammar_stack->ptr, *curr))
+        return NULL;
     
     if(!(params.ready && eval))
         return NULL;
@@ -2046,19 +2050,22 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     node = llpop(&params.pstack);
     id = node->ptr;
     free(node);
-        
-  //  pnode = getpnode_nterm_copy(pn, id->str_, 1);
-    //print_semtype(*t);
-    putchar('\n');
-    //for(;;)printf("%s\n", t->lexeme);
+
     test = gettype(p->lex, id->lexeme);
-    if(test.type != ATTYPE_NOT_EVALUATED) {
-        //redeclaration error here
+    if(test.type != ATTYPE_NULL && test.type != ATTYPE_NOT_EVALUATED) {
+        temp = malloc(sizeof(*temp));
+        if(!temp) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        temp->lineno = id->tok->lineno;
+        strcpy(temp->lexeme, id->lexeme);
+        add_semerror(p, temp, "Redeclaration of identifier");
     }
     t->tok = id->tok;
-    settype(p->lex, id->lexeme, *t);
     add_id(id->lexeme, *t, true);
-
+    settype(p->lex, id->lexeme, *t);
+    hashinsert(grammar_stack->ptr, *curr, *curr);
     return NULL;
 }
 
@@ -2067,6 +2074,10 @@ void *sem_addarg(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s
     llist_s *node;
     pnode_s *pnode;
     sem_type_s *t, *id, test;
+    token_s *temp;
+    
+    if(hashlookup(grammar_stack->ptr, *curr))
+        return NULL;
     
     if(!(params.ready && eval))
         return NULL;
@@ -2084,12 +2095,20 @@ void *sem_addarg(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s
     putchar('\n');
     //for(;;)printf("%s\n", t->lexeme);
     test = gettype(p->lex, id->lexeme);
-    if(test.type != ATTYPE_NOT_EVALUATED) {
-        //redeclaration error here
+    if(test.type != ATTYPE_NOT_EVALUATED && test.type != ATTYPE_NULL) {
+        temp = malloc(sizeof(*temp));
+        if(!temp) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        temp->lineno = id->tok->lineno;
+        strcpy(temp->lexeme, id->lexeme);
+        add_semerror(p, temp, "Redeclaration of identifier");
     }
     t->tok = id->tok;
-    settype(p->lex, id->lexeme, *t);
     add_id(id->lexeme, *t, false);
+    settype(p->lex, id->lexeme, *t);
+    hashinsert(grammar_stack->ptr, *curr, *curr);
     return NULL;
 }
 
