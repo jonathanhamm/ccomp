@@ -1751,6 +1751,23 @@ check_id_s check_id(char *id)
     return (check_id_s){.isfound = false, .address = 0, .type = NULL};
 }
 
+bool check_redeclared(char *id)
+{
+    unsigned i;
+    
+    if(!scope_tree)
+        return false;
+    for(i = 0; i < scope_tree->nentries; i++) {
+        if(!strcmp(scope_tree->entries[i].entry, id))
+            return true;
+    }
+    for(i = 0; i < scope_tree->nchildren; i++) {
+        if(!strcmp(scope_tree->children[i].child->id, id))
+            return true;
+    }
+    return false;
+}
+
 void add_id(char *id, sem_type_s type, bool islocal)
 {
     long difference;

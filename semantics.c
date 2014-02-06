@@ -2036,6 +2036,7 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     pnode_s *pnode;
     sem_type_s *t, *id, test;
     token_s *temp;
+    bool declared;
     
     if(hashlookup(grammar_stack->ptr, *curr))
         return NULL;
@@ -2051,8 +2052,9 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     id = node->ptr;
     free(node);
 
+    declared = check_redeclared(id->lexeme);
     test = gettype(p->lex, id->lexeme);
-    if(test.type != ATTYPE_NULL && test.type != ATTYPE_NOT_EVALUATED) {
+    if(declared && (test.type != ATTYPE_NULL && test.type != ATTYPE_NOT_EVALUATED)) {
         temp = malloc(sizeof(*temp));
         if(!temp) {
             perror("Memory Allocation Error");
@@ -2077,6 +2079,7 @@ void *sem_addarg(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s
     pnode_s *pnode;
     sem_type_s *t, *id, test;
     token_s *temp;
+    bool declared;
     
     if(hashlookup(grammar_stack->ptr, *curr))
         return NULL;
@@ -2096,8 +2099,9 @@ void *sem_addarg(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s
     //print_semtype(*t);
     putchar('\n');
     //for(;;)printf("%s\n", t->lexeme);
+    declared = check_redeclared(id->lexeme);
     test = gettype(p->lex, id->lexeme);
-    if(test.type != ATTYPE_NOT_EVALUATED && test.type != ATTYPE_NULL) {
+    if(declared && (test.type != ATTYPE_NOT_EVALUATED && test.type != ATTYPE_NULL)) {
         temp = malloc(sizeof(*temp));
         if(!temp) {
             perror("Memory Allocation Error");
@@ -2214,6 +2218,7 @@ void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     sem_type_s *final, *arg;
     check_id_s check;
     token_s *temp;
+    bool declared;
     
     if((final = hashlookup(grammar_stack->ptr, *curr)))
         return final;
@@ -2225,8 +2230,9 @@ void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     arg = node->ptr;
     free(node);
     
+    declared = check_redeclared(arg->str_);
     check = check_id(arg->str_);
-    if(check.type) {
+    if(declared && check.type) {
         temp = malloc(sizeof(*temp));
         if(!temp) {
             perror("Memory Allocation Error");
@@ -2234,9 +2240,8 @@ void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
         }
         temp->lineno = arg->tok->lineno;
         strcpy(temp->lexeme, arg->str_);
-        add_semerror(parse, temp, "Redeclaration of function");
+        add_semerror(parse, temp, "Redeclaration of procedure");
     }
-    
     push_scope(arg->str_);
     final = (sem_type_s *)1;
     hashinsert(grammar_stack->ptr, *curr, final);
