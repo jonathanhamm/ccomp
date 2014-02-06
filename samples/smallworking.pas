@@ -2,7 +2,7 @@ program bob (input, output);
 var tom : integer; var ted : real; var herp : array[1..2321] of real;
 var KimJongUn : array[1..0] of integer;
 var KimJongUn : integer;
-procedure lolwut (a : integer; b : real; c : real; c : integer);
+procedure lolwut (a : integer; b : real; c : real);
     var x : integer; var y : real;
     begin
         a := b+c

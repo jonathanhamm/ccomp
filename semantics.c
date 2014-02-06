@@ -2062,9 +2062,11 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
         strcpy(temp->lexeme, id->lexeme);
         add_semerror(p, temp, "Redeclaration of identifier");
     }
-    t->tok = id->tok;
-    add_id(id->lexeme, *t, true);
-    settype(p->lex, id->lexeme, *t);
+    else {
+        t->tok = id->tok;
+        add_id(id->lexeme, *t, true);
+        settype(p->lex, id->lexeme, *t);
+    }
     hashinsert(grammar_stack->ptr, *curr, *curr);
     return NULL;
 }
@@ -2105,9 +2107,11 @@ void *sem_addarg(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s
         strcpy(temp->lexeme, id->lexeme);
         add_semerror(p, temp, "Redeclaration of identifier");
     }
-    t->tok = id->tok;
-    add_id(id->lexeme, *t, false);
-    settype(p->lex, id->lexeme, *t);
+    else {
+        t->tok = id->tok;
+        add_id(id->lexeme, *t, false);
+        settype(p->lex, id->lexeme, *t);
+    }
     hashinsert(grammar_stack->ptr, *curr, *curr);
     return NULL;
 }
@@ -2208,6 +2212,8 @@ void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
 {
     llist_s *node;
     sem_type_s *final, *arg;
+    check_id_s check;
+    token_s *temp;
     
     if((final = hashlookup(grammar_stack->ptr, *curr)))
         return final;
@@ -2218,6 +2224,18 @@ void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     node = llpop(&params.pstack);
     arg = node->ptr;
     free(node);
+    
+    check = check_id(arg->str_);
+    if(check.type) {
+        temp = malloc(sizeof(*temp));
+        if(!temp) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        temp->lineno = arg->tok->lineno;
+        strcpy(temp->lexeme, arg->str_);
+        add_semerror(parse, temp, "Redeclaration of function");
+    }
     
     push_scope(arg->str_);
     final = (sem_type_s *)1;
