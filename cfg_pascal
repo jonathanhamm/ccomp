@@ -100,6 +100,9 @@
     }
 	|
 	ε
+    {
+        <subprogram_head'>.type := void
+    }
 
 <arguments> ->
 	\( <parameter_list> \)
@@ -122,6 +125,9 @@
     }
 	|
 	ε
+    {
+        <parameter_list'>.args := void
+    }
 	
 <compound_statement> ->
 	begin
@@ -198,7 +204,6 @@
 	call id <procedure_statement'>
     {
         if lookup(id) = <procedure_statement'>.type then
-            halt()
         fi
     }
 <procedure_statement'> ->
@@ -208,6 +213,9 @@
     }
 	|
 	ε
+    {
+        <procedure_statement'>.type := void
+    }
 	
 <expression_list> ->
 	<expression> <expression_list'>
@@ -223,6 +231,9 @@
     }
 	|
 	ε
+    {
+        <exprssion_list'>.args := void
+    }
 	
 <expression> ->
 	<simple_expression> <expression'>

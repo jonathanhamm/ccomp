@@ -256,7 +256,7 @@ static inline unsigned torelop(unsigned val);
 static pnode_s *getpnode_token(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm_copy(pna_s *pn, char *lexeme, unsigned index);
 static pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index);
-static sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, int op);
+static sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, int op);
 static sem_statements_s sem_statements (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
 static sem_statement_s sem_statement (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
 static sem_else_s sem_else (parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, test_s evaluate, bool elprev, bool isfinal);
@@ -296,7 +296,7 @@ static void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn
 static void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 
-static void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual);
+static int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual);
 
 static int ftable_strcmp(char *key, ftable_s *b);
 static sem_action_f get_semaction(char *str);
@@ -362,7 +362,6 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     s.high = 0;
     
     if(!token->stype) {
-
         res = idtable_lookup(parse->lex->idtable, token->lexeme);
         if(res.is_found) {
             s = res.tdat.type;
@@ -662,7 +661,7 @@ pnode_s *getpnode_nterm(production_s *prod, char *lexeme, unsigned index)
 }
 
 /* performs basic arithmetic operations with implicit type coercion */
-sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, int op)
+sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, int op)
 {
     sem_type_s result;
     result.str_ = NULL;
@@ -677,6 +676,7 @@ sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, in
                 result.type = ATTYPE_NUMINT;
                 result.int_ = !((v2.type == ATTYPE_NOT_EVALUATED) || (v2.type == ATTYPE_NULL));
             }
+            result.tok = tok_lastmatched;
             return result;
         }
         if(v2.type == ATTYPE_NULL) {
@@ -689,17 +689,20 @@ sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, in
                 result.type = ATTYPE_NUMINT;
                 result.int_ = !((v1.type == ATTYPE_NOT_EVALUATED) || (v1.type == ATTYPE_NULL));
             }
+            result.tok = tok_lastmatched;
             return result;
         }
         if (v1.type == ATTYPE_NOT_EVALUATED || v2.type == ATTYPE_NOT_EVALUATED) {
             result.type = ATTYPE_NOT_EVALUATED;
             result.str_ = "null";
             puts("Not Evaluated");
+            result.tok = tok_lastmatched;
             return result;
         }
         else if(v1.type == ATTYPE_NULL || v2.type == ATTYPE_NULL) {
             result.type = ATTYPE_NULL;
             result.str_ = "null";
+            result.tok = tok_lastmatched;
       //      puts("Not Evaluated");
             return result;
         }
@@ -858,9 +861,10 @@ sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, in
             else if((v1.type == ATTYPE_ARGLIST_FORMAL || v1.type == ATTYPE_ARGLIST_ACTUAL) || (v2.type == ATTYPE_ARGLIST_FORMAL || v2.type == ATTYPE_ARGLIST_ACTUAL)) {
                 printf("\ntypes: %u %u v1: %u -- v2: %u\n", ATTYPE_ARGLIST_ACTUAL, ATTYPE_ARGLIST_FORMAL, v1.type, v2.type);
                 if(v1.type == ATTYPE_ARGLIST_FORMAL)
-                    arglist_cmp(parse, tok, v1, v2);
+                    result.int_ = arglist_cmp(curr, parse, tok, v1, v2);
                 else
-                    arglist_cmp(parse, tok, v2, v1);
+                    result.int_ = arglist_cmp(curr, parse, tok, v2, v1);
+                result.int_ = 0;
             }
             else
                 result.int_ = v1.real_ == v2.real_;
@@ -919,9 +923,7 @@ sem_type_s sem_op(parse_s *parse, token_s *tok, sem_type_s v1, sem_type_s v2, in
             assert(false);
             break;
     }
-    result.tok = v1.tok;
-    if(!result.tok)
-        result.tok = v2.tok;
+    result.tok = tok_lastmatched;
     putchar('\n');
     return result;
 }
@@ -1099,7 +1101,7 @@ sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pd
            // for(;;)printf("%u\n", expression_.value.type);
         puts("\n\n");*/
     }
-    expression.value = sem_op(parse, pn->curr->matched, simple_expression.value, expression_.value, expression_.op);
+    expression.value = sem_op(curr, parse, tok_lastmatched, simple_expression.value, expression_.value, expression_.op);
     
     if(!expression.value.tok) {
         expression.value.tok = expression_.value.tok;
@@ -1208,7 +1210,7 @@ sem_simple_expression__s sem_simple_expression_(parse_s *parse, token_s **curr, 
             op = toaddop((*curr)->type.attribute);
             *curr = (*curr)->next;
             term = sem_term(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
-            *accum = sem_op(parse, pn->curr->matched, *accum, term.value, op);
+            *accum = sem_op(curr, parse, tok_lastmatched, *accum, term.value, op);
             simple_expression__ = sem_simple_expression_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval, isfinal);
             if(!simple_expression_.value.tok) {
                 simple_expression_.value.tok = simple_expression__.value.tok;
@@ -1275,7 +1277,7 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
             op = tomulop((*curr)->type.attribute);
             *curr = (*curr)->next;
             factor = sem_factor(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
-            *accum = sem_op(parse, pn->curr->matched, *accum, factor.value, op);
+            *accum = sem_op(curr, parse, tok_lastmatched, *accum, factor.value, op);
             term_ = sem_term_(parse, curr, il, accum, pda, prod, pn, syn, pass, eval, isfinal);
             if(!term_.value.tok) {
                 term_.value.tok = factor.value.tok;
@@ -1420,7 +1422,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                             }
                         }
                         if(!factor.value.tok)
-                            factor.value.tok = *curr;
+                            factor.value.tok = tok_lastmatched;
                     }
                     else {
                         factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
@@ -1450,7 +1452,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                 factor.value.lexeme = (*curr)->lexeme;
                 factor.value.real_ = safe_atod((*curr)->lexeme);
             }
-            factor.value.tok = *curr;
+            factor.value.tok = tok_lastmatched;
             *curr = (*curr)->next;
             break;
         case SEMTYPE_NOT:
@@ -1487,7 +1489,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
         case SEMTYPE_CODE:
             factor.value.type = ATTYPE_CODE;
             factor.value.str_ = (*curr)->lexeme_;
-            factor.value.tok = *curr;
+            factor.value.tok = tok_lastmatched;
             *curr = (*curr)->next;
             break;
         default:
@@ -2131,12 +2133,49 @@ void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     
 }
 
-void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
+int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
 {
     char *errstr;
     llist_s *lf, *la;
     sem_type_s *a, *f;
+    int *result;
     
+    
+    if((result = hashlookup(grammar_stack->ptr, *curr)))
+        return *result;
+    
+    result = malloc(sizeof(*result));
+    if(!result) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    
+    
+    switch(actual.type) {
+        case ATTYPE_ARGLIST_ACTUAL:
+            break;
+        case ATTYPE_ID:
+        case ATTYPE_ARRAY:
+        default:
+            add_semerror(parse, actual.tok, "Improper assignment involving procedure type");
+            *result = 0;
+            hashinsert(grammar_stack->ptr, *curr, result);
+            return 0;
+    }
+    
+    switch(formal.type) {
+        case ATTYPE_ARGLIST_FORMAL:
+            break;
+        case ATTYPE_ID:
+        case ATTYPE_ARRAY:
+        default:
+            add_semerror(parse, actual.tok, "Attempt to call non-procedure object");
+            *result = 0;
+            hashinsert(grammar_stack->ptr, *curr, result);
+            return 0;
+    }
+
+    assert(actual.type == ATTYPE_ARGLIST_ACTUAL && formal.type == ATTYPE_ARGLIST_FORMAL);
     
     la = actual.q->head;
     for(lf = formal.q->head; lf; lf = lf->next) {
@@ -2144,36 +2183,49 @@ void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s act
         a = la->ptr;
         
         if(f->type == ATTYPE_ID){
-            
             if(a->type == ATTYPE_ID){
                 if(!strcmp(f->str_, "real")){
-                    if(strcmp(a->str_, "real") && strcmp(a->str_, "integer"))
+                    if(strcmp(a->str_, "real") && strcmp(a->str_, "integer")) {
                         add_semerror(parse, a->tok, "Expected real or integer but got different type");
+                        *result = 0;
+                    }
                 }
                 else if(!strcmp(f->str_, "integer")){
-                    if(strcmp(a->str_, "integer"))
+                    if(strcmp(a->str_, "integer")) {
                         add_semerror(parse, a->tok, "Expected integer but got different type");
+                        *result = 0;
+                    }
                 }
             }
             else if(a->type == ATTYPE_ARRAY){
                 add_semerror(parse, a->tok, "Expected real or integer but got array");
+                *result = 0;
             }
             else{
                 add_semerror(parse, a->tok, "Expected real or integer but got different type");
+                *result = 0;
             }
         }
         else if(f->type == ATTYPE_ARRAY){
             if(a->type == ATTYPE_ARRAY){
-                
+                if(strcmp(f->str_, a->str_)) {
+                    add_semerror(parse, a->tok, "Array types mismatch");
+                    *result = 0;
+                }
+                if(f->low != a->low || f->high != a->high) {
+                    add_semerror(parse, a->tok, "Array bounds mismatch");
+                    *result = 0;
+                }
             }
             else if(a->type == ATTYPE_ID){
-                
+                add_semerror(parse, a->tok, "Exptected array type but got numeric type");
+                *result = 0;
             }
             else{
-                
+                add_semerror(parse, a->tok, "Exptected array type but got other type");
+                *result = 0;
             }
         }
-        
         if(la)
             la = la->next;
         else
@@ -2181,10 +2233,19 @@ void arglist_cmp(parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s act
     }
     
     //sprintf(errstr, "Excess Parameters Used in function call %s");
-    if(la)
+    if(la) {
         add_semerror(parse, ((sem_type_s *)la->ptr)->tok, "Excess Parameters Used in function call");
-    else if(lf)
+        *result = 0;
+        
+    }
+    else if(lf) {
         add_semerror(parse, ((sem_type_s *)la->ptr)->tok, "Not Enough Arguments Used in function call");
+        *result = 0;
+    }
+    *result = 1;
+    hashinsert(grammar_stack->ptr, *curr, result);
+    return *result;
+
 }
 
 int ftable_strcmp(char *key, ftable_s *b)

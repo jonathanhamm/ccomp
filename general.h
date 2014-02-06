@@ -93,6 +93,7 @@ struct sem_type_s
     };
     struct token_s *tok;
     long low, high;
+    int mark;
 };
 
 struct queue_s
