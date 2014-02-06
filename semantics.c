@@ -1318,6 +1318,7 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
     sem_idsuffix_s idsuffix;
     sem_expression_s expression;
     
+    factor.value.tok = NULL;
     expression.value.str_ = NULL;
     value.str_ = NULL;
     switch((*curr)->type.val) {
