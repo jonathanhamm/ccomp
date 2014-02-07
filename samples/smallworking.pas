@@ -6,7 +6,9 @@ var KimJongUn : integer;
 procedure lolwut (a : integer; b : real; c : real);
     var x : integer; var y : real;
     begin
-        a := b+c
+a := b+c;
+b := c;
+b := KimJongUn
     end;
 procedure lolwat(a: integer);
 begin
@@ -21,5 +23,6 @@ begin
     call lolwut(KimJongUn[3+3]*tom, herp[3], herp[KimJongUn[KimJongUn[KimJongUn[KimJongUn[3+tom]]]]*tom]);
     a := b+c;
     c := c;
+    tom := c;
     tom := tom /KimJongUn[2]
 end.

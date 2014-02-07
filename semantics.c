@@ -1913,7 +1913,10 @@ void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
         str[0] = ' ';
         str[strlen(str)-1] = ' ';
         p = getpnode_nterm_copy(pn, id->str_, 1);
-        add_semerror(parse, p->matched, str);
+        if(p)
+            add_semerror(parse, p->matched, str);
+        else
+            add_semerror(parse, tok_lastmatched, str);
     }
     return NULL;
 }

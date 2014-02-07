@@ -161,14 +161,14 @@
     {
         if <variable>.type = integer then
             if <expression>.type <> integer then
-                error(assignop, "Invalid assignment to integer type")
+                error(assignop, "Incompatible assignment to integer type")
             fi
         elif <variable>.type = real then 
             if (<expression>.type <> real) and (<expression>.type <> integer) then
-                error(assignop, "Invalid assigment to real type")
+                error(assignop, "Incompatible assigment to real type")
             fi
-        else 
-            error(assignop, "Invalid type used in assignment")
+        elif <variable>.type <> <expression>.type then
+            error(assignop, "Incompatible types used in assignment")
         fi
     }
 	|
@@ -255,6 +255,12 @@
 <expression'> ->
 	relop <simple_expression>
     {
+        if (<expression'>.in <> integer) and (<expression'>.in <> real) then
+            error(relop, "Incompatible type used on left-hand side of relational operator")
+        fi
+        if (<simple_expression>.type <> integer) and (<simple_expression>.type <> real) then
+            error(relop, "Incompatible type used on right-hand side of relational operator")
+        fi
         <expresion'>.type := integer
     }
 	|
@@ -380,6 +386,10 @@
 	not <factor>
     {
         <factor>.type := <factor>[1].type
+        if <factor>.type <> integer then
+            error(bob, "Incompatible type used in logical not")
+            <factor>.type := integer
+        fi
     }
     
 <factor'> ->
