@@ -2037,9 +2037,10 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
 {
     llist_s *node;
     pnode_s *pnode;
-    sem_type_s *t, *id, test;
+    sem_type_s *t, *id;
     token_s *temp;
     bool declared;
+    check_id_s check;
     
     if(hashlookup(grammar_stack->ptr, *curr))
         return NULL;
@@ -2054,10 +2055,9 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     node = llpop(&params.pstack);
     id = node->ptr;
     free(node);
-
     declared = check_redeclared(id->lexeme);
-    test = gettype(p->lex, id->lexeme);
-    if(declared && (test.type != ATTYPE_NULL && test.type != ATTYPE_NOT_EVALUATED)) {
+    check = check_id(id->lexeme);
+    if(declared && (check.type->type != ATTYPE_NULL && check.type->type != ATTYPE_NOT_EVALUATED)) {
         temp = malloc(sizeof(*temp));
         if(!temp) {
             perror("Memory Allocation Error");
@@ -2066,13 +2066,21 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
         temp->lineno = id->tok->lineno;
         strcpy(temp->lexeme, id->lexeme);
         add_semerror(p, temp, "Redeclaration of identifier");
+        hashinsert(grammar_stack->ptr, *curr, *curr);
     }
     else {
         t->tok = id->tok;
-        add_id(id->lexeme, *t, true);
+        if(!declared) {
+            printf("%u %u %u %u\n", ATTYPE_NOT_EVALUATED, ATTYPE_NULL, ATTYPE_ARGLIST_FORMAL, ATTYPE_ARGLIST_ACTUAL);
+            fflush(stdout);
+           if(t->type != ATTYPE_ARGLIST_FORMAL)
+                add_id(id->lexeme, *t, true);
+        }
         settype(p->lex, id->lexeme, *t);
+        if(t->type != ATTYPE_NULL && t->type != ATTYPE_NOT_EVALUATED) {
+            hashinsert(grammar_stack->ptr, *curr, *curr);
+        }
     }
-    hashinsert(grammar_stack->ptr, *curr, *curr);
     return NULL;
 }
 
@@ -2269,10 +2277,9 @@ void *sem_popscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse
 int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
 {
     char *errstr;
-    llist_s *lf, *la;
+    llist_s *lf, *la, *la_last;
     sem_type_s *a, *f;
     int *result;
-    
     
     if((result = hashlookup(grammar_stack->ptr, *curr)))
         return *result;
@@ -2310,8 +2317,8 @@ int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal,
 
     assert(actual.type == ATTYPE_ARGLIST_ACTUAL && formal.type == ATTYPE_ARGLIST_FORMAL);
     
-    la = actual.q->head;
-    for(lf = formal.q->head; lf; lf = lf->next) {
+    la_last = la = actual.q->head;
+    for(lf = formal.q->head; lf && la; lf = lf->next, la_last = la, la = la->next) {
         f = lf->ptr;
         a = la->ptr;
         
@@ -2359,20 +2366,16 @@ int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal,
                 *result = 0;
             }
         }
-        if(la)
-            la = la->next;
-        else
-            break;
     }
     
     //sprintf(errstr, "Excess Parameters Used in function call %s");
     if(la) {
-        add_semerror(parse, ((sem_type_s *)la->ptr)->tok, "Excess Parameters Used in function call");
+        add_semerror(parse, ((sem_type_s *)la_last->ptr)->tok, "Excess Parameters Used in function call");
         *result = 0;
         
     }
     else if(lf) {
-        add_semerror(parse, ((sem_type_s *)la->ptr)->tok, "Not Enough Arguments Used in function call");
+        add_semerror(parse, ((sem_type_s *)la_last->ptr)->tok, "Not Enough Arguments Used in function call");
         *result = 0;
     }
     *result = 1;

@@ -214,6 +214,7 @@
         if lookup(id) = <procedure_statement'>.type then
         fi
     }
+
 <procedure_statement'> ->
 	\( <expression_list> \)
     {

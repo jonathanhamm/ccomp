@@ -1609,6 +1609,7 @@ void settype(lex_s *lex, char *id, sem_type_s type)
     tdat.type = type;
     idtable_set(lex->idtable, id, tdat);*/
     check_id_s check = check_id(id);
+    
     if(check.isfound)
         *check.type = type;
 }
@@ -1702,6 +1703,8 @@ void push_scope(char *id)
     scope_s *s;
     sem_type_s init = {0};
     
+    
+    printf("scope pushed: %s\n", id);
     init.type = ATTYPE_NOT_EVALUATED;
     s = calloc(1, sizeof(*s));
     if(!s) {
@@ -1744,8 +1747,9 @@ check_id_s check_id(char *id)
                 return (check_id_s){.isfound = true, .address = iter->entries[i].address, .type = &iter->entries[i].type};
         }
         for(i = 0; i < iter->nchildren; i++) {
-            if(!strcmp(iter->children[i].child->id, id))
+            if(!strcmp(iter->children[i].child->id, id)) {
                 return (check_id_s){.isfound = true, .address = 0, .type = &iter->children[i].type};
+            }
         }
     }
     return (check_id_s){.isfound = false, .address = 0, .type = NULL};
@@ -1772,7 +1776,7 @@ void add_id(char *id, sem_type_s type, bool islocal)
 {
     long difference;
     unsigned index;
-
+    
     index = scope_tree->nentries;
     if(scope_tree->nentries)
         scope_tree->entries = realloc(scope_tree->entries, (index + 1) * sizeof(*scope_tree->entries));
@@ -1783,6 +1787,7 @@ void add_id(char *id, sem_type_s type, bool islocal)
         exit(EXIT_FAILURE);
     }
     scope_tree->entries[index].entry = id;
+    scope_tree->entries[index].type = type;
     if(type.type == ATTYPE_ID) {
         if(!strcmp(type.str_, "integer")) {
             if(islocal) {
