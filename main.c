@@ -85,6 +85,7 @@ int main(int argc, const char *argv[])
     parse (p, lextok);
     print_listing(p->listing, stdout);
     free_listing(p->listing);
+    print_scope(stdout);
     return 0;
 }
 

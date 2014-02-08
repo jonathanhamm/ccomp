@@ -105,6 +105,7 @@ struct prxa_expression_s
 };
 
 scope_s *scope_tree;
+static unsigned scope_indent;
 static scope_s *scope_root;
 
 static void printlist(token_s *list);
@@ -153,7 +154,10 @@ static mach_s *getmach(lex_s *lex, char *id);
  
 static int addtok_(token_s **tlist, char *lexeme, uint32_t lineno, uint16_t type, uint16_t attribute, char *stype, bool unlimited);
 
-static void print_frame(scope_s *s);
+static void print_indent(FILE *f);
+static void print_scope_(scope_s *root, FILE *f);
+static int entry_cmp(const void *a, const void *b);
+static void print_frame(FILE *f, scope_s *s);
 
 lex_s *buildlex(const char *file)
 {
@@ -1713,20 +1717,23 @@ void push_scope(char *id)
     }
     s->id = id;
     s->parent = scope_tree;
+    s->last_arg_addr = -INTEGER_WIDTH;
     
     if(!scope_tree)
         scope_root = scope_tree = s;
-    if(scope_tree->nchildren)
-        scope_tree->children = realloc(scope_tree->children, (scope_tree->nchildren + 1) * sizeof(*scope_tree->children));
-    else
-        scope_tree->children = malloc(sizeof(*scope_tree->children));
-    if(!scope_tree->children) {
-        perror("Memory Allocation Error");
-        exit(EXIT_FAILURE);
+    else {
+        if(scope_tree->nchildren)
+            scope_tree->children = realloc(scope_tree->children, (scope_tree->nchildren + 1) * sizeof(*scope_tree->children));
+        else
+            scope_tree->children = malloc(sizeof(*scope_tree->children));
+        if(!scope_tree->children) {
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        scope_tree->children[scope_tree->nchildren].child = s;
+        scope_tree->children[scope_tree->nchildren++].type = init;
+        scope_tree = s;
     }
-    scope_tree->children[scope_tree->nchildren].child = s;
-    scope_tree->children[scope_tree->nchildren++].type = init;
-    scope_tree = s;
 }
 
 void pop_scope(void)
@@ -1844,17 +1851,91 @@ void add_id(char *id, sem_type_s type, bool islocal)
     scope_tree->nentries++;
 }
 
-void print_frame(scope_s *s)
+int entry_cmp(const void *a, const void *b)
 {
-    unsigned i, j;
-    char *copy[s->nentries];
+    scope_entry_s   *aa = (scope_entry_s *)a,
+                    *bb = (scope_entry_s *)b;
     
-    for(i = 0, j = 0; i < s->nentries; i++) {
-      //  if(s->entries[i].address < 0)
+    if(aa->address > bb->address)
+        return 1;
+    if(aa->address < bb->address)
+        return -1;
+    return 0;
+}
+
+void print_indent(FILE *f)
+{
+    unsigned i;
+    
+    for(i = 0; i < scope_indent; i++)
+        fputc('\t', f);
+}
+
+void print_frame(FILE *f, scope_s *s)
+{
+    unsigned i;
+    scope_entry_s entries[s->nentries];
+    
+    print_indent(f);
+    fputs("==========================================\n", f);
+    print_indent(f);
+    fputs("==========================================\n", f);
+    print_indent(f);
+    fprintf(f, "\tPrinting Stack Frame for: %s\n", s->id);
+    print_indent(f);
+    fputs("==========================================\n", f);
+    for(i = 0; i < s->nentries; i++)
+        entries[i] = s->entries[i];
+    qsort(entries, s->nentries, sizeof(*entries), entry_cmp);
+    for(i = 0; i < s->nentries; i++) {
+        if(entries[i].address == 0)
+            break;
+        print_indent(f);
+        fprintf(f, "\t%16s: %8d\n", entries[i].entry, entries[i].address);
+        if(i + 1  < s->nentries && entries[i+1].address == 0){
+            print_indent(f);
+            fputs("==========================================\n", f);
+        }
+        else{
+            print_indent(f);
+            fputs("------------------------------------------\n", f);
+        }
+    }
+    print_indent(f);
+    fputs("\t\tFrame Pointer\n", f);
+    print_indent(f);
+    fputs("==========================================\n", f);
+    while(i < s->nentries) {
+        print_indent(f);
+        fprintf(f, "\t%16s:  %8d\n", entries[i].entry, entries[i].address);
+        print_indent(f);
+        if(i < s->nentries-1)
+            fputs("------------------------------------------\n", f);
+        else
+            fputs("==========================================\n", f);
+        i++;
+    }
+}
+
+void print_scope_(scope_s *root, FILE *f)
+{
+    unsigned i;
+    
+    print_frame(f, root);
+    for(i = 0; i < root->nchildren; i++) {
+        scope_indent++;
+        print_indent(f);
+        fputs("|\n", f);
+        print_indent(f);
+        fputs("|\n", f);
+        print_scope_(root->children[i].child, f);
+        scope_indent--;
     }
 }
 
 void print_scope(void *stream)
 {
-    FILE *f = stream;
+    scope_indent = 0;
+    puts("---Printing Scope Information---");
+    print_scope_(scope_root, stream);
 }

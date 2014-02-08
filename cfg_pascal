@@ -5,6 +5,7 @@
 	\.
 	{
         pushscope(id.entry)
+        <program>.type := <identifier_list>.type
 	}
 
 <program'> ->
@@ -22,14 +23,24 @@
 <identifier_list> ->
 	id <identifier_list'>
     {
+        addarg(id.entry, integer)
+        <identifier_list>.args := makelistf(integer)
+        <identifier_list'>.args := <identifier_list>.args
     }
 
 <identifier_list'> ->
 	, id <identifier_list'>
 	{
+        addarg(id.entry, integer)
+        listappend(<identifier_list'>.args, integer)
+        <identifier_list'>[1].args := <identifier_list'>.args
+
 	}
 	|
 	ε
+    {
+        <identifier_list'>.type := void
+    }
 
 <declarations> ->
 	var id : <type> ; <declarations'> 
@@ -95,7 +106,6 @@
     {
         pushscope(id.entry)
         addtype(id.entry, <subprogram_head'>.type)
-        <subprogram_head>.scope := id.entry
     }
 <subprogram_head'> ->
 	<arguments>
@@ -105,7 +115,7 @@
 	|
 	ε
     {
-        <subprogram_head'>.type := void
+        <subprogram_head'>.type := makelistf(void)
     }
 
 <arguments> ->
@@ -113,6 +123,7 @@
     {
         <arguments>.args := <parameter_list>.args
     }
+
 <parameter_list> ->
 	id : <type> <parameter_list'> 
     { 
@@ -212,6 +223,7 @@
 	call id <procedure_statement'>
     {
         if lookup(id) = <procedure_statement'>.type then
+            <procedure_statement>.type := void
         fi
     }
 
@@ -223,7 +235,7 @@
 	|
 	ε
     {
-        <procedure_statement'>.type := void
+        <procedure_statement'>.type := makelista(void)
     }
 	
 <expression_list> ->

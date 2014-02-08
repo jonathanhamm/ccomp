@@ -119,6 +119,7 @@ typedef struct mach_s mach_s;
 typedef struct lextok_s lextok_s;
 typedef struct iditer_s iditer_s;
 typedef struct regex_match_s regex_match_s;
+typedef struct scope_entry_s scope_entry_s;
 typedef struct scope_s scope_s;
 typedef struct check_id_s check_id_s;
 
@@ -240,14 +241,16 @@ struct regex_match_s
     unsigned attribute;
 };
 
+struct scope_entry_s
+{
+    char *entry;
+    int address;
+    sem_type_s type;
+};
+
 struct scope_s
 {
-    struct {
-        char *entry;
-        int address;
-        sem_type_s type;
-    } *entries;
-    
+    scope_entry_s *entries;
     struct {
         sem_type_s type;
         scope_s *child;

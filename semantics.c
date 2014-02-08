@@ -1,5 +1,5 @@
 /*
- parse.h
+ semantics.c
  Author: Jonathan Hamm
  
  Description:
@@ -47,7 +47,7 @@
 #define ATTYPE_GE   4
 #define ATTYPE_G    5
 
-#define TYPE_ERROR_PREFIX "      --Type Error at line %u: "
+#define TYPE_ERROR_PREFIX "      --Semantics Error at line %u: "
 #define TYPE_ERROR_SUFFIX " at token %s"
 
 #define FTABLE_SIZE (sizeof(ftable) / sizeof(ftable[0]))
@@ -2191,7 +2191,7 @@ void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
     list.q = queue_s_();
     list.lexeme = "--ARGLIST--";
     enqueue(list.q, t);
-    
+        
     final = alloc_semt(list);
     hashinsert(grammar_stack->ptr, *curr, final);
     return final;
@@ -2251,7 +2251,7 @@ void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
         }
         temp->lineno = arg->tok->lineno;
         strcpy(temp->lexeme, arg->str_);
-        add_semerror(parse, temp, "Redeclaration of procedure");
+        add_semerror(parse, temp, "Redeclaration of identifier as procedure");
     }
     push_scope(arg->str_);
     final = (sem_type_s *)1;
@@ -2366,9 +2366,13 @@ int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal,
                 *result = 0;
             }
         }
+        else if(f->type == ATTYPE_VOID) {
+            if(a->type != ATTYPE_VOID) {
+                add_semerror(parse, a->tok, "Excess Parameters Used in function call");
+                *result = 0;
+            }
+        }
     }
-    
-    //sprintf(errstr, "Excess Parameters Used in function call %s");
     if(la) {
         add_semerror(parse, ((sem_type_s *)la_last->ptr)->tok, "Excess Parameters Used in function call");
         *result = 0;

@@ -1,6 +1,12 @@
 program bob (input, output);
 var tom : integer; var ted : real;
 var omg : array[23..44] of real;
+procedure omg (a : integer; b : real; c : real);
+var derp : real;
+begin
+    derp := 10
+end;
+
 procedure bob (a : integer; b : real; c : real);
 	var zomg : integer; var herp : array[1..2321] of real;
 	procedure lolololol (d:real);

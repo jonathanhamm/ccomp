@@ -10,6 +10,14 @@ var KimJongUn : integer;
         b := c;
         b := KimJongUn
     end;
+    procedure hahaha ;
+    var x : integer; var y : real;
+    begin
+        a := b+c;
+        b := c;
+        b := KimJongUn
+    end;
+
     procedure lolwat(a: integer);
         procedure lulwut(b: real);
         begin
@@ -18,6 +26,8 @@ var KimJongUn : integer;
         end;
     begin
         a := 1;
+        call hahaha;
+        call hahaha(1.1, 5, 5);
         call lolwut(5);
         call lulwut(32.23)
     end;

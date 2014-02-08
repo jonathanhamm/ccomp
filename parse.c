@@ -498,7 +498,7 @@ llist_s *getfirsts(parse_s *parser, pda_s *pda)
     return list;
 }
 
-void getfollows (follow_s *fparams)
+void getfollows(follow_s *fparams)
 {
     uint16_t i;
     bool has_epsilon;
@@ -564,7 +564,7 @@ inline ffnode_s *makeEOF (void)
     return makeffnode(tmakeEOF(), 1);
 }
 
-inline token_s *tmakeEOF (void)
+inline token_s *tmakeEOF(void)
 {
     token_s *tok;
     
@@ -579,14 +579,14 @@ inline token_s *tmakeEOF (void)
     return tok;
 }
 
-follow_s *get_neighbor_params (follow_s *table, pda_s *pda)
+follow_s *get_neighbor_params(follow_s *table, pda_s *pda)
 {
     while (table->pda != pda)
         table++;
     return table;
 }
 
-llist_s *lldeep_concat_foll (llist_s *first, llist_s *second)
+llist_s *lldeep_concat_foll(llist_s *first, llist_s *second)
 {
     llist_s *second_ = NULL, *iter = NULL;
     
@@ -619,7 +619,7 @@ bool llpnode_contains(llist_s *list, token_s *tok)
     return false;
 }
 
-void add_inherit (follow_s *nonterm, follow_s *dependent)
+void add_inherit(follow_s *nonterm, follow_s *dependent)
 {
     uint16_t i;
     
@@ -639,7 +639,7 @@ void add_inherit (follow_s *nonterm, follow_s *dependent)
     nonterm->ninherit++;
 }
 
-llist_s *inherit_follows (follow_s *nterm, llist_s **stack)
+llist_s *inherit_follows(follow_s *nterm, llist_s **stack)
 {
     uint16_t i;
     llist_s *tmp;
@@ -657,7 +657,7 @@ llist_s *inherit_follows (follow_s *nterm, llist_s **stack)
     return nterm->follows;
 }
 
-void compute_firstfollows (parse_s *parser)
+void compute_firstfollows(parse_s *parser)
 {
     bool ready = false;
     int i, status, nitems = parser->phash->nitems;
@@ -718,7 +718,7 @@ void compute_firstfollows (parse_s *parser)
     pthread_cond_destroy(&jcond);
 }
 
-bool lllex_contains (llist_s *list, char *lex)
+bool lllex_contains(llist_s *list, char *lex)
 {
     while (list) {
         if (!strcmp(((token_s *)list->ptr)->lexeme, lex))
@@ -728,7 +728,7 @@ bool lllex_contains (llist_s *list, char *lex)
     return false;
 }
 
-void build_parse_table (parse_s *parse, token_s *tokens)
+void build_parse_table(parse_s *parse, token_s *tokens)
 {
     uint16_t    i, j, k,
                 n_terminals = 1,
@@ -1024,7 +1024,7 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
     return synhash;
 }
 
-size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme)
+size_t errbuf_check(char **buffer, size_t *bsize, size_t *errsize, char *lexeme)
 {    
     size_t oldsize = *errsize;
     *errsize += strlen(lexeme)+2;
@@ -1039,7 +1039,7 @@ size_t errbuf_check (char **buffer, size_t *bsize, size_t *errsize, char *lexeme
     return oldsize+1;
 }
 
-char *make_synerr (pda_s *pda, token_s **curr)
+char *make_synerr(pda_s *pda, token_s **curr)
 {
     bool gotepsilon = false;
     size_t errsize, bsize, oldsize;
@@ -1097,7 +1097,7 @@ char *make_synerr (pda_s *pda, token_s **curr)
     return errstr;
 }
 
-void panic_recovery (llist_s *follow, token_s **curr)
+void panic_recovery(llist_s *follow, token_s **curr)
 {
     llist_s *iter;    
     
@@ -1110,7 +1110,7 @@ void panic_recovery (llist_s *follow, token_s **curr)
     }
 }
 
-int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
+int get_production(parsetable_s *ptable, pda_s *pda, token_s **curr)
 {
     uint16_t i, j;
     
@@ -1130,19 +1130,19 @@ int get_production (parsetable_s *ptable, pda_s *pda, token_s **curr)
     return -1;
 }
 
-pda_s *get_pda (parse_s *parser, char *name)
+pda_s *get_pda(parse_s *parser, char *name)
 {
     return hashlookup(parser->phash, name);
 }
 
-bool hash_pda (parse_s *parser, char *name, pda_s *pda)
+bool hash_pda(parse_s *parser, char *name, pda_s *pda)
 {
     if (!parser->start)
         parser->start = pda;
     return hashinsert (parser->phash, name, pda);
 }
 
-uint16_t str_hashf (void *key)
+uint16_t str_hashf(void *key)
 {
     return *(uint64_t *)key % HTABLE_SIZE;
 }
