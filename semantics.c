@@ -566,7 +566,7 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
     last = *lineno;
     puts("\n\n-------------------------------------------------------------------------------");
     for(iter = ltok.tokens; iter; iter = iter->next)
-        printf("%s %d\n", iter->lexeme, iter->type.val);
+        printf("sem token: %s %d %u\n", iter->lexeme, iter->type.val, SEMTYPE_CODE);
     puts("-------------------------------------------------------------------------------\n\n");
 
     return i;
@@ -847,9 +847,13 @@ sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, s
             result.type = ATTYPE_NUMINT;
             result.int_ = 0;
             if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID || v1.type == ATTYPE_VOID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID || v2.type == ATTYPE_VOID)) {
-                printf("testing string or code type\n");
                 result.int_ = !strcmp(v1.str_, v2.str_);
-                printf("Tested: %s and %s and %ld %ld %ld %ld got result %ld\n", v1.str_, v2.str_, v1.low, v1.high, v2.low, v2.high, result.int_);
+                if(v1.type != v2.type) {
+                    if(v1.type == ATTYPE_CODE)
+                        result.int_ = !quote_strcmp(v1.str_, v2.str_);
+                    else if (v2.type == ATTYPE_CODE)
+                        result.int_ = !quote_strcmp(v2.str_, v1.str_);
+                }
             }
             else if (v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ == v2.int_;
@@ -875,9 +879,13 @@ sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, s
             result.type = ATTYPE_NUMINT;
             result.int_ = 0;
             if ((v1.type == ATTYPE_CODE || v1.type == ATTYPE_ID || v1.type == ATTYPE_VOID) && (v2.type == ATTYPE_CODE || v2.type == ATTYPE_ID || v2.type == ATTYPE_VOID)) {
-                printf("testing string or code type\n");
-             //   assert(strcmp("void", v1.str_) && strcmp("void", v2.str_));
                 result.int_ = !!strcmp(v1.str_, v2.str_);
+                if(v1.type != v2.type) {
+                    if(v1.type == ATTYPE_CODE)
+                        result.int_ = !!quote_strcmp(v1.str_, v2.str_);
+                    else if (v2.type == ATTYPE_CODE)
+                        result.int_ = !!quote_strcmp(v2.str_, v1.str_);
+                }
             }
             else if(v1.type == ATTYPE_NUMINT && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.int_ != v2.int_;
@@ -1518,6 +1526,8 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             factor.value.type = ATTYPE_CODE;
             factor.value.str_ = (*curr)->lexeme_;
             factor.value.tok = tok_lastmatched;
+            if(!strcmp(factor.value.str_, "/"))
+                for(;;);
             *curr = (*curr)->next;
             break;
         default:
@@ -2374,6 +2384,8 @@ int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal,
         }
     }
     if(la) {
+        if(la_last->next)
+            la_last = la_last->next;
         add_semerror(parse, ((sem_type_s *)la_last->ptr)->tok, "Excess Parameters Used in function call");
         *result = 0;
         

@@ -165,7 +165,7 @@ lex_s *buildlex(const char *file)
     lex_s *lex;
 
     lex = lex_s_();
-    list = lexspec (file, regex_annotate, NULL);
+    list = lexspec(file, regex_annotate, NULL);
     lex->typestart = parseregex(lex, &list);
     return lex;
 }
@@ -1296,6 +1296,20 @@ int ntstrcmp(char *nterm, char *str)
     ptr[i] = '>';
     return result;
 }
+
+int quote_strcmp(char *quoted, char *str)
+{
+    int i, result;
+    char *ptr;
+    
+    ptr = &quoted[1];
+    for (i = 0; ptr[i] != '"'; i++);
+    ptr[i] = '\0';
+    result = strcmp(ptr, str);
+    ptr[i] = '"';
+    return result;
+}
+
 
 void addmachine(lex_s *lex, token_s *tok)
 {

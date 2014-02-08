@@ -278,6 +278,7 @@ extern lex_s *buildlex (const char *file);
 extern token_s *lexspec (const char *file, annotation_f af, void *data);
 extern idtable_s *idtable_s_ (void);
 extern int ntstrcmp (char *nterm, char *str);
+extern int quote_strcmp(char *quoted, char *str);
 extern void addstate (mach_s *mach, token_s *tok);
 extern void addmachine (lex_s *lex, token_s *tok);
 extern void *idtable_insert(idtable_s *table, char *str, tdat_s tdat);

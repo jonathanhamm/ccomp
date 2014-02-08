@@ -91,7 +91,7 @@ procedure lolwut (a : integer; b : real; c : real);
 			call lawl
 	end;
 begin
-	while not 3*2/(x <> y) do
+	while not ( 3*2/(x <> y)) do
 		x := y*x
 end;
 

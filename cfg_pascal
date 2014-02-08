@@ -346,20 +346,23 @@
                 if (<term'>.in <> integer) or (<factor>.type <> integer) then
                     error(mulop, "Expected integer operands for modulo operation")
                 fi
-            elif mulop.entry = "/" then
-                halt()
-            fi
-            if (<term'>.in = integer) and (<factor>.type = integer) then
-                <term'>[1].in := integer
-                <term'>.type := integer
-            elif (<term'>.in = integer) and (<factor>.type = real) then
+            elif (mulop.entry = "/") or (mulop.entry = "div") then
+                <term'>.in := real
                 <term'>[1].in := real
-                <term'>.type := real
-            elif (<term'>.in = real ) and (<factor>.type = integer) then
-                <term'>[1].in := real
-                <term'>.type := real
+                <term>.type := real
             else
-                error(mulop, "Invalid type used in mulop expression")
+                if (<term'>.in = integer) and (<factor>.type = integer) then
+                    <term'>[1].in := integer
+                    <term'>.type := integer
+                elif (<term'>.in = integer) and (<factor>.type = real) then
+                    <term'>[1].in := real
+                    <term'>.type := real
+                elif (<term'>.in = real ) and (<factor>.type = integer) then
+                    <term'>[1].in := real
+                    <term'>.type := real
+                else
+                    error(mulop, "Invalid type used in mulop expression")
+                fi
             fi
 
             if <term'>[1].type <> void then
