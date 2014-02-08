@@ -57,6 +57,7 @@ struct tfind_s
     token_s *token;
 };
 
+extern FILE *emitdest;
 token_s *tok_lastmatched;
 
 static void match_phase(lextok_s regex, token_s *cfg);
@@ -868,7 +869,7 @@ void print_firfol (parse_s *parse, FILE *stream)
 }
 
 
-void parse(parse_s *parse, lextok_s lex)
+void parse(parse_s *parse, lextok_s lex, FILE *out)
 {
     int index;
     size_t errsize;
@@ -876,6 +877,7 @@ void parse(parse_s *parse, lextok_s lex)
     pda_s *nterm;
     pnode_s *root;
     
+    emitdest = out;
     root = pnode_(parse->start->nterm);
     index = get_production(parse->parse_table, parse->start, &lex.tokens);
     if (index < 0) {

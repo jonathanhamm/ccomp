@@ -342,6 +342,8 @@
 <term'> ->
         mulop <factor> <term'>
         {
+            <term'>.place := newtemp
+            emit(<term'>.place, " := ", <factor>.place, mulop.entry, <term'>[1].place)
             if mulop.entry = mod then
                 if (<term'>.in <> integer) or (<factor>.type <> integer) then
                     error(mulop, "Expected integer operands for modulo operation")
@@ -364,7 +366,6 @@
                     error(mulop, "Invalid type used in mulop expression")
                 end
             end
-
             if <term'>[1].type <> void then
                 <term'>.type := <term'>[1].type
                 print(<term'>[1].type)
@@ -379,6 +380,7 @@
 <factor> ->
 	id <factor'>
     {
+        <factor>.place := newtemp
         if <factor'>.type = integer then
             <factor>.type := getarray(id)
         elif <factor'>.type = void then
@@ -387,16 +389,23 @@
             <factor>.type := getarray(id)
             error(id, "Non-integer type used in array index")
         end
+        if <factor'>.type = void then
+            emit(<factor>.place, " := ", id.entry)
+        else
+            emit(<factor>.place, " := ", id.entry, " + ", <factor'>.place)
+        end
     }
 	|
 	num
     {
         <factor>.type := num.type
+        <factor>.place := num.val
     }
 	|
 	(<expression>)
     { 
         <factor>.type := <expression>.type
+        <factor>.place := <expression>.place
     }
 	|
 	not <factor>
@@ -406,14 +415,14 @@
             error(bob, "Incompatible type used in logical not")
             <factor>.type := integer
         end
+        emit(<factor>.place, " := ", "not ", <factor>.place)
     }
     
 <factor'> ->
 	[<expression>]
     {
         <factor'>.type := <expression>.type
-
-        <factor'>.val := <expression>.val
+        <factor'>.place := <expression>.place
     }
 	|
 	ε

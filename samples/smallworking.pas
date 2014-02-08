@@ -26,6 +26,7 @@ var KimJongUn : integer;
         end;
     begin
         a := 1;
+        a := KimJongUn[3];
         call hahaha;
         call hahaha(1.1, 5, 5);
         call lolwut(5);

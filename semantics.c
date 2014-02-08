@@ -244,7 +244,9 @@ struct test_s
     bool result;
 };
 
+FILE *emitdest;
 llist_s *grammar_stack;
+static unsigned tempcount;
 
 static uint16_t semgrammar_hashf(void *key);
 static bool semgrammar_isequalf(void *key1, void *key2);
@@ -308,7 +310,9 @@ static sem_type_s get_type(semantics_s *s, char *id);
 static char *make_semerror(unsigned lineno, char *lexeme, char *message);
 static void add_semerror(parse_s *p, token_s *t, char *message);
 
-void print_semtype(sem_type_s value);
+static sem_type_s sem_newtemp(token_s **curr);
+
+extern void print_semtype(sem_type_s value);
 
 /* Must be alphabetized */
 static ftable_s ftable[] = {
@@ -484,7 +488,7 @@ void print_semtype(sem_type_s value)
             break;
         case ATTYPE_ID:
         case ATTYPE_CODE:
-            //printf("string: %s", value.str_);
+        case ATTYPE_TEMP:
             printf("%s", value.str_);
             break;
         case ATTYPE_RANGE:
@@ -1348,14 +1352,6 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                         factor.value.lexeme = pnode->matched->lexeme;
                         factor.value.type = ATTYPE_ID;
                         factor.value.tok = pnode->matched;
-                        printf("matched: %s\n", factor.value.lexeme);
-                       /*// for(;;)printf("%s %s\n", pnode->matched->lexeme, pnode->matched->stype);
-                        factor.value = sem_type_s_(parse, pnode->matched);
-                        //factor.value = gettype(parse->lex, pnode->matched->lexeme);
-                        if(factor.value.type != ATTYPE_NOT_EVALUATED && factor.value.type != ATTYPE_NULL) {
-                            for(;;)print_semtype(factor.value);
-                            putchar('\n');
-                        }*/
                     }
                     if (idsuffix.dot.range.isset && idsuffix.dot.range.isready) {
                         factor.value.type = ATTYPE_RANGE;
@@ -1430,8 +1426,10 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                     factor.value.type = ATTYPE_VOID;
                     factor.value.str_ = "void";
                 }
+                else if(!strcmp(id->lexeme, "newtemp")) {
+                    factor.value = sem_newtemp(curr);
+                }
                 else {
-                    //factor.value = sem_type_s_(parse, id);
                     factor.value.str_ = id->lexeme;
                     factor.value.lexeme = id->lexeme;
                     factor.value.type = ATTYPE_ID;
@@ -1526,8 +1524,6 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             factor.value.type = ATTYPE_CODE;
             factor.value.str_ = (*curr)->lexeme_;
             factor.value.tok = tok_lastmatched;
-            if(!strcmp(factor.value.str_, "/"))
-                for(;;);
             *curr = (*curr)->next;
             break;
         default:
@@ -1900,7 +1896,44 @@ void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
 
 void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
-    printf("Emit Called\n");
+    int c;
+    char *out;
+    size_t len;
+    llist_s *iter;
+    sem_type_s *dummy;
+    sem_type_s *val;
+    
+    if(hashlookup(grammar_stack->ptr, *curr))
+        return NULL;
+    
+    if(params.ready && eval) {
+        llreverse(&params.pstack);
+        
+        while((iter = llpop(&params.pstack))) {
+            val = iter->ptr;
+            free(iter);
+            if(val->type == ATTYPE_CODE) {
+                len = strlen(val->str_);
+                out = malloc(len-1);
+                if(!out){
+                    perror("Memory Allocation Error");
+                    exit(EXIT_FAILURE);
+                }
+                c = val->str_[len-1];
+                val->str_[len-1] = '\0';
+                strcpy(out, &val->str_[1]);
+                val->str_[len-1] = c;
+                fputs(out, emitdest);
+                free(out);
+            }
+            else
+                fputs(val->str_, emitdest);
+        }
+        fputc('\n', emitdest);
+        dummy = (sem_type_s *)1;
+        hashinsert(grammar_stack->ptr, *curr, dummy);
+    }
+    
 }
 
 void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
@@ -1909,6 +1942,9 @@ void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     pnode_s *p;
     llist_s *node;
     sem_type_s *val, *id;
+    
+    if(hashlookup(grammar_stack->ptr, *curr))
+        return NULL;
     
     if(params.ready && eval) {
         node = llpop(&params.pstack);
@@ -1927,6 +1963,7 @@ void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
             add_semerror(parse, p->matched, str);
         else
             add_semerror(parse, tok_lastmatched, str);
+        hashinsert(grammar_stack->ptr, *curr, val);
     }
     return NULL;
 }
@@ -2518,4 +2555,25 @@ void add_semerror(parse_s *p, token_s *t, char *message)
         free(err);
     else
         adderror(p->listing, err, t->lineno);
+}
+
+sem_type_s sem_newtemp(token_s **curr)
+{
+    sem_type_s value, *hash;
+    
+    if((hash = hashlookup(grammar_stack->ptr, *curr)))
+        return *hash;
+    
+    value.type = ATTYPE_TEMP;
+    value.str_ = malloc(FS_INTWIDTH_DEC(tempcount)+2);
+    if(!value.str_) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    value.lexeme = value.str_;
+    sprintf(value.str_, "t%u", tempcount++);
+    printf("created temp: %s\n", value.str_);
+
+    hashinsert(grammar_stack->ptr, *curr, alloc_semt(value));
+    return value;
 }

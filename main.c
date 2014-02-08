@@ -69,23 +69,35 @@ static void print_usage (const char *message, const char *curr);
 
 int main(int argc, const char *argv[])
 {
+    char *outname;
     files_s files;
     argtok_s *list;
     lextok_s lextok;
     parse_s *p;
-        
-    list = arg_tokenize(argc, argv);    
-
+    FILE *gen;
+    
+    list = arg_tokenize(argc, argv);
     files = argsparse_start(&list);
-    //puts("\n\n\n\n\n\n\n\n\n\n\n\n\n");
     free_tokens(list);
     lextok = lexf(buildlex(files.regex), readfile(files.source), 0, true);
-    //assert(false);
-    p = build_parse (files.cfg, lextok);
-    parse (p, lextok);
+    p = build_parse(files.cfg, lextok);
+    outname = malloc(strlen(files.source)+5);
+    if(!outname) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    sprintf(outname, "%s.out", files.source);
+    gen = fopen(outname, "w");
+    if(!gen){
+        perror("Error Creating File");
+        exit(EXIT_FAILURE);
+    }
+    parse(p, lextok, gen);
     print_listing(p->listing, stdout);
     free_listing(p->listing);
     print_scope(stdout);
+    fclose(gen);
+    free(outname);
     return 0;
 }
 

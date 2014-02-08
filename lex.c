@@ -1922,7 +1922,7 @@ void print_frame(FILE *f, scope_s *s)
     print_indent(f);
     fputs("==========================================\n", f);
     print_indent(f);
-    fprintf(f, "\tPrinting Stack Frame for: %s\n", s->id);
+    fprintf(f, "\tPrinting Addresses for Frame: %s\n", s->id);
     print_indent(f);
     fputs("==========================================\n", f);
     for(i = 0; i < s->nentries; i++)
@@ -1943,7 +1943,7 @@ void print_frame(FILE *f, scope_s *s)
         }
     }
     print_indent(f);
-    fputs("\t\tFrame Pointer\n", f);
+    fputs("\t\t<Frame Pointer>\n", f);
     print_indent(f);
     fputs("==========================================\n", f);
     while(i < s->nentries) {
