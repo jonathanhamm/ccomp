@@ -1,8 +1,8 @@
 <program> ->
-	program id \( <identifier_list> \) ;
+	program id (<identifier_list>) ;
 	<program'>
 	<compound_statement>
-	\.
+	.
 	{
         pushscope(id.entry)
         <program>.type := <identifier_list>.type
@@ -61,7 +61,7 @@
         <type>.type := <standard_type>.type
     }
 	|
-	array \[ num \. \. num \] of <standard_type>
+	array [num..num] of <standard_type>
     {
         <type>.type := array(num[1].val .. num[2].val, <standard_type>.type)
     }
@@ -119,7 +119,7 @@
     }
 
 <arguments> ->
-	\( <parameter_list> \)
+	(<parameter_list>)
     {
         <arguments>.args := <parameter_list>.args
     }
@@ -208,7 +208,7 @@
         end
     }
 <variable'> ->
-	\[ <expression> \]
+	[<expression>]
     {
         <variable'>.type := <expression>.type
         <variable'>.val := <expression>.val
@@ -228,7 +228,7 @@
     }
 
 <procedure_statement'> ->
-	\( <expression_list> \)
+	(<expression_list>)
     {
         <procedure_statement'>.type := <expression_list>.args
     }
@@ -394,7 +394,7 @@
         <factor>.type := num.type
     }
 	|
-	\( <expression> \)
+	(<expression>)
     { 
         <factor>.type := <expression>.type
     }
@@ -409,7 +409,7 @@
     }
     
 <factor'> ->
-	\[ <expression> \]
+	[<expression>]
     {
         <factor'>.type := <expression>.type
 
@@ -422,4 +422,4 @@
     }
     
 <sign> ->
-	\+ | \-
+	+ | -

@@ -275,7 +275,7 @@ extern scope_s *scope_tree;
 
 extern lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing);
 extern lex_s *buildlex (const char *file);
-extern token_s *lexspec (const char *file, annotation_f af, void *data);
+extern token_s *lexspec (const char *file, annotation_f af, void *data, bool lexmode);
 extern idtable_s *idtable_s_ (void);
 extern int ntstrcmp (char *nterm, char *str);
 extern int quote_strcmp(char *quoted, char *str);

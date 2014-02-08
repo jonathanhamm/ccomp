@@ -165,12 +165,12 @@ lex_s *buildlex(const char *file)
     lex_s *lex;
 
     lex = lex_s_();
-    list = lexspec(file, regex_annotate, NULL);
+    list = lexspec(file, regex_annotate, NULL, true);
     lex->typestart = parseregex(lex, &list);
     return lex;
 }
 
-token_s *lexspec(const char *file, annotation_f af, void *data)
+token_s *lexspec(const char *file, annotation_f af, void *data, bool lexmode)
 {
     unsigned i, j, lineno, tmp, bpos;
     char *buf;
@@ -188,28 +188,52 @@ token_s *lexspec(const char *file, annotation_f af, void *data)
                 addtok(&list, "|", lineno, LEXTYPE_UNION, LEXATTR_DEFAULT, NULL);
                 break;
             case '(':
-                addtok(&list, "(", lineno, LEXTYPE_OPENPAREN, LEXATTR_DEFAULT, NULL);
+                if(lexmode)
+                    addtok(&list, "(", lineno, LEXTYPE_OPENPAREN, LEXATTR_DEFAULT, NULL);
+                else
+                    addtok(&list, "(", lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                 break;
             case ')':
-                addtok(&list, ")", lineno, LEXTYPE_CLOSEPAREN, LEXATTR_DEFAULT, NULL);
+                if(lexmode)
+                    addtok(&list, ")", lineno, LEXTYPE_CLOSEPAREN, LEXATTR_DEFAULT, NULL);
+                else
+                    addtok(&list, ")", lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                 break;
             case '[':
-                addtok(&list, "[", lineno, LEXTYPE_OPENBRACKET, LEXATTR_DEFAULT, NULL);
+                if(lexmode)
+                    addtok(&list, "[", lineno, LEXTYPE_OPENBRACKET, LEXATTR_DEFAULT, NULL);
+                else
+                    addtok(&list, "[", lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                 break;
             case ']':
-                addtok(&list, "]", lineno, LEXTYPE_CLOSEBRACKET, LEXATTR_DEFAULT, NULL);
+                if(lexmode)
+                    addtok(&list, "]", lineno, LEXTYPE_CLOSEBRACKET, LEXATTR_DEFAULT, NULL);
+                else
+                    addtok(&list, "]", lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                 break;
             case '^':
-                addtok(&list, "^", lineno, LEXTYPE_NEGATE, LEXATTR_DEFAULT, NULL);
+                if(lexmode)
+                    addtok(&list, "^", lineno, LEXTYPE_NEGATE, LEXATTR_DEFAULT, NULL);
+                else
+                    addtok(&list, "^", lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                 break;
             case '*':
-                addtok(&list, "*", lineno, LEXTYPE_KLEENE, LEXATTR_DEFAULT, NULL);
+                if(lexmode)
+                    addtok(&list, "*", lineno, LEXTYPE_KLEENE, LEXATTR_DEFAULT, NULL);
+                else
+                    addtok(&list, "*", lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                 break;
             case '+':
-                addtok(&list, "+", lineno, LEXTYPE_POSITIVE, LEXATTR_DEFAULT, NULL);
+                if(lexmode)
+                    addtok(&list, "+", lineno, LEXTYPE_POSITIVE, LEXATTR_DEFAULT, NULL);
+                else
+                    addtok(&list, "+", lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                 break;
             case '?':
-                addtok(&list, "?", lineno, LEXTYPE_ORNULL, LEXATTR_DEFAULT, NULL);
+                if(lexmode)
+                    addtok(&list, "?", lineno, LEXTYPE_ORNULL, LEXATTR_DEFAULT, NULL);
+                else
+                    addtok(&list, "?", lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                 break;
             case '\n':
                 lineno++;
@@ -291,7 +315,10 @@ token_s *lexspec(const char *file, annotation_f af, void *data)
                 }
                 break;
             case '.':
-                addtok(&list, ". (metachar)", lineno, LEXTYPE_DOT, LEXATTR_DEFAULT, NULL);
+                if(lexmode)
+                    addtok(&list, ". (metachar)", lineno, LEXTYPE_DOT, LEXATTR_DEFAULT, NULL);
+                else
+                    addtok(&list, ".", lineno, LEXTYPE_TERM, LEXATTR_DEFAULT, NULL);
                 break;
             case '\\':
                 lbuf[0] = buf[++i];

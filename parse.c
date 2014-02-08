@@ -134,7 +134,7 @@ parse_s *build_parse(const char *file, lextok_s lextok)
     assert(idtable_lookup(lextok.lex->kwtable, ")").is_found);
 
     semantics = semant_init();
-    list = lexspec (file, cfg_annotate, semantics);
+    list = lexspec(file, cfg_annotate, semantics, false);
     head = list;
     parse = parse_();
     parse->listing = lextok.lex->listing;
