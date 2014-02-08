@@ -56,7 +56,7 @@ enum semantic_types_ {
     SEMTYPE_IF = LEXID_START+1, //Guarantees that lexical and semantics token types are disjoint
     SEMTYPE_THEN,
     SEMTYPE_ELSE,
-    SEMTYPE_FI,
+    SEMTYPE_END,
     SEMTYPE_NOT,
     SEMTYPE_OPENPAREN,
     SEMTYPE_CLOSEPAREN,
@@ -958,7 +958,7 @@ sem_statements_s sem_statements(parse_s *parse, token_s **curr, llist_s **il, pd
         case SEMTYPE_ID:
             sem_statement(parse, curr, il, pda, prod, pn, syn, pass, evaluate, false, isfinal);
             sem_statements(parse, curr, il, pda, prod, pn, syn, pass, evaluate, false, isfinal);
-        case SEMTYPE_FI:
+        case SEMTYPE_END:
         case SEMTYPE_ELSE:
         case SEMTYPE_ELIF:
         case LEXTYPE_EOF:
@@ -1061,9 +1061,9 @@ sem_else_s sem_else(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
             sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated, .result = !elprev}, false, isfinal);
-            sem_match(curr, SEMTYPE_FI);
+            sem_match(curr, SEMTYPE_END);
             break;
-        case SEMTYPE_FI:
+        case SEMTYPE_END:
             *curr = (*curr)->next;
             break;
         case SEMTYPE_ELIF:
@@ -1135,7 +1135,7 @@ sem_expression__s sem_expression_(parse_s *parse, token_s **curr, llist_s **il, 
             expression_.value = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal).value;
             break;
         case SEMTYPE_COMMA:
-        case SEMTYPE_FI:
+        case SEMTYPE_END:
         case SEMTYPE_ELSE:
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
@@ -1230,7 +1230,7 @@ sem_simple_expression__s sem_simple_expression_(parse_s *parse, token_s **curr, 
             break;
         case SEMTYPE_COMMA:
         case SEMTYPE_RELOP:
-        case SEMTYPE_FI:
+        case SEMTYPE_END:
         case SEMTYPE_ELSE:
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
@@ -1298,7 +1298,7 @@ sem_term__s sem_term_(parse_s *parse, token_s **curr, llist_s **il, sem_type_s *
         case SEMTYPE_COMMA:
         case SEMTYPE_ADDOP:
         case SEMTYPE_RELOP:
-        case SEMTYPE_FI:
+        case SEMTYPE_END:
         case SEMTYPE_ELSE:
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
@@ -1551,7 +1551,7 @@ sem_factor__s sem_factor_(parse_s *parse, token_s **curr, llist_s **il, pna_s *p
         case SEMTYPE_MULOP:
         case SEMTYPE_ADDOP:
         case SEMTYPE_RELOP:
-        case SEMTYPE_FI:
+        case SEMTYPE_END:
         case SEMTYPE_ELSE:
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
@@ -1588,7 +1588,7 @@ sem_idsuffix_s sem_idsuffix(parse_s *parse, token_s **curr, llist_s **il, pda_s 
         case SEMTYPE_MULOP:
         case SEMTYPE_ADDOP:
         case SEMTYPE_RELOP:
-        case SEMTYPE_FI:
+        case SEMTYPE_END:
         case SEMTYPE_ELSE:
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
@@ -1652,7 +1652,7 @@ sem_dot_s sem_dot(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, seman
         case SEMTYPE_MULOP:
         case SEMTYPE_ADDOP:
         case SEMTYPE_RELOP:
-        case SEMTYPE_FI:
+        case SEMTYPE_END:
         case SEMTYPE_ELSE:
         case SEMTYPE_THEN:
         case SEMTYPE_IF:
@@ -1709,7 +1709,7 @@ sem_range_s sem_range(parse_s *parse, token_s **curr, llist_s **il, pna_s *pn, s
         case SEMTYPE_MULOP:
         case SEMTYPE_ADDOP:
         case SEMTYPE_RELOP:
-        case SEMTYPE_FI:
+        case SEMTYPE_END:
         case SEMTYPE_CLOSEPAREN:
         case SEMTYPE_ID:
         case SEMTYPE_ELSE:

@@ -92,7 +92,7 @@
     {
         if <compound_statement>.type = void then
             popscope()
-        fi
+        end
     }
 <subprogram_declaration'> ->
 	<declarations> <dec>
@@ -173,14 +173,14 @@
         if <variable>.type = integer then
             if <expression>.type <> integer then
                 error(assignop, "Incompatible assignment to integer type")
-            fi
+            end
         elif <variable>.type = real then 
             if (<expression>.type <> real) and (<expression>.type <> integer) then
                 error(assignop, "Incompatible assigment to real type")
-            fi
+            end
         elif <variable>.type <> <expression>.type then
             error(assignop, "Incompatible types used in assignment")
-        fi
+        end
     }
 	|
 	<procedure_statement>
@@ -205,7 +205,7 @@
         else
             <variable>.type := getarray(id)
             error(id, "Non-integer type used in array index")
-        fi
+        end
     }
 <variable'> ->
 	\[ <expression> \]
@@ -224,7 +224,7 @@
     {
         if lookup(id) = <procedure_statement'>.type then
             <procedure_statement>.type := void
-        fi
+        end
     }
 
 <procedure_statement'> ->
@@ -263,17 +263,17 @@
         <expression>.type := <simple_expression>.type
         if <expression'>.type <> void then
             <expression>.type := <expression'>.type
-        fi
+        end
     }
 <expression'> ->
 	relop <simple_expression>
     {
         if (<expression'>.in <> integer) and (<expression'>.in <> real) then
             error(relop, "Incompatible type used on left-hand side of relational operator")
-        fi
+        end
         if (<simple_expression>.type <> integer) and (<simple_expression>.type <> real) then
             error(relop, "Incompatible type used on right-hand side of relational operator")
-        fi
+        end
         <expresion'>.type := integer
     }
 	|
@@ -289,7 +289,7 @@
         <simple_expression'>.in := <term>.type
         if <simple_expression'>.type <> void then
             <simple_expression>.type := <simple_expression>.type
-        fi
+        end
     }
 	|
 	<term> <simple_expression'>
@@ -298,7 +298,7 @@
         <simple_expression'>.in := <term>.type
         if <simple_expression'>.type <> void then
             <simple_expression>.type := <simple_expression'>.type
-        fi
+        end
     }
 
 <simple_expression'> ->
@@ -317,11 +317,11 @@
             <simple_expression'>[1].in := real
         else
             error(addop, "Invalid type used in addop expression")
-        fi
+        end
 
         if <simple_expression'>[1].type <> void then
             <simple_expression'>.type := <simple_expression'>[1].type
-        fi
+        end
     }
 	|
 	ε
@@ -337,7 +337,7 @@
         <term>.type := <factor>.type
         if <term'>.type <> void then
             <term>.type := <term'>.type
-        fi
+        end
 	}
 <term'> ->
         mulop <factor> <term'>
@@ -345,7 +345,7 @@
             if mulop.entry = mod then
                 if (<term'>.in <> integer) or (<factor>.type <> integer) then
                     error(mulop, "Expected integer operands for modulo operation")
-                fi
+                end
             elif (mulop.entry = "/") or (mulop.entry = "div") then
                 <term'>.in := real
                 <term'>[1].in := real
@@ -362,13 +362,13 @@
                     <term'>.type := real
                 else
                     error(mulop, "Invalid type used in mulop expression")
-                fi
-            fi
+                end
+            end
 
             if <term'>[1].type <> void then
                 <term'>.type := <term'>[1].type
                 print(<term'>[1].type)
-            fi
+            end
         }
         |
         ε
@@ -386,7 +386,7 @@
         else
             <factor>.type := getarray(id)
             error(id, "Non-integer type used in array index")
-        fi
+        end
     }
 	|
 	num
@@ -405,7 +405,7 @@
         if <factor>.type <> integer then
             error(bob, "Incompatible type used in logical not")
             <factor>.type := integer
-        fi
+        end
     }
     
 <factor'> ->
