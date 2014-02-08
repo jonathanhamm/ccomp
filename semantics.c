@@ -1906,32 +1906,49 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     if(hashlookup(grammar_stack->ptr, *curr))
         return NULL;
     
+    static int bob;
+    
     if(params.ready && eval) {
         llreverse(&params.pstack);
         
         while((iter = llpop(&params.pstack))) {
             val = iter->ptr;
             free(iter);
-            if(val->type == ATTYPE_CODE) {
-                len = strlen(val->str_);
-                out = malloc(len-1);
-                if(!out){
-                    perror("Memory Allocation Error");
-                    exit(EXIT_FAILURE);
-                }
-                c = val->str_[len-1];
-                val->str_[len-1] = '\0';
-                strcpy(out, &val->str_[1]);
-                val->str_[len-1] = c;
-                fputs(out, emitdest);
-                free(out);
+            
+            
+            switch(val->type) {
+                case ATTYPE_CODE:
+                    len = strlen(val->str_);
+                    out = malloc(len-1);
+                    if(!out){
+                        perror("Memory Allocation Error");
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    c = val->str_[len-1];
+                    val->str_[len-1] = '\0';
+                    strcpy(out, &val->str_[1]);
+                    val->str_[len-1] = c;
+                    fputs(out, emitdest);
+                    free(out);
+                    break;
+                case ATTYPE_NUMINT:
+                    fprintf(emitdest, "%ld", val->int_);
+                    break;
+                case ATTYPE_NUMREAL:
+                    fprintf(emitdest, "%f", val->real_);
+                    break;
+                default:
+                    fputs(val->str_, emitdest);
+                    break;
             }
-            else
-                fputs(val->str_, emitdest);
+            
         }
+
         fputc('\n', emitdest);
         dummy = (sem_type_s *)1;
         hashinsert(grammar_stack->ptr, *curr, dummy);
+
     }
     
 }
@@ -2523,6 +2540,8 @@ void free_sem(semantics_s *s)
 
 semantics_s *get_il(llist_s *l, pnode_s *p)
 {
+    if(!p)
+        return NULL;
     while(l) {
         if(((semantics_s *)l->ptr)->n->self == p->self)
             return l->ptr;
