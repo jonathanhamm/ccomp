@@ -2623,7 +2623,7 @@ sem_type_s sem_newtemp(token_s **curr)
         return *hash;
     
     value.type = ATTYPE_TEMP;
-    value.str_ = malloc(FS_INTWIDTH_DEC(tempcount)+3);
+    value.str_ = malloc(FS_INTWIDTH_DEC(tempcount)+40);
     if(!value.str_) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
