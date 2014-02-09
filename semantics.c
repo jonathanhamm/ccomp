@@ -1909,7 +1909,6 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     sem_type_s *dummy;
     sem_type_s *val;
     bool gotfirst = false, gotlabel = false;
-    llist_s *lable_name;
     
     if(hashlookup(grammar_stack->ptr, *curr))
         return NULL;
@@ -1952,6 +1951,7 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                     val->str_[len-1] = '\0';
                     strcpy(out, &val->str_[1]);
                     val->str_[len-1] = c;
+                    printf("%p\n", line);
                     safe_addstring(&line, out);
                     free(out);
                     break;
