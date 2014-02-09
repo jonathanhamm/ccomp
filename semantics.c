@@ -300,6 +300,8 @@ static void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn
 static void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_popscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_resettemps(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+static void *sem_resolveproc(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+
 
 static int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual);
 
@@ -337,7 +339,8 @@ static ftable_s ftable[] = {
     {"popscope", (sem_action_f)sem_popscope},
     {"print", sem_print},
     {"pushscope", (sem_action_f)sem_pushscope},
-    {"resettemps", (sem_action_f)sem_resettemps}
+    {"resettemps", (sem_action_f)sem_resettemps},
+    {"resolveproc", (sem_action_f)sem_resolveproc}
 };
 
 inline void grstack_push(void)
@@ -2157,6 +2160,7 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     free(node);
     declared = check_redeclared(id->lexeme);
     check = check_id(id->lexeme);
+    
     if(declared && (check.type->type != ATTYPE_NULL && check.type->type != ATTYPE_NOT_EVALUATED)) {
         temp = malloc(sizeof(*temp));
         if(!temp) {
@@ -2380,6 +2384,31 @@ void *sem_resettemps(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
     tempcount = 0;
     return NULL;
 }
+
+void *sem_resolveproc(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
+{
+    llist_s *node;
+    check_id_s check;
+    sem_type_s dummy = {0}, *proc, copy;
+    
+    dummy.type = ATTYPE_NOT_EVALUATED;
+    if(!(params.ready && eval))
+        return alloc_semt(dummy);
+    
+    node = llpop(&params.pstack);
+    proc = node->ptr;
+    
+    check = check_id(proc->str_);
+    if(check.isfound) {
+        copy = *proc;
+        copy.str_ = check.scope->full_id;
+        copy.lexeme = check.scope->full_id;
+        return alloc_semt(copy);
+    }
+    dummy.type = ATTYPE_NULL;
+    return alloc_semt(dummy);
+}
+
 
 int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
 {

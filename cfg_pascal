@@ -200,7 +200,7 @@
 	<procedure_statement> 
     {
         <statement>.type := void
-        emit("call ", <procedure_statement>.id)
+        emit("call ", resolveproc(<procedure_statement>.id))
     }
 	|
 	<compound_statement>

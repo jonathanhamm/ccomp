@@ -269,6 +269,7 @@ struct check_id_s
 {
     bool isfound;
     int address;
+    scope_s *scope;
     sem_type_s *type;
 };
 
