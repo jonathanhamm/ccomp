@@ -255,8 +255,8 @@ struct scope_s
         sem_type_s type;
         scope_s *child;
     } *children;
-    
     char *id;
+    char *full_id;
     int last_local_addr;
     int last_arg_addr;
     unsigned nentries;
@@ -272,6 +272,7 @@ struct check_id_s
     sem_type_s *type;
 };
 
+extern scope_s *scope_root;
 extern scope_s *scope_tree;
 
 extern lextok_s lexf (lex_s *lex, char *buf, uint32_t linestart, bool listing);

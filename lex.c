@@ -106,7 +106,7 @@ struct prxa_expression_s
 
 scope_s *scope_tree;
 unsigned scope_indent;
-static scope_s *scope_root;
+scope_s *scope_root;
 
 static void printlist(token_s *list);
 static void parray_insert(idtnode_s *tnode, uint8_t index, idtnode_s *child);

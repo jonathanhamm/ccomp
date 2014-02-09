@@ -312,6 +312,9 @@ static char *make_semerror(unsigned lineno, char *lexeme, char *message);
 static void add_semerror(parse_s *p, token_s *t, char *message);
 
 static sem_type_s sem_newtemp(token_s **curr);
+static char *scoped_label(void);
+
+static void write_code_(scope_s *s);
 
 extern void print_semtype(sem_type_s value);
 
@@ -1905,7 +1908,8 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     llist_s *iter;
     sem_type_s *dummy;
     sem_type_s *val;
-    bool gotfirst = false;
+    bool gotfirst = false, gotlabel = false;
+    llist_s *lable_name;
     
     if(hashlookup(grammar_stack->ptr, *curr))
         return NULL;
@@ -1931,6 +1935,7 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                 }
                 else {
                     gotfirst = true;
+                    gotlabel = true;
                     continue;
                 }
             }
@@ -1957,11 +1962,17 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                     safe_adddouble(&line, val->real_);
                     break;
                 default:
-                    safe_addstring(&line, val->str_);
+                    if(gotlabel) {
+                        safe_addstring(&line, scope_tree->full_id);
+                        gotlabel = false;
+                    }
+                    else
+                        safe_addstring(&line, val->str_);
                     break;
             }
             
         }
+        printf("%p\n", scope_tree);
         addline(&scope_tree->code, line);
         dummy = (sem_type_s *)1;
         hashinsert(grammar_stack->ptr, *curr, dummy);
@@ -2334,6 +2345,7 @@ void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
         add_semerror(parse, temp, "Redeclaration of identifier as procedure");
     }
     push_scope(arg->str_);
+    scope_tree->full_id = scoped_label();
     final = (sem_type_s *)1;
     hashinsert(grammar_stack->ptr, *curr, final);
     return NULL;
@@ -2515,6 +2527,7 @@ char *sem_tostring(sem_type_s type)
         default:
             break;
     }
+    return stralloc;
 }
 
 char *semstr_concat(char *base, sem_type_s val)
@@ -2618,3 +2631,37 @@ sem_type_s sem_newtemp(token_s **curr)
     hashinsert(grammar_stack->ptr, *curr, alloc_semt(value));
     return value;
 }
+
+char *scoped_label(void)
+{
+    char *str, *label = NULL;
+    llist_s *l = NULL, *node = NULL;
+    scope_s *s;
+    
+    for(s = scope_tree; s; s = s->parent)
+        llpush(&l, s->id);
+    
+    while((node = llpop(&l)))  {
+        str = node->ptr;
+        free(node);
+        safe_addstring(&label, "_");
+        safe_addstring(&label, str);
+    }
+    return label;
+}
+
+
+void write_code(void)
+{
+    write_code_(scope_root);
+}
+
+void write_code_(scope_s *s)
+{
+    unsigned i;
+    
+    print_listing_nonum(s->code, emitdest);
+    for(i = 0; i < s->nchildren; i++)
+        write_code_(s->children[i].child);
+}
+

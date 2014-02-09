@@ -900,6 +900,7 @@ void parse(parse_s *parse, lextok_s lex, FILE *out)
         synerr[errsize-1] = '\n';
         adderror(parse->listing, synerr, lex.tokens->lineno);
     }
+    write_code();
 }
 
 int match(token_s **curr, pnode_s *p)

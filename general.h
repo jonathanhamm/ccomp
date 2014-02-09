@@ -159,6 +159,7 @@ extern void adderror(linetable_s *listing, char *message, unsigned lineno);
 extern bool check_listing(linetable_s *listing, unsigned lineno, char *str);
 
 extern void print_listing(linetable_s *table, void *stream);
+extern void print_listing_nonum(linetable_s *table, void *stream);
 extern bool check_listing(linetable_s *table, unsigned lineno, char *str);
 extern void free_listing(linetable_s *table);
 

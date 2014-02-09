@@ -45,5 +45,6 @@ extern llist_s *sem_start(semantics_s *in, parse_s *parse, mach_s *machs, pda_s 
 
 extern semantics_s *get_il(llist_s *l, pnode_s *p);
 
+extern void write_code(void);
 
 #endif

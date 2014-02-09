@@ -491,7 +491,8 @@ bool check_listing(linetable_s *linelist, unsigned lineno, char *str)
 {
     llist_s *list;
     
-    if(!(lineno <= linelist->nlines))asm("hlt");
+    if(!(lineno <= linelist->nlines))
+        assert(false);
     list = linelist->table[--lineno].errors;
     while(list) {
         if(!strcmp(list->ptr, str))
@@ -513,6 +514,15 @@ void print_listing(linetable_s *table, void *stream)
         }
     }
 }
+
+void print_listing_nonum(linetable_s *table, void *stream)
+{
+    unsigned i;
+    
+    for(i = 0; i < table->nlines; i++)
+        fprintf((FILE *)stream, "%s\n", table->table[i].line);
+}
+
 
 void free_listing(linetable_s *table)
 {
@@ -552,9 +562,9 @@ void safe_addstring(char **buf, char *str)
             perror("Memory Allocation Error");
             exit(EXIT_FAILURE);
         }
-        base = buf[currlen-1];
+        base = &(*buf)[currlen-1];
     }
-    strcat(base, str);
+    sprintf(base, "%s", str);
 }
 
 void safe_addint(char **buf, long val)
@@ -580,7 +590,7 @@ void safe_addint(char **buf, long val)
             perror("Memory Alocation Error");
             exit(EXIT_FAILURE);
         }
-        base = buf[currlen-1];
+        base = &(*buf)[currlen-1];
     }
     sprintf(base, "%ld", val);
 }
@@ -607,9 +617,9 @@ void safe_adddouble(char **buf, double val)
             perror("Memory Allocation Error");
             exit(EXIT_FAILURE);
         }
-        base = buf[currlen-1];
+        base = &(*buf)[currlen-1];
     }
-    sprintf(*buf, "%f", val);
+    sprintf(base, "%f", val);
 }
 
 int ndouble_digits(double val)

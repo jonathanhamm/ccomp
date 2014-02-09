@@ -4,8 +4,8 @@
 	<compound_statement>
 	.
 	{
-        emit(label, "_", id.entry, ":")
         pushscope(id.entry)
+        emit(label, "_", id.entry, ":")
         <program>.type := <identifier_list>.type
 	}
 
@@ -104,9 +104,9 @@
 <subprogram_head> ->
 	procedure id <subprogram_head'>;
     {
-        emit("")
-        emit(label, "_", id.entry, ":")
         pushscope(id.entry)
+        emit(" ")
+        emit(label, "_", id.entry, ":")
         addtype(id.entry, <subprogram_head'>.type)
     }
 <subprogram_head'> ->
