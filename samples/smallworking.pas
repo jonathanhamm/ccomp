@@ -23,6 +23,7 @@ var KimJongUn : integer;
         begin
         b := 3.233E-23;
         call lolwat(33);
+        call lolwat(33+3);
         if (b <> 32) and (b <> 33) then
             call lolwut(4, 4.4, 44.3)
         end

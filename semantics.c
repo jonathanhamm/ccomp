@@ -247,6 +247,7 @@ struct test_s
 FILE *emitdest;
 llist_s *grammar_stack;
 static unsigned tempcount;
+static unsigned lablecount;
 
 static uint16_t semgrammar_hashf(void *key);
 static bool semgrammar_isequalf(void *key1, void *key2);
@@ -312,6 +313,7 @@ static char *make_semerror(unsigned lineno, char *lexeme, char *message);
 static void add_semerror(parse_s *p, token_s *t, char *message);
 
 static sem_type_s sem_newtemp(token_s **curr);
+static sem_type_s sem_newlabel(token_s **curr);
 static char *scoped_label(void);
 
 static void write_code_(scope_s *s);
@@ -494,6 +496,7 @@ void print_semtype(sem_type_s value)
         case ATTYPE_ID:
         case ATTYPE_CODE:
         case ATTYPE_TEMP:
+        case ATTYPE_LABEL:
             printf("%s", value.str_);
             break;
         case ATTYPE_RANGE:
@@ -1434,6 +1437,9 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                 else if(!strcmp(id->lexeme, "newtemp")) {
                     factor.value = sem_newtemp(curr);
                 }
+                else if(!strcmp(id->lexeme, "newlabel")) {
+                    factor.value = sem_newlabel(curr);
+                }
                 else {
                     factor.value.str_ = id->lexeme;
                     factor.value.lexeme = id->lexeme;
@@ -1453,18 +1459,17 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
             if (idsuffix.dot.id) {
                 if (!strcmp(factor.value.str_, pda->nterm->lexeme) && !idsuffix.factor_.isset) {
                     if(pn->curr) {
-                        factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
+                        factor.value = getatt(syn, idsuffix.dot.id);
+
                         if(factor.value.type == ATTYPE_NOT_EVALUATED) {
                             factor.value = getatt(pn->curr->in, idsuffix.dot.id);
                             if(factor.value.type == ATTYPE_NOT_EVALUATED) {
-                                factor.value = getatt(syn, idsuffix.dot.id);
+                                factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
+
                             }
                         }
                         if(!factor.value.tok)
                             factor.value.tok = tok_lastmatched;
-                    }
-                    else {
-                        factor.value = getatt(pn->curr->syn, idsuffix.dot.id);
                     }
                 }
                 else {
@@ -1908,7 +1913,7 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     llist_s *iter;
     sem_type_s *dummy;
     sem_type_s *val;
-    bool gotfirst = false, gotlabel = false;
+    bool gotfirst = false, gotlabelf = false, gotlabell = false;
     char *line = NULL;
     
     if(hashlookup(grammar_stack->ptr, *curr))
@@ -1923,15 +1928,20 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
             
             
             if(!gotfirst) {
-                if(val->type != ATTYPE_ID || strcmp(val->str_, "label")) {
-                    safe_addstring(&line, "\t");
-                    gotfirst = true;
+                if(val->type == ATTYPE_ID) {
+                    if(!strcmp(val->str_, "labelf")) {
+                        gotfirst = true;
+                        gotlabelf = true;
+                        continue;
+                    }
+                    else if(!strcmp(val->str_, "label")) {
+                        gotfirst = true;
+                        gotlabell = true;
+                        continue;
+                    }
                 }
-                else {
-                    gotfirst = true;
-                    gotlabel = true;
-                    continue;
-                }
+                safe_addstring(&line, "\t");
+                gotfirst = true;
             }
             
             switch(val->type) {
@@ -1957,9 +1967,10 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                     break;
                 case ATTYPE_ID:
                 case ATTYPE_TEMP:
-                    if(gotlabel) {
+                case ATTYPE_LABEL:
+                    if(gotlabelf) {
                         safe_addstring(&line, scope_tree->full_id);
-                        gotlabel = false;
+                        gotlabelf = false;
                     }
                     else {
                         safe_addstring(&line, val->str_);
@@ -2617,7 +2628,7 @@ sem_type_s sem_newtemp(token_s **curr)
         return *hash;
     
     value.type = ATTYPE_TEMP;
-    value.str_ = malloc(FS_INTWIDTH_DEC(tempcount)+40);
+    value.str_ = malloc(FS_INTWIDTH_DEC(tempcount)+4);
     if(!value.str_) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
@@ -2625,6 +2636,26 @@ sem_type_s sem_newtemp(token_s **curr)
     value.lexeme = value.str_;
     sprintf(value.str_, "_t%u", tempcount++);
 
+    hashinsert(grammar_stack->ptr, *curr, alloc_semt(value));
+    return value;
+}
+
+sem_type_s sem_newlabel(token_s **curr)
+{
+    sem_type_s value, *hash;
+    
+    if((hash = hashlookup(grammar_stack->ptr, *curr)))
+        return *hash;
+    
+    value.type = ATTYPE_LABEL;
+    value.str_ = malloc(FS_INTWIDTH_DEC(tempcount)+40);
+    if(!value.str_) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    value.lexeme = value.str_;
+    sprintf(value.str_, "_L%u", lablecount++);
+    
     hashinsert(grammar_stack->ptr, *curr, alloc_semt(value));
     return value;
 }

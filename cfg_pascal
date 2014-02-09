@@ -5,8 +5,11 @@
 	.
 	{
         pushscope(id.entry)
-        emit(label, "_", id.entry, ":")
+        emit(labelf, "_", id.entry, ":")
         <program>.type := <identifier_list>.type
+        if <compound_statement>.type <> null then
+            emit("return")
+        end
 	}
 
 <program'> ->
@@ -91,7 +94,9 @@
 	<compound_statement>
     {
         if <compound_statement>.type = void then
+            emit("return")
             popscope()
+            resettemps()
         end
     }
 <subprogram_declaration'> ->
@@ -106,7 +111,7 @@
     {
         pushscope(id.entry)
         emit(" ")
-        emit(label, "_", id.entry, ":")
+        emit(labelf, "_", id.entry, ":")
         addtype(id.entry, <subprogram_head'>.type)
     }
 <subprogram_head'> ->
@@ -151,6 +156,7 @@
 	<compound_statement'>
 	end
     {
+        resettemps()
         <compound_statement>.type := void
     }
 
@@ -175,6 +181,7 @@
 <statement> ->
 	<variable> assignop <expression> 
     {
+        <statement>.type := void
         if <variable>.type = integer then
             if <expression>.type <> integer then
                 error(assignop, "Incompatible assignment to integer type")
@@ -187,15 +194,46 @@
             error(assignop, "Incompatible types used in assignment")
         end
         
+        emit(<variable>.place, " := ", <expression>.place)
     }
 	|
-	<procedure_statement>
+	<procedure_statement> 
+    {
+        <statement>.type := void
+        emit("call ", <procedure_statement>.id)
+    }
 	|
 	<compound_statement>
+    {
+        <statement>.type := void
+    }
 	|
 	while <expression> do <statement>
+    {
+        <statement>.type := void
+        <statement>.begin := newlabel
+        <statement>.true := newlabel
+        <statement>.false := newlabel
+        
+        emit("if ", <expression>.place, " goto ", <statement>.true)
+        if <expression>.type <> null then
+            emit("goto ", <statement>.false)
+        end
+        emit(label, <statement>.begin,":")
+        if <expression>.type <> null then
+            emit(label, <statement>.true, ":")
+        end
+        if <statement>[1].type <> null then
+            emit("goto ", <statement>.begin)
+            emit(label, <statement>.false, ":")
+        end
+
+    }
 	|
 	if <expression> then <statement> <statement'>
+    {
+        <statement>.type := void
+    }
 
 <statement'> ->
 	else <statement>
@@ -213,6 +251,8 @@
             <variable>.type := getarray(id)
             error(id, "Non-integer type used in array index")
         end
+        
+        <variable>.place := id.entry
     }
 <variable'> ->
 	[<expression>]
@@ -232,6 +272,7 @@
         if lookup(id) = <procedure_statement'>.type then
             <procedure_statement>.type := void
         end
+        <procedure_statement>.id := id.entry
     }
 
 <procedure_statement'> ->
@@ -250,12 +291,14 @@
     {
         <expression_list>.args := makelista(<expression>.type)
         <expression_list'>.args := <expression_list>.args
+        emit("push ", <expression>.place)
     }
 <expression_list'> ->
 	, <expression> <expression_list'>
     {
         listappend(<expression_list'>.args, <expression>.type)
         <expression_list'>[1].args := <expression_list'>.args
+        emit("push ", <expression>.place)
     }
 	|
 	ε
@@ -276,7 +319,7 @@
         <expression'>.place1 := <expression>.place
         <expression'>.place2 := <simple_expression>.place
         if <expression'>.type = void then
-            <expression>.place := <simple_expression>.place
+            emit(<expression>.place, " := ", <simple_expression>.place)
         end
     }
 
@@ -310,12 +353,12 @@
         
         <simple_expression>.place := newtemp
         if <sign>.code = "uminus" then
-            emit(<simple_expression>.place, " := ", "uminus ", <simple_expression>.place)
+            emit(<simple_expression>.place, " := ", "uminus ", <term>.place)
         end
         <simple_expression'>.place1 := <simple_expression>.place
         <simple_expression'>.place2 := <term>.place
         if <simple_expression'>.type = void then
-            <simle_expression>.place := <term>.place
+            emit(<simple_expression>.place, " := ", <term>.place)
         end
     }
 	|
@@ -331,8 +374,7 @@
         <simple_expression'>.place1 := <simple_expression>.place
         <simple_expression'>.place2 := <term>.place
         if <simple_expression'>.type = void then
-            <simle_expression>.place := <term>.place
-
+            emit(<simple_expression>.place, " := ", <term>.place)
         end
     }
 
@@ -381,7 +423,7 @@
         <term'>.place1 := <term>.place
         <term'>.place2 := <factor>.place
         if <term'>.type = void then
-            <term>.place := <factor>.place
+            emit(<term>.place, " := ", <factor>.place)
         end
 
 	}
@@ -466,7 +508,8 @@
         end
 
         <factor>.place := newtemp
-        emit(<factor>.place, " := ", "not ", <factor>.place)
+
+        emit(<factor>.place, " := ", "not ", <factor>[1].place)
     }
     
 <factor'> ->

@@ -69,7 +69,7 @@ begin
 		else
 		begin
 			bob := bob and omg or 32.1 + 23;
-			while not 32 > omg do
+			while not 32.444 > omg do
 				omg := +3232.1 * omg
 			;
 			if not 32.2 then

@@ -117,6 +117,7 @@ enum atypes {
     ATTYPE_ARGLIST_FORMAL,
     ATTYPE_ARGLIST_ACTUAL,
     ATTYPE_TEMP,
+    ATTYPE_LABEL,
 };
 
 extern long safe_atol (char *str);
