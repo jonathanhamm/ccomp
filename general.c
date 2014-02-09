@@ -633,7 +633,7 @@ void safe_adddouble(char **buf, double val)
     
     printf("last called adddouble\n");
     
-    newlen = ndouble_digits(val);
+    newlen = ndouble_digits(val)+1;
     if(!*buf) {
         currlen = 0;
         *buf = malloc(newlen);
