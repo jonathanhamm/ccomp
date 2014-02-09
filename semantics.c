@@ -1903,7 +1903,7 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
 {
     int c;
     size_t lsize = 32;
-    char *out, *line = NULL;
+    char *out = NULL, *line = NULL;
     size_t len;
     llist_s *iter;
     sem_type_s *dummy;
@@ -1951,7 +1951,8 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                     val->str_[len-1] = '\0';
                     strcpy(out, &val->str_[1]);
                     val->str_[len-1] = c;
-                    printf("%p\n", line);
+                    printf("pointer: %p\n", line);
+                    fflush(stdout);
                     safe_addstring(&line, out);
                     free(out);
                     break;
