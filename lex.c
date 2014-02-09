@@ -105,7 +105,7 @@ struct prxa_expression_s
 };
 
 scope_s *scope_tree;
-static unsigned scope_indent;
+unsigned scope_indent;
 static scope_s *scope_root;
 
 static void printlist(token_s *list);

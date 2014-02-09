@@ -298,6 +298,7 @@ static void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn
 static void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_popscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+static void *sem_resettemps(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 
 static int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual);
 
@@ -330,7 +331,8 @@ static ftable_s ftable[] = {
     {"makelistf", (sem_action_f)sem_makelistf},
     {"popscope", (sem_action_f)sem_popscope},
     {"print", sem_print},
-    {"pushscope", (sem_action_f)sem_pushscope}
+    {"pushscope", (sem_action_f)sem_pushscope},
+    {"resettemps", (sem_action_f)sem_resettemps}
 };
 
 inline void grstack_push(void)
@@ -1902,11 +1904,10 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     llist_s *iter;
     sem_type_s *dummy;
     sem_type_s *val;
+    bool gotfirst = false;
     
     if(hashlookup(grammar_stack->ptr, *curr))
         return NULL;
-    
-    static int bob;
     
     if(params.ready && eval) {
         llreverse(&params.pstack);
@@ -1915,6 +1916,16 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
             val = iter->ptr;
             free(iter);
             
+            if(!gotfirst) {
+                if(strcmp(val->str_, "label")) {
+                    fputc('\t', emitdest);
+                    gotfirst = true;
+                }
+                else {
+                    gotfirst = true;
+                    continue;
+                }
+            }
             
             switch(val->type) {
                 case ATTYPE_CODE:
@@ -1944,13 +1955,11 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
             }
             
         }
-
         fputc('\n', emitdest);
-        dummy = (sem_type_s *)1;
+        dummy = (sem_type_s *)0xfffff;
         hashinsert(grammar_stack->ptr, *curr, dummy);
-
     }
-    
+    return NULL;
 }
 
 void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
@@ -2338,6 +2347,12 @@ void *sem_popscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse
     return NULL;
 }
 
+void *sem_resettemps(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
+{
+    tempcount = 0;
+    return NULL;
+}
+
 int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
 {
     char *errstr;
@@ -2584,13 +2599,13 @@ sem_type_s sem_newtemp(token_s **curr)
         return *hash;
     
     value.type = ATTYPE_TEMP;
-    value.str_ = malloc(FS_INTWIDTH_DEC(tempcount)+2);
+    value.str_ = malloc(FS_INTWIDTH_DEC(tempcount)+3);
     if(!value.str_) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
     value.lexeme = value.str_;
-    sprintf(value.str_, "t%u", tempcount++);
+    sprintf(value.str_, "_t%u", tempcount++);
     printf("created temp: %s\n", value.str_);
 
     hashinsert(grammar_stack->ptr, *curr, alloc_semt(value));

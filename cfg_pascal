@@ -4,6 +4,7 @@
 	<compound_statement>
 	.
 	{
+        emit(label, "_", id.entry, ":")
         pushscope(id.entry)
         <program>.type := <identifier_list>.type
 	}
@@ -34,7 +35,6 @@
         addarg(id.entry, integer)
         listappend(<identifier_list'>.args, integer)
         <identifier_list'>[1].args := <identifier_list'>.args
-
 	}
 	|
 	ε
@@ -104,6 +104,8 @@
 <subprogram_head> ->
 	procedure id <subprogram_head'>;
     {
+        emit("")
+        emit(label, "_", id.entry, ":")
         pushscope(id.entry)
         addtype(id.entry, <subprogram_head'>.type)
     }
@@ -164,6 +166,9 @@
 	<statement> <statement_list'>
 <statement_list'> ->
 	; <statement> <statement_list'>
+    {
+        resettemps()
+    }
 	|
 	ε
 
@@ -181,6 +186,7 @@
         elif <variable>.type <> <expression>.type then
             error(assignop, "Incompatible types used in assignment")
         end
+        
     }
 	|
 	<procedure_statement>
@@ -190,6 +196,7 @@
 	while <expression> do <statement>
 	|
 	if <expression> then <statement> <statement'>
+
 <statement'> ->
 	else <statement>
 	|
@@ -211,7 +218,7 @@
 	[<expression>]
     {
         <variable'>.type := <expression>.type
-        <variable'>.val := <expression>.val
+        <variable'>.place := <expression>.place
     }
 	|
 	ε
@@ -258,15 +265,21 @@
 	
 <expression> ->
 	<simple_expression> <expression'>
-    { 
-        <expression>.place := newtemp
-
+    {
         <expression'>.in := <simple_expression>.type
         <expression>.type := <simple_expression>.type
         if <expression'>.type <> void then
             <expression>.type := <expression'>.type
         end
+        
+        <expression>.place := newtemp
+        <expression'>.place1 := <expression>.place
+        <expression'>.place2 := <simple_expression>.place
+        if <expression'>.type = void then
+            <expression>.place := <simple_expression>.place
+        end
     }
+
 <expression'> ->
 	relop <simple_expression>
     {
@@ -277,6 +290,8 @@
             error(relop, "Incompatible type used on right-hand side of relational operator")
         end
         <expresion'>.type := integer
+        
+        emit(<expression'>.place1, " := ", <expression'>.place2, " ", relop.entry, " ", <simple_expression>.place)
     }
 	|
 	ε
@@ -290,25 +305,40 @@
         <simple_expression>.type := <term>.type
         <simple_expression'>.in := <term>.type
         if <simple_expression'>.type <> void then
-            <simple_expression>.type := <simple_expression>.type
+            <simple_expression>.type := <simple_expression'>.type
+        end
+        
+        <simple_expression>.place := newtemp
+        if <sign>.code = "uminus" then
+            emit(<simple_expression>.place, " := ", "uminus ", <simple_expression>.place)
+        end
+        <simple_expression'>.place1 := <simple_expression>.place
+        <simple_expression'>.place2 := <term>.place
+        if <simple_expression'>.type = void then
+            <simle_expression>.place := <term>.place
         end
     }
 	|
 	<term> <simple_expression'>
     {
-        <simple_expression'>.placeTerm := <term>.place
         <simple_expression>.type := <term>.type
         <simple_expression'>.in := <term>.type
         if <simple_expression'>.type <> void then
             <simple_expression>.type := <simple_expression'>.type
+        end
+        
+        <simple_expression>.place := newtemp
+        <simple_expression'>.place1 := <simple_expression>.place
+        <simple_expression'>.place2 := <term>.place
+        if <simple_expression'>.type = void then
+            <simle_expression>.place := <term>.place
+
         end
     }
 
 <simple_expression'> ->
 	addop <term> <simple_expression'>
     {
-        <simple_expression'>.place := newtemp
-
         if (<simple_expression'>.in = integer) and (<term>.type = integer) then
             <simple_expression'>[1].in := integer
             <simple_expression'>.type := integer
@@ -323,12 +353,13 @@
         else
             error(addop, "Invalid type used in addop expression")
         end
-
         if <simple_expression'>[1].type <> void then
             <simple_expression'>.type := <simple_expression'>[1].type
         end
         
-        emit(<simple_expression'>.place, " := ", <simple_expression'>.placeTerm, addop.entry, <simple_expression>[1].place)
+        emit(<simple_expression'>.place1, " := ", <simple_expression'>.place2, " ", addop.entry, " ", <term>.place)
+        <simple_expression'>[1].place1 := <simple_expression'>.place1
+        <simple_expression'>[1].place2 := <simple_expression'>.place1
     }
 	|
 	ε
@@ -345,14 +376,18 @@
         if <term'>.type <> void then
             <term>.type := <term'>.type
         end
-        <term>.place := <factor>.place
+        
+        <term>.place := newtemp
+        <term'>.place1 := <term>.place
+        <term'>.place2 := <factor>.place
+        if <term'>.type = void then
+            <term>.place := <factor>.place
+        end
+
 	}
 <term'> ->
         mulop <factor> <term'>
         {
-            <term'>.place := newtemp
-            emit(<term'>.place, " := ", <factor>.place, mulop.entry, <term'>[1].place)
-
             if mulop.entry = mod then
                 if (<term'>.in <> integer) or (<factor>.type <> integer) then
                     error(mulop, "Expected integer operands for modulo operation")
@@ -379,6 +414,10 @@
                 <term'>.type := <term'>[1].type
                 print(<term'>[1].type)
             end
+            
+            emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.place)
+            <term'>[1].place1 := <term'>.place1
+            <term'>[1].place2 := <term'>.place1
         }
         |
         ε
@@ -389,7 +428,6 @@
 <factor> ->
 	id <factor'>
     {
-        <factor>.place := newtemp
         if <factor'>.type = integer then
             <factor>.type := getarray(id)
         elif <factor'>.type = void then
@@ -398,10 +436,12 @@
             <factor>.type := getarray(id)
             error(id, "Non-integer type used in array index")
         end
-        if <factor'>.type = void then
-            emit(<factor>.place, " := ", id.entry)
+        
+        if <factor'>.type <> void then
+            <factor>.place := newtemp
+            emit(<factor>.place, " := ", id.entry, "[", <factor'>.place, "]")
         else
-            emit(<factor>.place, " := ", id.entry, " + ", <factor'>.place)
+            <factor>.place := id.entry
         end
     }
 	|
@@ -424,6 +464,8 @@
             error(bob, "Incompatible type used in logical not")
             <factor>.type := integer
         end
+
+        <factor>.place := <factor>[1].place
         emit(<factor>.place, " := ", "not ", <factor>.place)
     }
     
@@ -440,4 +482,4 @@
     }
     
 <sign> ->
-	+ | -
+	+ {<sign>.code := "uplus"} | - {<sign>.code := "uminus"}

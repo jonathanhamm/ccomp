@@ -6,8 +6,8 @@ var KimJongUn : integer;
     procedure lolwut (a : integer; b : real; c : real);
     var x : integer; var y : real;
     begin
-        a := b+c;
-        b := c;
+        a := b+c*4*3/3;
+        a := b;
         b := KimJongUn
     end;
     procedure hahaha ;
@@ -22,7 +22,10 @@ var KimJongUn : integer;
         procedure lulwut(b: real);
         begin
         b := 3.233E-23;
-        call lolwat(33)
+        call lolwat(33);
+        if (b <> 32) and (b <> 33) then
+            call lolwut(4, 4.4, 44.3)
+        end
         end;
     begin
         a := 1;
