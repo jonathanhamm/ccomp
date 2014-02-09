@@ -233,12 +233,36 @@
 	if <expression> then <statement> <statement'>
     {
         <statement>.type := void
+        <statement>.true := newlabel
+        <statement>.false := newlabel
+        <statement'>.next := newlabel
+
+        emit("if ", <expression>.place, " goto ", <statement>.true)
+        if <expression>.type <> null then
+            emit("goto ", <statement>.false)
+        end
+        if <expression>.type <> null then
+            emit(label, <statement>.true, ":")
+        end
+        if <statement>[1].type <> null then
+            emit("goto ", <statement'>.next)
+            emit(label, <statement>.false, ":")
+        end
     }
 
 <statement'> ->
 	else <statement>
+    {
+        if <statement>.type <> null then
+            emit(label, <statement'>.next, ":")
+        end
+    }
 	|
 	ε
+    {
+        <statement'>.type := void
+        emit(label, <statement'>.next, ":")
+    }
 	
 <variable> ->
 	id <variable'> 
