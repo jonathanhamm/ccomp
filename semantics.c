@@ -1903,12 +1903,13 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
 {
     int c;
     size_t lsize = 32;
-    char *out = NULL, *line = NULL;
+    char *out = NULL;
     size_t len;
     llist_s *iter;
     sem_type_s *dummy;
     sem_type_s *val;
     bool gotfirst = false, gotlabel = false;
+    char *line = NULL;
     
     if(hashlookup(grammar_stack->ptr, *curr))
         return NULL;
@@ -1951,8 +1952,6 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                     val->str_[len-1] = '\0';
                     strcpy(out, &val->str_[1]);
                     val->str_[len-1] = c;
-                    printf("pointer: %p\n", line);
-                    fflush(stdout);
                     safe_addstring(&line, out);
                     free(out);
                     break;
@@ -1962,18 +1961,22 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                 case ATTYPE_NUMREAL:
                     safe_adddouble(&line, val->real_);
                     break;
-                default:
+                case ATTYPE_ID:
+                case ATTYPE_TEMP:
                     if(gotlabel) {
                         safe_addstring(&line, scope_tree->full_id);
                         gotlabel = false;
                     }
-                    else
+                    else {
                         safe_addstring(&line, val->str_);
+                    }
+                    
+                    break;
+                default:
                     break;
             }
             
         }
-        printf("%p\n", scope_tree);
         addline(&scope_tree->code, line);
         dummy = (sem_type_s *)1;
         hashinsert(grammar_stack->ptr, *curr, dummy);
@@ -2509,7 +2512,7 @@ sem_action_f get_semaction(char *str)
 
 char *sem_tostring(sem_type_s type)
 {
-    char *stralloc;
+    char *stralloc = NULL;
     
     switch(type.type) {
         case ATTYPE_ID:
@@ -2627,7 +2630,6 @@ sem_type_s sem_newtemp(token_s **curr)
     }
     value.lexeme = value.str_;
     sprintf(value.str_, "_t%u", tempcount++);
-    printf("created temp: %s\n", value.str_);
 
     hashinsert(grammar_stack->ptr, *curr, alloc_semt(value));
     return value;

@@ -13,6 +13,7 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <ctype.h>
 
 #if ((defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__))
     #include <malloc/malloc.h>
@@ -544,7 +545,19 @@ void safe_addstring(char **buf, char *str)
     char *base;
     size_t currlen, newlen;
     
+    int i;
+    
+    printf("last called addstring\n");
+
     newlen = strlen(str)+1;
+    if(*buf && strlen(*buf))
+    for(i = 0; i < strlen(*buf)-1; i++) {
+        if(((*buf)[i] >= 127 || (*buf)[i] < '\t' || (*buf)[i] == '@')) {
+            printf("%u %u", (*buf)[i], '_');
+            asm("hlt");
+        }
+    }
+
     if(!*buf) {
         currlen = 0;
         *buf = malloc(newlen);
@@ -565,13 +578,23 @@ void safe_addstring(char **buf, char *str)
         base = &(*buf)[currlen-1];
     }
     sprintf(base, "%s", str);
+    for(i = 0; i < newlen-1; i++) {
+        if(((*buf)[i] >= 127 || (*buf)[i] < '\t' || (*buf)[i] == '@')) {
+            printf("%u %u", (*buf)[i], '_');
+            asm("hlt");
+        }
+    }
+
+    
 }
 
 void safe_addint(char **buf, long val)
 {
+    int i;
     char *base;
     size_t currlen, newlen;
     
+    printf("last called addint\n");
     newlen = FS_INTWIDTH_DEC(val)+1;
     if(!*buf) {
         currlen = 0;
@@ -593,12 +616,22 @@ void safe_addint(char **buf, long val)
         base = &(*buf)[currlen-1];
     }
     sprintf(base, "%ld", val);
+    for(i = 0; i < newlen-1; i++) {
+        if(((*buf)[i] >= 127 || (*buf)[i] < '\t' || (*buf)[i] == '@')) {
+            printf("%u %u", (*buf)[i], '_');
+            asm("hlt");
+        }
+    }
+
 }
 
 void safe_adddouble(char **buf, double val)
 {
+    int i;
     char *base;
     size_t currlen, newlen;
+    
+    printf("last called adddouble\n");
     
     newlen = ndouble_digits(val);
     if(!*buf) {
@@ -608,6 +641,7 @@ void safe_adddouble(char **buf, double val)
             perror("Memory Allocation Error");
             exit(EXIT_FAILURE);
         }
+        base = *buf;
     }
     else {
         currlen = strlen(*buf)+1;
@@ -620,6 +654,13 @@ void safe_adddouble(char **buf, double val)
         base = &(*buf)[currlen-1];
     }
     sprintf(base, "%f", val);
+    for(i = 0; i < newlen-1; i++) {
+        if(((*buf)[i] >= 127 || (*buf)[i] < '\t' || (*buf)[i] == '@')) {
+            printf("%u %u", (*buf)[i], '_');
+            asm("hlt");
+        }
+    }
+
 }
 
 int ndouble_digits(double val)

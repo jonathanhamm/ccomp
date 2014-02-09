@@ -465,7 +465,7 @@
             <factor>.type := integer
         end
 
-        <factor>.place := <factor>[1].place
+        <factor>.place := newtemp
         emit(<factor>.place, " := ", "not ", <factor>.place)
     }
     
