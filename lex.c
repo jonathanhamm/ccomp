@@ -1759,6 +1759,7 @@ void push_scope(char *id)
     s->id = id;
     s->parent = scope_tree;
     s->last_arg_addr = -INTEGER_WIDTH;
+    s->code = linetable_s_();
     
     if(!scope_tree)
         scope_root = scope_tree = s;

@@ -1899,7 +1899,8 @@ void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
 void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
     int c;
-    char *out;
+    size_t lsize = 32;
+    char *out, *line = NULL;
     size_t len;
     llist_s *iter;
     sem_type_s *dummy;
@@ -1912,13 +1913,20 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     if(params.ready && eval) {
         llreverse(&params.pstack);
         
+        line = malloc(lsize);
+        if(!line) {
+            perror("Memory Allocation Erro");
+            exit(EXIT_FAILURE);
+        }
+        
         while((iter = llpop(&params.pstack))) {
             val = iter->ptr;
             free(iter);
             
+            
             if(!gotfirst) {
-                if(strcmp(val->str_, "label")) {
-                    fputc('\t', emitdest);
+                if(val->type != ATTYPE_ID || strcmp(val->str_, "label")) {
+                    safe_addstring(&line, "\t");
                     gotfirst = true;
                 }
                 else {
@@ -1935,28 +1943,27 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                         perror("Memory Allocation Error");
                         exit(EXIT_FAILURE);
                     }
-                    
                     c = val->str_[len-1];
                     val->str_[len-1] = '\0';
                     strcpy(out, &val->str_[1]);
                     val->str_[len-1] = c;
-                    fputs(out, emitdest);
+                    safe_addstring(&line, out);
                     free(out);
                     break;
                 case ATTYPE_NUMINT:
-                    fprintf(emitdest, "%ld", val->int_);
+                    safe_addint(&line, val->int_);
                     break;
                 case ATTYPE_NUMREAL:
-                    fprintf(emitdest, "%f", val->real_);
+                    safe_adddouble(&line, val->real_);
                     break;
                 default:
-                    fputs(val->str_, emitdest);
+                    safe_addstring(&line, val->str_);
                     break;
             }
             
         }
-        fputc('\n', emitdest);
-        dummy = (sem_type_s *)0xfffff;
+        addline(&scope_tree->code, line);
+        dummy = (sem_type_s *)1;
         hashinsert(grammar_stack->ptr, *curr, dummy);
     }
     return NULL;

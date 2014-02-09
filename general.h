@@ -162,11 +162,15 @@ extern void print_listing(linetable_s *table, void *stream);
 extern bool check_listing(linetable_s *table, unsigned lineno, char *str);
 extern void free_listing(linetable_s *table);
 
-extern bool is_allocated(const void *ptr);
+extern void safe_addstring(char **buf, char *str);
+extern void safe_addint(char **buf, long val);
+extern void safe_adddouble(char **buf, double val);
 
 extern queue_s *queue_s_(void);
 extern void enqueue(queue_s *q, void *ptr);
 extern void *dequeu(queue_s *q);
 extern void free_queue(queue_s *q);
+
+extern bool is_allocated(const void *ptr);
 
 #endif

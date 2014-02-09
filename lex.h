@@ -261,6 +261,7 @@ struct scope_s
     int last_arg_addr;
     unsigned nentries;
     unsigned nchildren;
+    linetable_s *code;
     scope_s *parent;
 };
 

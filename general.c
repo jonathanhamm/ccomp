@@ -24,6 +24,7 @@
 static void printline(char *buf, FILE *stream);
 static void llpush_(llist_s **list, llist_s *node);
 static bool default_eq(void *k1, void *k2);
+static int ndouble_digits(double val);
 
 long safe_atol (char *str)
 {
@@ -526,6 +527,96 @@ void free_listing(linetable_s *table)
         }
     }
     free(table);
+}
+
+void safe_addstring(char **buf, char *str)
+{
+    char *base;
+    size_t currlen, newlen;
+    
+    newlen = strlen(str)+1;
+    if(!*buf) {
+        currlen = 0;
+        *buf = malloc(newlen);
+        if(!*buf){
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        base = *buf;
+    }
+    else {
+        currlen = strlen(*buf)+1;
+        newlen += currlen-1;
+        *buf = realloc(*buf, newlen);
+        if(!*buf){
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        base = buf[currlen-1];
+    }
+    strcat(base, str);
+}
+
+void safe_addint(char **buf, long val)
+{
+    char *base;
+    size_t currlen, newlen;
+    
+    newlen = FS_INTWIDTH_DEC(val)+1;
+    if(!*buf) {
+        currlen = 0;
+        *buf = malloc(newlen);
+        if(!*buf){
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        base = *buf;
+    }
+    else {
+        currlen = strlen(*buf)+1;
+        newlen += currlen-1;
+        *buf = realloc(*buf, newlen);
+        if(!*buf){
+            perror("Memory Alocation Error");
+            exit(EXIT_FAILURE);
+        }
+        base = buf[currlen-1];
+    }
+    sprintf(base, "%ld", val);
+}
+
+void safe_adddouble(char **buf, double val)
+{
+    char *base;
+    size_t currlen, newlen;
+    
+    newlen = ndouble_digits(val);
+    if(!*buf) {
+        currlen = 0;
+        *buf = malloc(newlen);
+        if(!*buf){
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else {
+        currlen = strlen(*buf)+1;
+        newlen += currlen-1;
+        *buf = realloc(*buf, newlen);
+        if(!*buf){
+            perror("Memory Allocation Error");
+            exit(EXIT_FAILURE);
+        }
+        base = buf[currlen-1];
+    }
+    sprintf(*buf, "%f", val);
+}
+
+int ndouble_digits(double val)
+{
+    char buf[128];
+    
+    return sprintf(buf, "%f", val);
 }
 
 queue_s *queue_s_(void)
