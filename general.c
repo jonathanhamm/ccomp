@@ -545,19 +545,7 @@ void safe_addstring(char **buf, char *str)
     char *base;
     size_t currlen, newlen;
     
-    int i;
-    
-    printf("last called addstring\n");
-
     newlen = strlen(str)+1;
-    if(*buf && strlen(*buf))
-    for(i = 0; i < strlen(*buf)-1; i++) {
-        if(((*buf)[i] >= 127 || (*buf)[i] < '\t' || (*buf)[i] == '@')) {
-            printf("%u %u", (*buf)[i], '_');
-            asm("hlt");
-        }
-    }
-
     if(!*buf) {
         currlen = 0;
         *buf = malloc(newlen);
@@ -578,14 +566,6 @@ void safe_addstring(char **buf, char *str)
         base = &(*buf)[currlen-1];
     }
     sprintf(base, "%s", str);
-    for(i = 0; i < newlen-1; i++) {
-        if(((*buf)[i] >= 127 || (*buf)[i] < '\t' || (*buf)[i] == '@')) {
-            printf("%u %u", (*buf)[i], '_');
-            asm("hlt");
-        }
-    }
-
-    
 }
 
 void safe_addint(char **buf, long val)
@@ -594,7 +574,6 @@ void safe_addint(char **buf, long val)
     char *base;
     size_t currlen, newlen;
     
-    printf("last called addint\n");
     newlen = FS_INTWIDTH_DEC(val)+1;
     if(!*buf) {
         currlen = 0;
@@ -616,13 +595,6 @@ void safe_addint(char **buf, long val)
         base = &(*buf)[currlen-1];
     }
     sprintf(base, "%ld", val);
-    for(i = 0; i < newlen-1; i++) {
-        if(((*buf)[i] >= 127 || (*buf)[i] < '\t' || (*buf)[i] == '@')) {
-            printf("%u %u", (*buf)[i], '_');
-            asm("hlt");
-        }
-    }
-
 }
 
 void safe_adddouble(char **buf, double val)
@@ -630,8 +602,6 @@ void safe_adddouble(char **buf, double val)
     int i;
     char *base;
     size_t currlen, newlen;
-    
-    printf("last called adddouble\n");
     
     newlen = ndouble_digits(val)+1;
     if(!*buf) {
@@ -654,13 +624,6 @@ void safe_adddouble(char **buf, double val)
         base = &(*buf)[currlen-1];
     }
     sprintf(base, "%f", val);
-    for(i = 0; i < newlen-1; i++) {
-        if(((*buf)[i] >= 127 || (*buf)[i] < '\t' || (*buf)[i] == '@')) {
-            printf("%u %u", (*buf)[i], '_');
-            asm("hlt");
-        }
-    }
-
 }
 
 int ndouble_digits(double val)

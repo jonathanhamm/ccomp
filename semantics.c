@@ -1917,12 +1917,6 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     if(params.ready && eval) {
         llreverse(&params.pstack);
         
-        line = malloc(lsize);
-        if(!line) {
-            perror("Memory Allocation Erro");
-            exit(EXIT_FAILURE);
-        }
-        
         while((iter = llpop(&params.pstack))) {
             val = iter->ptr;
             free(iter);
