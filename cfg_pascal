@@ -195,7 +195,16 @@
             error(assignop, "Incompatible types used in assignment")
         end
         
-        emit(<variable>.place, " := ", <expression>.place)
+        if <variable>.offset = void then
+            emit(<variable>.place, " := ", <expression>.place)
+        else 
+            <variable>.place := newtemp
+            <variable>.placetmp1 := newtemp
+            <variable>.placetmp2 := newtemp
+            emit(<variable>.placetmp1, " := ", <variable>.offset, " int - ", <variable>.low)
+            emit(<variable>.placetmp2, " := ", <variable>.placetmp1, " int * ", <variable>.width)
+            emit(<variable>.id, "[", <variable>.placetmp2, "]", " := ", <expression>.place)
+        end
     }
 	|
 	<procedure_statement> 
@@ -277,6 +286,15 @@
         end
         
         <variable>.place := id.entry
+        if <variable'>.type <> void then
+            <variable>.offset := <variable'>.place
+            <variable>.low := low(id)
+            <variable>.width := width(id)
+            <variable>.id := id.entry
+        else
+            <variable>.offset := void
+        end
+
     }
 <variable'> ->
 	[<expression>]

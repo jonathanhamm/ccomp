@@ -2436,6 +2436,10 @@ void *sem_low(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *p
     node = llpop(&params.pstack);
     id = *(sem_type_s *)node->ptr;
     p = getpnode_nterm_copy(pna, id.str_, 1);
+    if(!p) {
+        id.type = ATTYPE_NULL;
+        return alloc_semt(id);
+    }
     str = p->matched->lexeme;
     check = check_id(str);
     low.type = ATTYPE_NUMINT;
