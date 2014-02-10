@@ -2394,11 +2394,11 @@ void *sem_resolveproc(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pa
 
 void *sem_getwidth(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
-    char *str;
-    llist_s *node;
-    pnode_s *p;
-    sem_type_s id, width;
-    check_id_s check;
+    char *str = NULL;
+    llist_s *node = NULL;
+    pnode_s *p = NULL;
+    sem_type_s id = {0}, width = {0};
+    check_id_s check = {0};
     
     id.type = ATTYPE_NOT_EVALUATED;
     if(!(params.ready && eval))
