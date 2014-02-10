@@ -1854,7 +1854,7 @@ void setatt(semantics_s *s, char *id, sem_type_s *data)
 
 sem_type_s getatt(semantics_s *s, char *id)
 {
-    sem_type_s dummy;
+    sem_type_s dummy = {0};
     sem_type_s *data;
     
     dummy.type = ATTYPE_NOT_EVALUATED;
