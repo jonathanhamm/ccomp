@@ -2286,8 +2286,8 @@ void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pars
 
 void *sem_makelistf(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
-    llist_s *node;
-    sem_type_s *t, *final, list;
+    llist_s *node = NULL;
+    sem_type_s *t = NULL, *final = NULL, list = {0};
     
     if((final = hashlookup(grammar_stack->ptr, *curr)))
         return final;
