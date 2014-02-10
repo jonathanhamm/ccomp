@@ -1104,7 +1104,7 @@ sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result, isfinal);
     sem_match(curr, SEMTYPE_THEN);
     test = test_semtype(expression.value);
-    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result && test.result && !elprev}, false, isfinal);
+    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated && evaluate.result, .result = evaluate.result && test.result && !elprev}, false, isfinal);
     sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result}, test.result || elprev, isfinal);
 }
 
@@ -1121,15 +1121,6 @@ sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pd
     simple_expression.value.tok = NULL;
     simple_expression = sem_simple_expression(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
     expression_ = sem_expression_(parse, curr, il, pda, prod, pn, syn, pass, eval, isfinal);
-    if (expression_.op != OPTYPE_NOP) {
-       /* printf("Comparing:\n");
-        print_semtype(simple_expression.value);
-        puts("   ");
-        print_semtype(expression_.value);
-        //if (expression_.value.type == ATTYPE_ID)
-           // for(;;)printf("%u\n", expression_.value.type);
-        puts("\n\n");*/
-    }
     expression.value = sem_op(curr, parse, tok_lastmatched, simple_expression.value, expression_.value, expression_.op);
     
     if(!expression.value.tok) {

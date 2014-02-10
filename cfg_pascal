@@ -201,7 +201,7 @@
             <variable>.place := newtemp
             <variable>.placetmp1 := newtemp
             <variable>.placetmp2 := newtemp
-            emit(<variable>.placetmp1, " := ", <variable>.offset, " int - ", <variable>.low)
+            emit(<variable>.placetmp1, " := ", <variable>.offset, " int -", <variable>.low)
             emit(<variable>.placetmp2, " := ", <variable>.placetmp1, " int * ", <variable>.width)
             emit(<variable>.id, "[", <variable>.placetmp2, "]", " := ", <expression>.place)
         end
@@ -504,6 +504,7 @@
                 if (<term'>.in <> integer) or (<factor>.type <> integer) then
                     error(mulop, "Expected integer operands for modulo operation")
                 end
+                <factor>.fplace := <factor>.place
             elif (mulop.entry = "/") or (mulop.entry = "div") then
                 <term'>.in := real
                 <term'>[1].in := real
@@ -554,11 +555,23 @@
                 emit(<term'>.place1, " := ", <term'>.place2, " / ", <factor>.fplace)
             else
                 if <term'>.type = integer then
-                    emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
+                    if mulop.entry = mod then
+                        emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.fplace)
+                    else
+                        emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
+                    end
                 elif <term'>.type = real then
-                    emit(<term'>.place1, " := ", <term'>.place2, " real ", mulop.entry, " ", <factor>.fplace)
+                    if mulop.entry = mod then
+                        emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.fplace)
+                    else
+                        emit(<term'>.place1, " := ", <term'>.place2, " real ", mulop.entry, " ", <factor>.fplace)
+                    end
                 else
-                    emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
+                    if mulop.entry = mod then
+                        emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.fplace)
+                    else
+                        emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
+                    end
                 end
             end
             <term'>[1].place1 := <term'>.place1

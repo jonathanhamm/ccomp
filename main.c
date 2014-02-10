@@ -86,7 +86,7 @@ int main(int argc, const char *argv[])
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
-    sprintf(outname, "%s.out", files.source);
+    sprintf(outname, "%s.tac", files.source);
     gen = fopen(outname, "w");
     if(!gen){
         perror("Error Creating File");
