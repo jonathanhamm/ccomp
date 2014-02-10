@@ -1793,11 +1793,23 @@ check_id_s check_id(char *id)
         for(i = 0; i < iter->nentries; i++) {
           //  printf("Comparing: %s with %s\n", id, iter->entries[i].entry);
             if(!strcmp(iter->entries[i].entry, id))
-                return (check_id_s){.isfound = true, .address = iter->entries[i].address, .scope = iter, .type = &iter->entries[i].type};
+                return (check_id_s){
+                    .isfound = true,
+                    .address = iter->entries[i].address,
+                    .scope = iter,
+                    .width = iter->entries[i].width,
+                    .type = &iter->entries[i].type
+                };
         }
         for(i = 0; i < iter->nchildren; i++) {
             if(!strcmp(iter->children[i].child->id, id)) {
-                return (check_id_s){.isfound = true, .address = 0, .scope = iter->children[i].child, .type = &iter->children[i].type};
+                return (check_id_s){
+                    .isfound = true,
+                    .address = 0,
+                    .scope = iter->children[i].child,
+                    .width = 0,
+                    .type = &iter->children[i].type
+                };
             }
         }
     }
@@ -1841,20 +1853,24 @@ void add_id(char *id, sem_type_s type, bool islocal)
         if(!strcmp(type.str_, "integer")) {
             if(islocal) {
                 scope_tree->entries[index].address = scope_tree->last_local_addr;
+                scope_tree->entries[index].width = INTEGER_WIDTH;
                 scope_tree->last_local_addr += INTEGER_WIDTH;
             }
             else {
                 scope_tree->entries[index].address = scope_tree->last_arg_addr;
+                scope_tree->entries[index].width = INTEGER_WIDTH;
                 scope_tree->last_arg_addr -= INTEGER_WIDTH;
             }
         }
         else if(!strcmp(type.str_, "real")) {
             if(islocal) {
                 scope_tree->entries[index].address = scope_tree->last_local_addr;
+                scope_tree->entries[index].width = REAL_WIDTH;
                 scope_tree->last_local_addr += REAL_WIDTH;
             }
             else {
                 scope_tree->entries[index].address = scope_tree->last_arg_addr;
+                scope_tree->entries[index].width = REAL_WIDTH;
                 scope_tree->last_arg_addr -= REAL_WIDTH;
             }
         }
@@ -1869,20 +1885,24 @@ void add_id(char *id, sem_type_s type, bool islocal)
         if(!strcmp(type.str_, "integer")) {
             if(islocal) {
                 scope_tree->entries[index].address = scope_tree->last_local_addr;
+                scope_tree->entries[index].width = INTEGER_WIDTH;
                 scope_tree->last_local_addr += INTEGER_WIDTH*difference;
             }
             else {
                 scope_tree->entries[index].address = scope_tree->last_arg_addr;
+                scope_tree->entries[index].width = INTEGER_WIDTH;
                 scope_tree->last_arg_addr -= INTEGER_WIDTH*difference;
             }
         }
         else if(!strcmp(type.str_, "real")) {
             if(islocal) {
                 scope_tree->entries[index].address = scope_tree->last_local_addr;
+                scope_tree->entries[index].width = REAL_WIDTH;
                 scope_tree->last_local_addr += REAL_WIDTH*difference;
             }
             else {
                 scope_tree->entries[index].address = scope_tree->last_arg_addr;
+                scope_tree->entries[index].width = REAL_WIDTH;
                 scope_tree->last_arg_addr -= REAL_WIDTH*difference;
             }
         }

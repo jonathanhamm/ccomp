@@ -93,6 +93,7 @@
 	<subprogram_declaration'>
 	<compound_statement>
     {
+        emit("_beginfunc")
         if <compound_statement>.type = void then
             emit("return")
             popscope()
@@ -211,17 +212,16 @@
 	while <expression> do <statement>
     {
         <statement>.type := void
+        
         <statement>.begin := newlabel
         <statement>.true := newlabel
         <statement>.false := newlabel
         
-        emit("if ", <expression>.place, " goto ", <statement>.true)
-        if <expression>.type <> null then
-            emit("goto ", <statement>.false)
-        end
         emit(label, <statement>.begin,":")
         if <expression>.type <> null then
-            emit(label, <statement>.true, ":")
+            emit("if ", <expression>.place, " goto ", <statement>.true)
+            emit("goto ", <statement>.false)
+            emit(label, <statement>.true,":")
         end
         if <statement>[1].type <> null then
             emit("goto ", <statement>.begin)
@@ -337,6 +337,7 @@
         <expression>.type := <simple_expression>.type
         if <expression'>.type <> void then
             <expression>.type := <expression'>.type
+
         end
         
         <expression>.place := newtemp
@@ -505,6 +506,8 @@
         
         if <factor'>.type <> void then
             <factor>.place := newtemp
+            print(getwidth(id))
+            halt()
             emit(<factor>.place, " := ", id.entry, "[", <factor'>.place, "]")
         else
             <factor>.place := id.entry
@@ -532,7 +535,6 @@
         end
 
         <factor>.place := newtemp
-
         emit(<factor>.place, " := ", "not ", <factor>[1].place)
     }
     

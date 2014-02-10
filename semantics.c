@@ -301,8 +301,7 @@ static void *sem_pushscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn
 static void *sem_popscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_resettemps(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_resolveproc(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
-
-
+static void *sem_getwidth(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual);
 
 static int ftable_strcmp(char *key, ftable_s *b);
@@ -331,6 +330,7 @@ static ftable_s ftable[] = {
     {"error", sem_error},
     {"getarray", sem_getarray},
     {"gettype", sem_gettype},
+    {"getwidth", (sem_action_f)sem_getwidth},
     {"halt", sem_halt},
     {"listappend", (sem_action_f)sem_listappend},
     {"lookup", sem_lookup},
@@ -1852,14 +1852,7 @@ att_s *att_s_(void *data, unsigned tid)
 
 void setatt(semantics_s *s, char *id, sem_type_s *data)
 {
-  //  printf("\n------------------INSERTING %s INTO %s %p %p  ", id, s->pda->nterm->lexeme, s->pda, data);
-    
-  //  assert(data->type != ATTYPE_VOID);
     if(data->type != ATTYPE_NOT_EVALUATED && data->type != ATTYPE_NULL) {
-
-        puts("Adding: ");
-        print_semtype(*data);
-        printf("to: %s with attribute: %s\n", s->n->token->lexeme, id);
         hashinsert_(s->table, id, data);
     }
 }
@@ -1871,7 +1864,6 @@ sem_type_s getatt(semantics_s *s, char *id)
     
     dummy.type = ATTYPE_NOT_EVALUATED;
     dummy.str_ = NULL;
-   // printf("\n------------------RETRIEVING %s FROM %s %p\n", id, s->pda->nterm->lexeme, s->pda);
     if(!s)
         return dummy;
     
@@ -2098,12 +2090,10 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
         free(node);
         
         p = getpnode_nterm_copy(pn, val->str_, 1);
-        printf("getting type for: %s from %s\n", p->matched->lexeme, val->str_);
         type = gettype(parse->lex, p->matched->lexeme);
         if((type.type == ATTYPE_NULL || !check_id(p->matched->lexeme).isfound) && eval && isfinal) {
             add_semerror(parse, p->matched, "undeclared identifier");
         }
-        printf("Got Type: ");
         print_semtype(type);
         return alloc_semt(type);
     }
@@ -2114,8 +2104,6 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
 {
     llist_s *node;
     sem_type_s *val;
-    
-    puts("~~~~~In print");
     
     if(!(params.ready && eval))
         return NULL;
@@ -2409,24 +2397,42 @@ void *sem_resolveproc(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, pa
     return alloc_semt(dummy);
 }
 
+void *sem_getwidth(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
+{
+    char *str;
+    llist_s *node;
+    pnode_s *p;
+    sem_type_s id, width;
+    check_id_s check;
+    
+    id.type = ATTYPE_NOT_EVALUATED;
+    if(!(params.ready && eval))
+        return alloc_semt(id);
+    node = llpop(&params.pstack);
+    id = *(sem_type_s *)node->ptr;
+    
+    p = getpnode_nterm_copy(pna, id.str_, 1);
+    str = p->matched->lexeme;
+    check = check_id(str);
+    width.type = ATTYPE_NUMINT;
+    width.int_ = check.width;
+    return alloc_semt(width);
+}
+
 
 int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
 {
-    char *errstr;
     llist_s *lf, *la, *la_last;
     sem_type_s *a, *f;
     int *result;
     
     if((result = hashlookup(grammar_stack->ptr, *curr)))
         return *result;
-    
     result = malloc(sizeof(*result));
     if(!result) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
     }
-    
-    
     switch(actual.type) {
         case ATTYPE_ARGLIST_ACTUAL:
             break;
@@ -2438,7 +2444,6 @@ int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal,
             hashinsert(grammar_stack->ptr, *curr, result);
             return 0;
     }
-    
     switch(formal.type) {
         case ATTYPE_ARGLIST_FORMAL:
             break;
@@ -2450,9 +2455,6 @@ int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal,
             hashinsert(grammar_stack->ptr, *curr, result);
             return 0;
     }
-
-    assert(actual.type == ATTYPE_ARGLIST_ACTUAL && formal.type == ATTYPE_ARGLIST_FORMAL);
-    
     la_last = la = actual.q->head;
     for(lf = formal.q->head; lf && la; lf = lf->next, la_last = la, la = la->next) {
         f = lf->ptr;
@@ -2523,7 +2525,6 @@ int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal,
     *result = 1;
     hashinsert(grammar_stack->ptr, *curr, result);
     return *result;
-
 }
 
 int ftable_strcmp(char *key, ftable_s *b)

@@ -243,6 +243,7 @@ struct regex_match_s
 
 struct scope_entry_s
 {
+    int width;
     char *entry;
     int address;
     sem_type_s type;
@@ -269,6 +270,7 @@ struct check_id_s
 {
     bool isfound;
     int address;
+    int width;
     scope_s *scope;
     sem_type_s *type;
 };
