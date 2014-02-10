@@ -2260,8 +2260,8 @@ void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
 
 void *sem_makelista(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
-    llist_s *node;
-    sem_type_s *t, *final, list;
+    llist_s *node = NULL;
+    sem_type_s *t = NULL, *final = NULL, list = {0};
     
     if((final = hashlookup(grammar_stack->ptr, *curr)))
         return final;
@@ -2415,11 +2415,11 @@ void *sem_getwidth(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse
 
 void *sem_low(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
-    char *str;
-    llist_s *node;
-    pnode_s *p;
-    sem_type_s id, low;
-    check_id_s check;
+    char *str = NULL;
+    llist_s *node = NULL;
+    pnode_s *p = NULL;
+    sem_type_s id = {0}, low = {0};
+    check_id_s check = {0};
     
     id.type = ATTYPE_NOT_EVALUATED;
     if(!(params.ready && eval))
