@@ -2013,10 +2013,10 @@ void *sem_error(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
 
 void *sem_getarray(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
-    pnode_s *p;
-    llist_s *node;
-    sem_type_s *val, type;
-    check_id_s check;
+    pnode_s *p = NULL;
+    llist_s *node = NULL;
+    sem_type_s *val = NULL, type = {0};
+    check_id_s check = {0};
     
     if(params.ready && eval) {
         node = llpop(&params.pstack);
