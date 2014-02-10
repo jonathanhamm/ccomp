@@ -443,7 +443,7 @@
         
         if <simple_expression'>.type = integer then
             emit(<simple_expression'>.place1, " := ", <simple_expression'>.place2, " int ", addop.entry, " ", <term>.fplace)
-        elif <simple_expression'>.type = real
+        elif <simple_expression'>.type = real then
             emit(<simple_expression'>.place1, " := ", <simple_expression'>.place2, " real ", addop.entry, " ", <term>.fplace)
         else
             emit(<simple_expression'>.place1, " := ", <simple_expression'>.place2, " int ", addop.entry, " ", <term>.fplace)
@@ -524,7 +524,7 @@
                     <term'>.type := real
                     <factor>.fplace := <factor>.place
                 else
-                    error(mulop, "Invalid type used in mulop expression ")
+                    error(mulop, "Invalid type used in mulop expression")
                     <factor>.fplace := <factor>.place
                 end
             end
