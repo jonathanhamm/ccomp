@@ -519,8 +519,12 @@
                     <factor>.placeToReal := newtemp
                     emit(<factor>.placeToReal, " := inttoreal ", <factor>.place)
                     <factor>.fplace := <factor>.placeToReal
+                elif (<term'>.in = real) and (<factor>.type = real) then
+                    <term'>[1].in := real
+                    <term'>.type := real
+                    <factor>.fplace := <factor>.place
                 else
-                    error(mulop, "Invalid type used in mulop expression")
+                    error(mulop, "Invalid type used in mulop expression ")
                     <factor>.fplace := <factor>.place
                 end
             end

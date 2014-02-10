@@ -1079,7 +1079,7 @@ sem_else_s sem_else(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated, .result = !elprev}, false, isfinal);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated && evaluate.result, .result = !elprev}, false, isfinal);
             sem_match(curr, SEMTYPE_END);
             break;
         case SEMTYPE_END:
