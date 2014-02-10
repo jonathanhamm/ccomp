@@ -383,7 +383,11 @@
         <simple_expression'>.place1 := <simple_expression>.place
         <simple_expression'>.place2 := <term>.place
         if <simple_expression'>.type = void then
-            emit(<simple_expression>.place, " := ", <term>.place)
+            if (<simple_expression>.type = real) and (<term>.type = integer) then
+                emit(<simple_expression>.place, " := inttoreal ", <term>.place)
+            else
+                emit(<simple_expression>.place, " := ", <term>.place)
+            end
         end
     }
 	|
@@ -399,7 +403,11 @@
         <simple_expression'>.place1 := <simple_expression>.place
         <simple_expression'>.place2 := <term>.place
         if <simple_expression'>.type = void then
-            emit(<simple_expression>.place, " := ", <term>.place)
+            if (<simple_expression>.type = real) and (<term>.type = integer) then
+                emit(<simple_expression>.place, " := inttoreal ", <term>.place)
+            else
+                emit(<simple_expression>.place, " := ", <term>.place)
+            end
         end
     }
 
@@ -463,7 +471,7 @@
         <term'>.place1 := <term>.place
         <term'>.place2 := <factor>.place
         if <term'>.type = void then
-            if (<term>.in = real) and (<factor>.type = integer) then
+            if (<term>.type = real) and (<factor>.type = integer) then
                 emit(<term>.place, " := inttoreal ", <factor>.place)
             else
                 emit(<term>.place, " := ", <factor>.place)

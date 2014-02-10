@@ -2439,7 +2439,11 @@ void *sem_low(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *p
     str = p->matched->lexeme;
     check = check_id(str);
     low.type = ATTYPE_NUMINT;
-    if(check.type->type == ATTYPE_ARRAY)
+    if(!check.isfound) {
+        low.type = ATTYPE_NULL;
+        low.int_ = 0;
+    }
+    else if(check.type->type == ATTYPE_ARRAY)
         low.int_ = check.type->low;
     else
         low.int_ = 0;
