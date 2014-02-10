@@ -2750,6 +2750,8 @@ void write_code_(scope_s *s)
 {
     unsigned i;
     
+    if(!s)
+        return;
     print_listing_nonum(s->code, emitdest);
     for(i = 0; i < s->nchildren; i++)
         write_code_(s->children[i].child);

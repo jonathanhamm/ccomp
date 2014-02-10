@@ -160,6 +160,129 @@ _L10:
 	_t18 := _t18 real + _t31
 	_t17 := _t18
 	putin[_t2] := _t17
+_L12:
+	_t18 := 2222
+	_t17 := _t18
+	_t16 := _t17
+	_t14 := _t16 int - 2332
+	_t15 := _t14 int * 8
+	_t13 := d[_t15]
+	_t11 := inttoreal a
+	_t5 := _t11 real * _t13
+	_t21 := 3
+	_t20 := inttoreal _t21
+	_t4 := _t5 real + _t20
+	_t23 := 32
+	_t22 := _t23
+	_t3 := _t4 <> _t22
+	_t36 := 2332
+	_t39 := 32
+	_t35 := _t36 int + _t39
+	_t45 := 8 mod 4
+	_t45 := 8 mod 4
+	_t44 := _t45
+	_t43 := _t44
+	_t42 := _t43
+	_t35 := _t35 int + _t42
+	_t34 := _t35
+	_t32 := _t34 int - 32
+	_t33 := _t32 int * 4
+	_t31 := torquemada[_t33]
+	_t30 := _t31
+	_t29 := _t30
+	_t57 := 2323
+	_t56 := _t57
+	_t55 := _t56
+	_t53 := _t55 int - 333
+	_t54 := _t53 int * 8
+	_t52 := putin[_t54]
+	_t51 := _t52
+	_t50 := _t51
+	_t28 := _t29 <> _t50
+	_t27 := inttoreal _t28
+	_t2 := _t3 real and _t27
+	_t69 := 32
+	_t68 := _t69
+	_t67 := _t68
+	_t65 := _t67 int - 333
+	_t66 := _t65 int * 8
+	_t64 := putin[_t66]
+	_t63 := _t64
+	_t62 := _t63
+	_t71 := 2332
+	_t70 := _t71
+	_t61 := _t62 >= _t70
+	_t60 := _t61
+	_t1 := _t2 real or _t60
+	_t83 := 3223
+	_t86 := 3
+	_t82 := _t83 int + _t86
+	_t81 := _t82
+	_t79 := _t81 int - 32
+	_t80 := _t79 int * 4
+	_t78 := torquemada[_t80]
+	_t77 := _t78
+	_t76 := _t77
+	_t88 := 2323
+	_t87 := _t88
+	_t75 := _t76 < _t87
+	_t74 := _t75
+	_t73 := inttoreal _t74
+	_t1 := _t1 real or _t73
+	_t0 := _t1
+	if _t0 goto _L13
+	goto _L14
+_L13:
+	_t2 := 2332
+	_t5 := 32
+	_t1 := _t2 int + _t5
+	_t8 := 32
+	_t1 := _t1 int + _t8
+	_t11 := a
+	_t1 := _t1 int + _t11
+	_t17 := c
+	_t15 := inttoreal _t17
+	_t1 := _t1 real + _t17
+	_t1 := _t1 real + _t11
+	_t1 := _t1 real + _t8
+	_t1 := _t2 real + _t5
+	_t0 := _t1
+	push _t0
+	_t23 := 32 int * a
+	_t33 := inttoreal _t23
+	_t23 := _t33 real * c
+	_t47 := 32
+	_t50 := 32
+	_t46 := _t47 int + _t50
+	_t45 := _t46
+	_t43 := _t45 int - 333
+	_t44 := _t43 int * 8
+	_t42 := putin[_t44]
+	_t23 := _t23 real * _t42
+	_t23 := 32 real * a
+	_t22 := _t23
+	_t21 := _t22
+	push _t21
+	call __bob_lolwut
+	_t5 := 3232
+	_t4 := _t5
+	_t3 := _t4
+	_t1 := _t3 int -333
+	_t2 := _t1 int * 8
+	_t8 := 2332
+	_t11 := a
+	_t7 := _t8 int + _t11
+	_t6 := _t7
+	putin[_t2] := _t6
+	goto _L12
+_L14:
+	_t2 := a
+	_t8 := 888.888000
+	_t6 := inttoreal _t8
+	_t1 := _t2 real + _t8
+	_t0 := _t1
+	push _t0
+	call __bob_lolwut
 _L11:
 	return
 	 

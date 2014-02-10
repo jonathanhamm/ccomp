@@ -33,6 +33,12 @@ end;
             end
         else
             begin
-                putin[88*88*a] := 23.132+32/32+342+(3 mod 44)
+                putin[88*88*a] := 23.132+32/32+342+(3 mod 44);
+                while (a * d[2222]+3 <> 32) and (torquemada[2332+32+(8 mod 4)] <> putin[2323]) or (putin[32] >= 2332) or (torquemada[3223+3] < 2323) do
+                    begin
+                        call lolwut(2332+32+32+a+c, 32*a*c*putin[32+32]);
+                        putin[3232] := 2332+a
+                    end;
+                call lolwut(a+888.888)
             end
 end.

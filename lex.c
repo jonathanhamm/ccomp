@@ -1982,6 +1982,8 @@ void print_scope_(scope_s *root, FILE *f)
 {
     unsigned i;
     
+    if(!root)
+        return;
     print_frame(f, root);
     for(i = 0; i < root->nchildren; i++) {
         scope_indent++;
