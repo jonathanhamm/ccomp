@@ -4,3 +4,4 @@ massif.*
 *out
 pcomp.*
 pc*
+*.c.*
