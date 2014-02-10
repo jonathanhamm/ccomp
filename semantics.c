@@ -302,7 +302,10 @@ static void *sem_popscope(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna
 static void *sem_resettemps(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_resolveproc(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
 static void *sem_getwidth(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+static void *sem_low(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal);
+
 static int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual);
+
 
 static int ftable_strcmp(char *key, ftable_s *b);
 static sem_action_f get_semaction(char *str);
@@ -330,17 +333,18 @@ static ftable_s ftable[] = {
     {"error", sem_error},
     {"getarray", sem_getarray},
     {"gettype", sem_gettype},
-    {"getwidth", (sem_action_f)sem_getwidth},
     {"halt", sem_halt},
     {"listappend", (sem_action_f)sem_listappend},
     {"lookup", sem_lookup},
+    {"low", (sem_action_f)sem_low},
     {"makelista", (sem_action_f)sem_makelista},
     {"makelistf", (sem_action_f)sem_makelistf},
     {"popscope", (sem_action_f)sem_popscope},
     {"print", sem_print},
     {"pushscope", (sem_action_f)sem_pushscope},
     {"resettemps", (sem_action_f)sem_resettemps},
-    {"resolveproc", (sem_action_f)sem_resolveproc}
+    {"resolveproc", (sem_action_f)sem_resolveproc},
+    {"width", (sem_action_f)sem_getwidth},
 };
 
 inline void grstack_push(void)
@@ -2410,7 +2414,6 @@ void *sem_getwidth(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse
         return alloc_semt(id);
     node = llpop(&params.pstack);
     id = *(sem_type_s *)node->ptr;
-    
     p = getpnode_nterm_copy(pna, id.str_, 1);
     str = p->matched->lexeme;
     check = check_id(str);
@@ -2419,6 +2422,29 @@ void *sem_getwidth(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse
     return alloc_semt(width);
 }
 
+void *sem_low(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *parse, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
+{
+    char *str;
+    llist_s *node;
+    pnode_s *p;
+    sem_type_s id, low;
+    check_id_s check;
+    
+    id.type = ATTYPE_NOT_EVALUATED;
+    if(!(params.ready && eval))
+        return alloc_semt(id);
+    node = llpop(&params.pstack);
+    id = *(sem_type_s *)node->ptr;
+    p = getpnode_nterm_copy(pna, id.str_, 1);
+    str = p->matched->lexeme;
+    check = check_id(str);
+    low.type = ATTYPE_NUMINT;
+    if(check.type->type == ATTYPE_ARRAY)
+        low.int_ = check.type->low;
+    else
+        low.int_ = 0;
+    return alloc_semt(low);
+}
 
 int arglist_cmp(token_s **curr, parse_s *parse, token_s *tok, sem_type_s formal, sem_type_s actual)
 {
@@ -2692,6 +2718,7 @@ sem_type_s sem_newlabel(token_s **curr)
 
 char *scoped_label(void)
 {
+    bool gotfirst = false;
     char *str, *label = NULL;
     llist_s *l = NULL, *node = NULL;
     scope_s *s;
@@ -2702,7 +2729,13 @@ char *scoped_label(void)
     while((node = llpop(&l)))  {
         str = node->ptr;
         free(node);
-        safe_addstring(&label, "_");
+        
+        if(gotfirst)
+            safe_addstring(&label, "_");
+        else {
+            safe_addstring(&label, "__");
+            gotfirst = true;
+        }
         safe_addstring(&label, str);
     }
     return label;
@@ -2722,4 +2755,3 @@ void write_code_(scope_s *s)
     for(i = 0; i < s->nchildren; i++)
         write_code_(s->children[i].child);
 }
-

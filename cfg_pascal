@@ -5,7 +5,7 @@
 	.
 	{
         pushscope(id.entry)
-        emit(labelf, "_", id.entry, ":")
+        emit(labelf, id.entry, ":")
         <program>.type := <identifier_list>.type
         if <compound_statement>.type <> null then
             emit("return")
@@ -93,7 +93,6 @@
 	<subprogram_declaration'>
 	<compound_statement>
     {
-        emit("_beginfunc")
         if <compound_statement>.type = void then
             emit("return")
             popscope()
@@ -112,7 +111,8 @@
     {
         pushscope(id.entry)
         emit(" ")
-        emit(labelf, "_", id.entry, ":")
+        emit(labelf, id.entry, ":")
+        emit("_beginfunc")
         addtype(id.entry, <subprogram_head'>.type)
     }
 <subprogram_head'> ->
@@ -383,7 +383,11 @@
         <simple_expression'>.place1 := <simple_expression>.place
         <simple_expression'>.place2 := <term>.place
         if <simple_expression'>.type = void then
-            emit(<simple_expression>.place, " := ", <term>.place)
+            if (<term>.in = real) and (<factor>.type = integer) then
+                emit(<simple_expression>.place, " := inttoreal ", <term>.place)
+            else
+                emit(<simple_expression>.place, " := ", <term>.place)
+            end
         end
     }
 	|
@@ -399,7 +403,11 @@
         <simple_expression'>.place1 := <simple_expression>.place
         <simple_expression'>.place2 := <term>.place
         if <simple_expression'>.type = void then
-            emit(<simple_expression>.place, " := ", <term>.place)
+            if (<term>.in = real) and (<term>.type = integer) then
+                emit(<simple_expression>.place, " := inttoreal ", <term>.place)
+            else
+                emit(<simple_expression>.place, " := ", <factor>.place)
+            end
         end
     }
 
@@ -409,22 +417,37 @@
         if (<simple_expression'>.in = integer) and (<term>.type = integer) then
             <simple_expression'>[1].in := integer
             <simple_expression'>.type := integer
+            <term>.fplace := <term>.place
         elif (<simple_expression'>.in = integer) and (<term>.type = real) then
-             <simple_expression'>[1].in := real
+            <simple_expression'>[1].in := real
             <simple_expression'>.type := real
+            <simple_expression'>.placeToReal := newtemp
+            emit(<simple_expression'>.placeToReal, " := inttoreal ", <simple_expression'>.place)
+            <term>.fplace := <term>.place
         elif (<simple_expression'>.in = real ) and (<term>.type = integer) then
-             <simple_expression'>[1].in := real
+            <simple_expression'>[1].in := real
             <simple_expression'>.type := real
+            <term>.placeToReal := newtemp
+            emit(<term>.placeToReal, " := inttoreal ", <term>.place)
+            <term>.fplace := <term>.placeToReal
         elif (<simple_expression'>.in = real) and (<term>.type = real) then
             <simple_expression'>[1].in := real
+            <term>.fplace := <term>.place
         else
             error(addop, "Invalid type used in addop expression")
+            <term>.fplace := <term>.place
         end
         if <simple_expression'>[1].type <> void then
             <simple_expression'>.type := <simple_expression'>[1].type
         end
         
-        emit(<simple_expression'>.place1, " := ", <simple_expression'>.place2, " ", addop.entry, " ", <term>.place)
+        if <simple_expression'>.type = integer then
+            emit(<simple_expression'>.place1, " := ", <simple_expression'>.place2, " int ", addop.entry, " ", <term>.fplace)
+        elif <simple_expression'>.type = real
+            emit(<simple_expression'>.place1, " := ", <simple_expression'>.place2, " real ", addop.entry, " ", <term>.fplace)
+        else
+            emit(<simple_expression'>.place1, " := ", <simple_expression'>.place2, " int ", addop.entry, " ", <term>.fplace)
+        end
         <simple_expression'>[1].place1 := <simple_expression'>.place1
         <simple_expression'>[1].place2 := <simple_expression'>.place1
     }
@@ -448,7 +471,11 @@
         <term'>.place1 := <term>.place
         <term'>.place2 := <factor>.place
         if <term'>.type = void then
-            emit(<term>.place, " := ", <factor>.place)
+            if (<term>.in = real) and (<factor>.type = integer) then
+                emit(<term>.place, " := inttoreal ", <factor>.place)
+            else
+                emit(<term>.place, " := ", <factor>.place)
+            end
         end
 
 	}
@@ -463,26 +490,55 @@
                 <term'>.in := real
                 <term'>[1].in := real
                 <term>.type := real
+                if <term'>.in = integer then
+                    <term'>.placeToReal := newtemp
+                    emit(<term'>.placeToReal, " := inttoreal ", <term'>.place2)
+                    <term'>.place2 := <term'>.placeToReal
+                    <factor>.fplace := <factor>.place
+                end
+                if <factor>.type = integer then 
+                    <factor>.placeToReal := newtemp
+                    emit(<factor>.placeToReal, " := inttoreal ", <factor>.place)
+                    <factor>.fplace := <factor>.placeToReal
+                end
             else
                 if (<term'>.in = integer) and (<factor>.type = integer) then
                     <term'>[1].in := integer
                     <term'>.type := integer
+                    <factor>.fplace := <factor>.place
                 elif (<term'>.in = integer) and (<factor>.type = real) then
                     <term'>[1].in := real
                     <term'>.type := real
+                    <term'>.placeToReal := newtemp
+                    emit(<term'>.placeToReal, " := inttoreal ", <term'>.place2)
+                    <term'>.place2 := <term'>.placeToReal
+                    <factor>.fplace := <factor>.place
                 elif (<term'>.in = real ) and (<factor>.type = integer) then
                     <term'>[1].in := real
                     <term'>.type := real
+                    <factor>.placeToReal := newtemp
+                    emit(<factor>.placeToReal, " := inttoreal ", <factor>.place)
+                    <factor>.fplace := <factor>.placeToReal
                 else
                     error(mulop, "Invalid type used in mulop expression")
+                    <factor>.fplace := <factor>.place
                 end
             end
             if <term'>[1].type <> void then
                 <term'>.type := <term'>[1].type
                 print(<term'>[1].type)
             end
-            
-            emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.place)
+            if (mulop.entry = "/") or (mulop.entry = "div") then
+                emit(<term'>.place1, " := ", <term'>.place2, " / ", <factor>.fplace)
+            else
+                if <term'>.type = integer then
+                    emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
+                elif <term'>.type = real then
+                    emit(<term'>.place1, " := ", <term'>.place2, " real ", mulop.entry, " ", <factor>.fplace)
+                else
+                    emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
+                end
+            end
             <term'>[1].place1 := <term'>.place1
             <term'>[1].place2 := <term'>.place1
         }
@@ -506,9 +562,11 @@
         
         if <factor'>.type <> void then
             <factor>.place := newtemp
-            print(getwidth(id))
-            halt()
-            emit(<factor>.place, " := ", id.entry, "[", <factor'>.place, "]")
+            <factor>.placetmp1 := newtemp
+            <factor>.placetmp2 := newtemp
+            emit(<factor>.placetmp1, " := ", <factor'>.place, " int - ", low(id))
+            emit(<factor>.placetmp2, " := ", <factor>.placetmp1, " int * ", width(id))
+            emit(<factor>.place, " := ", id.entry, "[", <factor>.placetmp2, "]")
         else
             <factor>.place := id.entry
         end

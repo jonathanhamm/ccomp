@@ -1791,7 +1791,6 @@ check_id_s check_id(char *id)
     
     for(iter = scope_tree; iter; iter = iter->parent) {
         for(i = 0; i < iter->nentries; i++) {
-          //  printf("Comparing: %s with %s\n", id, iter->entries[i].entry);
             if(!strcmp(iter->entries[i].entry, id))
                 return (check_id_s){
                     .isfound = true,
