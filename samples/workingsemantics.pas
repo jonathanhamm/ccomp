@@ -86,10 +86,12 @@ end;
 procedure lolwut (a : integer; b : real; c : real);
 	var x : integer; var y : real;
 	procedure lawl;
-	var a : real; var putin : integer;
-	begin
+    var a : real; var putin : integer; var bob : array[1..233] of real;
+    var kimilsung : array[1..32] of integer;
+    var z : integer;
+    begin
 		if not putin then
-			call lolwut(2323, 234.2*32/32 div 32, 233)
+			call lolwut(2323, z * bob[32]*kimilsung[23]*234.2*32/32 div 32, 233)
 		else
 			call lawl
 	end;

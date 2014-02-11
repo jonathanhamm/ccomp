@@ -24,6 +24,13 @@ enum basic_ops_ {
     OP_NUM
 };
 
+//#define SHOW_PARAMETER_ADDRESSES
+
+#define STACK_DIRECTION_UP 1
+#define STACK_DIRECTION_DOWN -1
+#define STACK_DIRECTION STACK_DIRECTION_DOWN
+
+
 #define LERR_PREFIX         "      --Lexical Error: at line: %d: "
 #define LERR_UNKNOWNSYM     LERR_PREFIX "Unknown Character: %s"
 #define LERR_TOOLONG        LERR_PREFIX "Token too long: %s"
@@ -1949,8 +1956,9 @@ void print_frame(FILE *f, scope_s *s)
     for(i = 0; i < s->nentries; i++) {
         if(entries[i].address == 0)
             break;
+#ifdef SHOW_PARAMETER_ADDRESSES
         print_indent(f);
-        fprintf(f, "\t%16s: %8d\n", entries[i].entry, entries[i].address);
+        fprintf(f, "\t%16s: %8d\n", entries[i].entry, STACK_DIRECTION * entries[i].address);
         if(i + 1  < s->nentries && entries[i+1].address == 0){
             print_indent(f);
             fputs("=================================================\n", f);
@@ -1959,14 +1967,17 @@ void print_frame(FILE *f, scope_s *s)
             print_indent(f);
             fputs("-------------------------------------------------\n", f);
         }
+#endif
     }
+#ifdef SHOW_PARAMETER_ADDRESSES
     print_indent(f);
     fputs("\t\t<Frame Pointer>\n", f);
     print_indent(f);
     fputs("=================================================\n", f);
+#endif
     while(i < s->nentries) {
         print_indent(f);
-        fprintf(f, "\t%16s:  %8d\n", entries[i].entry, entries[i].address);
+        fprintf(f, "\t%16s:  %8d\n", entries[i].entry, STACK_DIRECTION * entries[i].address);
         print_indent(f);
         if(i < s->nentries-1)
             fputs("-------------------------------------------------\n", f);
@@ -1997,6 +2008,6 @@ void print_scope_(scope_s *root, FILE *f)
 void print_scope(void *stream)
 {
     scope_indent = 0;
-    puts("---Printing Scope Information---");
+    fputs("---Printing Scope Information---\n", (FILE *)stream);
     print_scope_(scope_root, stream);
 }

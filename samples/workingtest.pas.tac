@@ -62,9 +62,6 @@ _L9:
 	_t7 := omg
 	_t6 := _t7
 	_t0 := _t1 <> _t6
-	if _t0 goto _L10
-	goto _L11
-_L10:
 	_t42 := 3 mod 4
 	_t41 := _t42
 	_t40 := _t41
@@ -82,16 +79,12 @@ _L11:
 	_t6 := _t7
 	_t0 := _t1 <= _t6
 	if _t0 goto _L12
-	goto _L13
-_L12:
 	_t10 := zomg
 	_t9 := _t10
 	_t15 := omg
 	_t14 := _t15
 	_t8 := _t9 >= _t14
 	if _t8 goto _L15
-	goto _L16
-_L15:
 	_t27 := 33
 	_t26 := _t27
 	_t25 := _t26
@@ -104,8 +97,6 @@ _L15:
 	_t28 := _t29
 	_t19 := _t20 = _t28
 	if _t19 goto _L18
-	goto _L19
-_L18:
 	_t35 := 3
 	_t34 := _t35
 	_t33 := _t34
@@ -165,8 +156,6 @@ _L13:
 	_t9 := _t10
 	_t0 := _t1 = _t9
 	if _t0 goto _L21
-	goto _L22
-_L21:
 	_t11 := inttoreal 32
 	_t2 := _t2 / _t11
 	_t2 := _t2 mod 3343
@@ -193,8 +182,6 @@ _L21:
 	_t16 := _t17
 	_t0 := _t1 < _t16
 	if _t0 goto _L24
-	goto _L25
-_L24:
 	_t25 := inttoreal 10
 	_t23 := 24 / _t25
 	_t22 := _t23
@@ -264,8 +251,6 @@ _L23:
 	_t14 := _t15
 	_t0 := _t1 <> _t14
 	if _t0 goto _L30
-	goto _L31
-_L30:
 	_t27 := inttoreal 32
 	_t18 := _t18 / _t27
 	_t18 := _t18 mod 3343
@@ -294,9 +279,6 @@ _L33:
 	_t5 := omg
 	_t4 := _t5
 	_t0 := _t1 > _t4
-	if _t0 goto _L34
-	goto _L35
-_L34:
 	_t13 := uminus _t14
 	_t13 := _t14
 	_t12 := _t13
@@ -386,8 +368,6 @@ __bob_bob_lolololol:
 	_t3 := _t4
 	_t0 := _t1 > _t3
 	if _t0 goto _L0
-	goto _L1
-_L0:
 	_t24 := 3
 	_t23 := _t24
 	_t22 := _t23
@@ -462,9 +442,6 @@ _L3:
 	_t7 := ted
 	_t6 := _t7
 	_t0 := _t1 <> _t6
-	if _t0 goto _L4
-	goto _L5
-_L4:
 	_t5 := d
 	_t11 := 1
 	_t3 := _t4
@@ -480,8 +457,6 @@ _L4:
 	_t6 := _t7
 	_t0 := _t1 = _t6
 	if _t0 goto _L6
-	goto _L7
-_L6:
 	_t4 := _t5
 	_t3 := _t4
 	ted := _t3
@@ -518,8 +493,6 @@ _L45:
 	_t22 := y
 	_t21 := _t22
 	_t15 := _t16 <> _t21
-	_t12 := inttoreal _t15
-	_t6 := _t6 / _t12
 	_t5 := _t6
 	_t4 := _t5
 	_t3 := not _t4

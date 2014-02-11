@@ -885,10 +885,11 @@ sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, s
                 result.int_ = v1.int_ != v2.real_;
             else if(v1.type == ATTYPE_NUMREAL && v2.type == ATTYPE_NUMINT)
                 result.int_ = v1.real_ != v2.int_;
-            else if(v1.type == ATTYPE_ARRAY || v2.type == ATTYPE_ARRAY)
+            else if(v1.type == ATTYPE_ARRAY || v2.type == ATTYPE_ARRAY) {
                 result.int_ = !(v2.type == ATTYPE_ARRAY && v1.low == v2.low && v1.high == v2.high);
+            }
             else
-                result.int_ = v1.real_ != v2.real_;
+                result.int_ = true;
             break;
         case OPTYPE_OR:
             if (v1.type == ATTYPE_ID || v2.type == ATTYPE_ID)
@@ -2057,9 +2058,12 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
     while (params.pstack) {
         node = llpop(&params.pstack);
         val = node->ptr;
+        print_semtype(*val);
         free(node);
         free(val);
     }
+    putchar('\n');
+    fflush(stdout);
     return NULL;
 }
 

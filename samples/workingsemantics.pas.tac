@@ -660,17 +660,29 @@ _L42:
 	_t8 := _t9
 	_t7 := _t8
 	push _t7
-	_t18 := inttoreal 32
-	_t12 := _t12 / _t18
-	_t22 := inttoreal 32
-	_t12 := _t12 / _t22
+	_t25 := 32
+	_t24 := _t25
+	_t23 := _t24
+	_t21 := _t23 int - 1
+	_t22 := _t21 int * 8
+	_t20 := bob[_t22]
+	_t35 := 23
+	_t34 := _t35
+	_t33 := _t34
+	_t31 := _t33 int - 1
+	_t32 := _t31 int * 4
+	_t30 := kimilsung[_t32]
+	_t45 := inttoreal 32
+	_t12 := _t12 / _t45
+	_t49 := inttoreal 32
+	_t12 := _t12 / _t49
 	_t11 := _t12
 	_t10 := _t11
 	push _t10
-	_t27 := 233
-	_t26 := _t27
-	_t25 := _t26
-	push _t25
+	_t54 := 233
+	_t53 := _t54
+	_t52 := _t53
+	push _t52
 	call __bob_lolwut
 	goto _L44
 _L43:

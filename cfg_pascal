@@ -353,10 +353,10 @@
 	<simple_expression> <expression'>
     {
         <expression'>.in := <simple_expression>.type
-        <expression>.type := <simple_expression>.type
         if <expression'>.type <> void then
             <expression>.type := <expression'>.type
-
+        else
+            <expression>.type := <simple_expression>.type
         end
         
         <expression>.place := newtemp
