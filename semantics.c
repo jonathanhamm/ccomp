@@ -2579,7 +2579,7 @@ char *make_semerror(unsigned lineno, char *lexeme, char *message)
     size_t stlenl = strlen(lexeme);
     size_t stlenm = strlen(message);
     
-    msg = malloc(sizeof(TYPE_ERROR_PREFIX) + sizeof(TYPE_ERROR_SUFFIX) + FS_INTWIDTH_DEC(lineno) + stlenl + stlenm - 1);
+    msg = calloc(1, sizeof(TYPE_ERROR_PREFIX) + sizeof(TYPE_ERROR_SUFFIX) + FS_INTWIDTH_DEC(lineno) + stlenl + stlenm - 1);
     if(!msg) {
         perror("Memory Allocation Error");
         exit(EXIT_FAILURE);
