@@ -259,11 +259,8 @@ __bob_lolwat_lulwut:
 	_t22 := 33
 	_t21 := _t22
 	_t15 := _t16 <> _t21
-	_t1 := _t2
 	_t0 := _t1
 	if _t0 goto _L0
-	goto _L1
-_L0:
 	_t25 := 4
 	_t24 := _t25
 	_t23 := _t24

@@ -1011,7 +1011,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             sem_match(curr, SEMTYPE_THEN);
             test = test_semtype(expression.value);
             sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = test.result && evaluate.result}, false, isfinal);
-            evaluate.evaluated = evaluate.evaluated && test.evaluated;
+            evaluate.evaluated = evaluate.evaluated;
             sem_else(parse, curr, il, pda, prod, pn, syn, pass, evaluate, test.result, isfinal);
             break;
         case SEMTYPE_ID:
@@ -1036,7 +1036,7 @@ sem_else_s sem_else(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     switch((*curr)->type.val) {
         case SEMTYPE_ELSE:
             *curr = (*curr)->next;
-            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated && evaluate.result, .result = !elprev}, false, isfinal);
+            sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = evaluate.evaluated, .result = !elprev && evaluate.result}, false, isfinal);
             sem_match(curr, SEMTYPE_END);
             break;
         case SEMTYPE_END:
@@ -1061,8 +1061,8 @@ sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result, isfinal);
     sem_match(curr, SEMTYPE_THEN);
     test = test_semtype(expression.value);
-    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated && evaluate.result, .result = evaluate.result && test.result && !elprev}, false, isfinal);
-    sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result && test.result}, test.result || elprev, isfinal);
+    sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result && test.result && !elprev}, false, isfinal);
+    sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result}, test.result || elprev, isfinal);
 }
 
 sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)
@@ -2022,6 +2022,7 @@ void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     printf("Halt Called in %s\n", pda->nterm->lexeme);
     fflush(stderr);
     fflush(stdout);
+    asm("hlt");
     assert(false);
 }
 

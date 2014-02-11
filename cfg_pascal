@@ -188,14 +188,15 @@
             if <expression>.type <> integer then
                 error(assignop, "Incompatible assignment to integer type")
             end
-        elif <variable>.type = real then 
+        elif <variable>.type = real then
             if (<expression>.type <> real) and (<expression>.type <> integer) then
                 error(assignop, "Incompatible assigment to real type")
             end
         elif <variable>.type <> <expression>.type then
             error(assignop, "Incompatible types used in assignment")
         end
-        
+
+
         if <variable>.offset = void then
             emit(<variable>.place, " := ", <expression>.place)
         else 
@@ -348,17 +349,18 @@
     {
         <exprssion_list'>.args := void
     }
-	
+
 <expression> ->
 	<simple_expression> <expression'>
     {
         <expression'>.in := <simple_expression>.type
+        
         if <expression'>.type <> void then
             <expression>.type := <expression'>.type
         else
             <expression>.type := <simple_expression>.type
         end
-        
+    
         <expression>.place := newtemp
         <expression'>.place1 := <expression>.place
         <expression'>.place2 := <simple_expression>.place
@@ -376,7 +378,7 @@
         if (<simple_expression>.type <> integer) and (<simple_expression>.type <> real) then
             error(relop, "Incompatible type used on right-hand side of relational operator")
         end
-        <expresion'>.type := integer
+        <expression'>.type := integer
         
         emit(<expression'>.place1, " := ", <expression'>.place2, " ", relop.entry, " ", <simple_expression>.place)
     }
@@ -394,6 +396,10 @@
         if <simple_expression'>.type <> void then
             <simple_expression>.type := <simple_expression'>.type
         end
+        if (<term>.type <> integer) and (<term>.type <> real) then
+            error(<sign>.code, "Incompatible type used in negation/positive operator")
+        end
+
         
         <simple_expression>.place := newtemp
         if <sign>.code = "uminus" then
@@ -584,7 +590,6 @@
                     if mulop.entry = mod then
                         emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.fplace)
                         if <term'>.hit <> null then
-                            halt()
                         end
                     else
                         emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)

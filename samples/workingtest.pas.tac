@@ -2,7 +2,11 @@ __bob:
 	_begin_program
 	_t5 := ted
 	_t11 := 32
+	_t10 := inttoreal _t11
+	_t4 := _t5 real + _t10
 	_t14 := 31
+	_t13 := inttoreal _t14
+	_t4 := _t4 real + _t13
 	_t31 := 5
 	_t37 := 33443
 	_t40 := 22
@@ -21,8 +25,12 @@ __bob:
 	_t32 := inttoreal _t34
 	_t30 := _t31 real + _t34
 	_t66 := 43.200000
+	_t30 := _t30 real + _t66
 	_t29 := _t30
+	_t16 := inttoreal _t17
+	_t4 := _t4 real + _t16
 	_t69 := 0.000000
+	_t4 := _t4 real + _t69
 	_t3 := _t4
 	tom := _t3
 	_t2 := 3
@@ -157,7 +165,9 @@ _L13:
 	_t0 := _t1 = _t9
 	if _t0 goto _L21
 	_t11 := inttoreal 32
-	_t2 := _t2 / _t11
+	_t13 := inttoreal 32
+	_t2 := _t2 / _t13
+	_t2 := _t2 real div _t13
 	_t2 := _t2 mod 3343
 	_t1 := _t2
 	_t0 := _t1
@@ -183,7 +193,9 @@ _L13:
 	_t0 := _t1 < _t16
 	if _t0 goto _L24
 	_t25 := inttoreal 10
-	_t23 := 24 / _t25
+	_t27 := inttoreal 10
+	_t23 := 24 / _t27
+	_t23 := 24 real div _t27
 	_t22 := _t23
 	_t21 := _t22
 	_t19 := _t21 int -0
@@ -194,6 +206,8 @@ _L13:
 	omg[_t20] := _t28
 	goto _L26
 _L25:
+	_t5 := 24 / ted
+	_t5 := 24 real div ted
 	_t4 := _t5
 	_t3 := _t4
 	_t1 := _t3 int -0
@@ -238,21 +252,23 @@ _L26:
 _L22:
 _L23:
 	_t11 := inttoreal 10
-	_t9 := 24 / _t11
+	_t13 := inttoreal 10
+	_t9 := 24 / _t13
+	_t9 := 24 real div _t13
 	_t8 := _t9
 	_t7 := _t8
 	_t5 := _t7 int - 0
 	_t6 := _t5 int * 8
 	_t4 := omg[_t6]
 	_t3 := not _t4
-	_t2 := _t3
-	_t1 := _t2
 	_t15 := 32.200000
 	_t14 := _t15
 	_t0 := _t1 <> _t14
 	if _t0 goto _L30
 	_t27 := inttoreal 32
-	_t18 := _t18 / _t27
+	_t29 := inttoreal 32
+	_t18 := _t18 / _t29
+	_t18 := _t18 real div _t29
 	_t18 := _t18 mod 3343
 	_t17 := _t18
 	_t16 := _t17
@@ -359,13 +375,13 @@ __bob_bob_lolololol:
 	zomg := _t3
 	_t2 := 43
 	_t1 := _t2
+	_t10 := _t10 / 44.200000
+	_t10 := _t10 real / 44.200000
 	_t9 := _t10
 	_t8 := _t9
 	_t6 := _t8 int - 1
 	_t7 := _t6 int * 8
 	_t5 := herp[_t7]
-	_t4 := _t5
-	_t3 := _t4
 	_t0 := _t1 > _t3
 	if _t0 goto _L0
 	_t24 := 3
@@ -376,12 +392,17 @@ __bob_bob_lolololol:
 _L1:
 	_t30 := 4700.000000
 	_t33 := a
+	_t32 := inttoreal _t33
+	_t29 := _t30 real + _t32
 	_t39 := 22.100000
+	_t29 := _t29 real + _t39
 	_t45 := 33
 	_t48 := 4
 	_t44 := _t45 int - _t48
 	_t43 := _t44
 	_t42 := _t43
+	_t41 := inttoreal _t42
+	_t29 := _t29 real + _t41
 	_t28 := _t29
 	derp := _t28
 _L2:
@@ -403,6 +424,8 @@ _L2:
 	_t5 := 32.200000
 	_t4 := uminus _t5
 	_t8 := 3
+	_t7 := inttoreal _t8
+	_t4 := _t5 real + _t7
 	_t3 := _t4
 	zomg := _t3
 	_t5 := 32
@@ -444,8 +467,13 @@ _L3:
 	_t0 := _t1 <> _t6
 	_t5 := d
 	_t11 := 1
+	_t10 := inttoreal _t11
+	_t4 := _t5 real - _t10
 	_t3 := _t4
 	ted := _t3
+	_t2 := _t2 mod 322
+	_t2 := _t2 / 3232.200000
+	_t2 := _t2 real div 3232.200000
 	_t2 := _t2 mod 322
 	_t1 := _t2
 	_t0 := _t1
@@ -457,6 +485,8 @@ _L3:
 	_t6 := _t7
 	_t0 := _t1 = _t6
 	if _t0 goto _L6
+	_t5 := tom / d
+	_t5 := tom real div d
 	_t4 := _t5
 	_t3 := _t4
 	ted := _t3
@@ -474,13 +504,17 @@ _L8:
 _L5:
 	_t5 := derp mod c
 	_t23 := inttoreal a
-	_t18 := b / _t23
+	_t25 := inttoreal a
+	_t18 := b / _t25
+	_t18 := b real / _t25
+	_t4 := _t5 real + _t18
 	_t44 := 30
 	_t43 := _t44
 	_t42 := _t43
 	_t40 := _t42 int - 0
 	_t41 := _t40 int * 8
 	_t39 := omg[_t41]
+	_t4 := _t4 real - _t31
 	_t3 := _t4
 	derp := _t3
 	return
@@ -547,6 +581,7 @@ __bob_bosstweed:
 	_t46 := aaaaaaa
 	_t45 := uminus _t46
 	_t52 := 3.300000
+	_t45 := _t46 real + _t52
 	_t44 := _t45
 	_t35 := _t36
 	_t34 := _t35
@@ -557,6 +592,9 @@ __bob_bosstweed:
 	_t61 := _t62
 	_t33 := _t34 mod _t61
 	_t25 := _t26
+	_t2 := _t2 / 32.100000
+	_t2 := _t2 real / 32.100000
+	_t1 := _t2
 	_t79 := 0.032232
 	_t78 := _t79
 	_t0 := _t1 <> _t78

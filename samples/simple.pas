@@ -18,6 +18,6 @@ begin
             end
         else
             e := c[31];
-    d[10] := c[d[c[3 mod 4]]]
+        d[10] := c[d[c[3 mod 4]]]
     end
 end.

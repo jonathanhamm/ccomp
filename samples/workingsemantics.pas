@@ -27,7 +27,7 @@ procedure bob (a : integer; b : real; c : real);
 		zomg := +32 + 3;
         call omgAliens(1*4, 32.32E3, 23.23);
 		omg[32] := -omg[32];
-		herp[22*23232.3] := +omg[23];
+		herp[22*23232] := +omg[23];
 		while d <> ted do
 		begin
 			ted := d-1;
@@ -36,7 +36,7 @@ procedure bob (a : integer; b : real; c : real);
 			begin 
 				ted := tom div d;
                 zomg := 33333;
-				tom := tom * d
+				tom := tom * a
 			end
 		end;
 		derp := tom mod a + b/a - ted*omg[30]
@@ -56,8 +56,8 @@ begin
 	begin
 		if omg[24] = 39 then
 		begin
-			call bob(100, 32.1+omg[33*omg[3*a]], ted*323 div (32 mod 3343));
-			if omg[24*ted] < 5 then
+			call bob(100, 32.1+omg[33*WAHAHA[3*a]], ted*323 div (32 mod 3343));
+			if omg[24*tom] < 5 then
 				omg[24 div 10] := 38
 			else
 			begin
@@ -68,15 +68,15 @@ begin
 			end
 		end;
 		if not WAHAHA[24 div 10] <> 32.2 then
-			call bob(WAHAHA[8 mod a]*323 or 32 mod 3343, 32.1+omg, 32.1)
+			call bob(WAHAHA[8 mod a]*323 or 32 mod 3343, 32.1+omg[8 mod 4], 32.1)
 		else
 		begin
 			omg[32] := a and WAHAHA[323*WAHAHA[32]] or (32 + 23);
 			while not (+(-(32+444))) > omg[33] do
-				omg := +3232.1 * omg
+				omg[2] := +3232.1 * omg[3]
 			;
 			if not (-32+32) then
-				call bob (not 2323, -34 < omg[32.1], +23+3 <> omg[32])
+				call bob (not 2323, -34 < omg[32], +23+3 <> omg[32])
 			else if 32.1 then
 				call bob (3,33.2,33.1)
 		end
@@ -106,8 +106,8 @@ integer; omgomgomg : real);
 var hahah : array[12..3124] of real;
 var aaa : integer;
 begin
-	if not aaa*omnomnom*omgomgomg*(aaa+(omnomnom*(-aaaaaaa+3.3)*32)
-	 mod (33+23*4 or 3))/32.1 <> 32.232E-3 then
+	if not (aaa*omnomnom*omgomgomg*(aaa+(omnomnom*(-aaaaaaa+3.3)*32)
+	 div (33+23*4 or 3))/32.1 <> 32.232E-3) then
 		call bosstweed (3423.2 , 33, 234.2)
 	else
 		call bosstweed (34.2 , omnomnom, 234*2.2)

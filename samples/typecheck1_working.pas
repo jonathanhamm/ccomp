@@ -1,6 +1,6 @@
 program bob (input, output);
 var a : integer; var c : real; var d : array[2332..3232] of real;
-var torquemada : array[32..2332] of integer; var putin : array[333..32322] of real;
+var torquemada : array[32..2332] of integer; var putin : array[14..1000] of real;
 var kimjongun : array[13..1000] of real;
 var kimjongil : array[14..1000] of real;
 var bosstweed : array[1..1000] of real;
@@ -8,12 +8,12 @@ procedure lolwut (a : integer; b : real; c : real; kimjongil : array[14..1000] o
 bosstweed : array[1..1000] of real);
     begin
         if a <> b then
-            a := a * b
+            a := a * a
         ;
         kimjongil[a*a+a] := 333*34;
         b := c*b*a*c/3;
-        kimjongil := bosstweed;
-        c := kimjongil[a*b]
+        kimjongil := putin;
+        c := kimjongil[a*a]
     end;
 begin
     a := 3;
@@ -23,7 +23,7 @@ begin
         begin
             while a < c do
                 begin
-                    a := a*32*c;
+                    a := a*32*a;
                     c := a*23*23/4*32/23
                 end
 end;
