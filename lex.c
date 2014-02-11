@@ -1883,8 +1883,8 @@ void add_id(char *id, sem_type_s type, bool islocal)
         }
     }
     else if(type.type == ATTYPE_ARRAY) {
-        difference = type.high - type.low;
-        if(difference < 0)
+        difference = type.high - type.low+1;
+        if(difference <= 0)
             difference = 0;
         if(!strcmp(type.str_, "integer")) {
             if(islocal) {

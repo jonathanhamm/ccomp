@@ -119,7 +119,7 @@ int main(int argc, const char *argv[])
     }
     
     parse(p, lextok, gen);
-    print_listing(p->listing, listing);
+    print_listing(p->listing, stdout);
     free_listing(p->listing);
     print_scope(scope);
     fclose(gen);
