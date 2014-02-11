@@ -69,12 +69,12 @@ static void print_usage (const char *message, const char *curr);
 
 int main(int argc, const char *argv[])
 {
-    char *outname, *scopename;
+    char *outname, *scopename, *listingname;
     files_s files;
     argtok_s *list;
     lextok_s lextok;
     parse_s *p;
-    FILE *gen, *scope;
+    FILE *gen, *scope, *listing;
     
     list = arg_tokenize(argc, argv);
     files = argsparse_start(&list);
@@ -106,12 +106,25 @@ int main(int argc, const char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    listingname = malloc(strlen(files.source)+6);
+    if(!listingname) {
+        perror("Memory Allocation Error");
+        exit(EXIT_FAILURE);
+    }
+    sprintf(listingname, "%s.list", files.source);
+    listing = fopen(listingname, "w");
+    if(!listing){
+        perror("Error Creating File");
+        exit(EXIT_FAILURE);
+    }
+    
     parse(p, lextok, gen);
-    print_listing(p->listing, stdout);
+    print_listing(p->listing, listing);
     free_listing(p->listing);
     print_scope(scope);
     fclose(gen);
     fclose(scope);
+    fclose(listing);
     free(outname);
     return 0;
 }

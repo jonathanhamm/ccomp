@@ -568,7 +568,6 @@
 
             if <term'>[1].type <> void then
                 <term'>.type := <term'>[1].type
-                print(<term'>[1].type)
             end
             if (mulop.entry = "/") or (mulop.entry = "div") then
                 emit(<term'>.place1, " := ", <term'>.place2, " / ", <factor>.fplace)
@@ -576,8 +575,7 @@
                 if <term'>.type = integer then
                     if mulop.entry = mod then
                         emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.fplace)
-                        <term'>.hit := true
-                    else
+                     else
                         emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
                     end
                 elif <term'>.type = real then
@@ -589,8 +587,6 @@
                 else
                     if mulop.entry = mod then
                         emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.fplace)
-                        if <term'>.hit <> null then
-                        end
                     else
                         emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
                     end
@@ -645,7 +641,7 @@
     {
         <factor>.type := <factor>[1].type
         if <factor>.type <> integer then
-            error(bob, "Incompatible type used in logical not")
+            error("not", "Incompatible type used in logical not")
             <factor>.type := integer
         end
 
