@@ -380,7 +380,6 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
     s.str_ = NULL;
     s.low = 0 ;
     s.high = 0;
-    
     if(!token->stype) {
         res = idtable_lookup(parse->lex->idtable, token->lexeme);
         if(res.is_found) {
@@ -390,7 +389,6 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
         else {
             s.type = ATTYPE_CODE;
             if((match = lex_matches(parse->lex, "addop", token->lexeme)).matched) {
-                puts("addop");
                 switch(match.attribute){
                     case LEXATTR_PLUS:
                         s.str_ = "+";
@@ -407,7 +405,6 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
                 }
             }
             else if((match = lex_matches(parse->lex, "mulop", token->lexeme)).matched) {
-                puts("mulop");
                 switch(match.attribute){
                     case LEXATTR_MULT:
                         s.str_ = "*";
@@ -428,7 +425,6 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
                 }
             }
             else if((match = lex_matches(parse->lex, "relop", token->lexeme)).matched) {
-                puts("relop");
                 switch(match.attribute) {
                     case LEXATTR_EQ:
                         s.str_ = "=";
@@ -454,45 +450,36 @@ sem_type_s sem_type_s_(parse_s *parse, token_s *token)
                 }
             }
             else if (!strcmp(token->lexeme, "integer")) {
-                puts("integer 1");
                 s.type = ATTYPE_ID;
-            
                 s.str_ = "integer";
             }
             else if (!strcmp(token->lexeme, "real")) {
-                puts("real 1");
                 s.type = ATTYPE_ID;
                 s.str_ = "real";
             }
             else {
-                puts("id 1");
                 s.type = ATTYPE_ID;
                 s.str_ = token->lexeme;
             }
         }
     }
     else if(!strcmp(token->stype, "integer")) {
-        puts("integer");
         s.type = ATTYPE_ID;
         s.str_ = "integer";
     }
     else if(!strcmp(token->stype, "real")) {
-        puts("real");
         s.type = ATTYPE_ID;
         s.str_ = "real";
     }
     else {
-        puts("id");
         s.type = ATTYPE_ID;
         s.str_ = token->lexeme;
     }
-    //s.lexeme = token->lexeme;
     return s;
 }
 
 void print_semtype(sem_type_s value)
 {
-    //printf("printing value: ");
     switch (value.type) {
         case ATTYPE_NUMINT:
             printf("%ld", value.int_);
@@ -531,8 +518,6 @@ void print_semtype(sem_type_s value)
             /*illegal*/
             break;
     }
-   // puts("\n~~~~~~~~~~~~~~~\n");
-    fflush(stdout);
 }
 
 test_s test_semtype(sem_type_s value)
@@ -566,7 +551,6 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
 {
     uint32_t i;
     lextok_s ltok;
-    token_s *iter;
     static unsigned anlineno = 0;
     static unsigned last;
     
@@ -583,11 +567,6 @@ uint32_t cfg_annotate (token_s **tlist, char *buf, uint32_t *lineno, void *data)
     while ((*tlist)->next)
         *tlist = (*tlist)->next;
     last = *lineno;
-    puts("\n\n-------------------------------------------------------------------------------");
-    for(iter = ltok.tokens; iter; iter = iter->next)
-        printf("sem token: %s %d %u\n", iter->lexeme, iter->type.val, SEMTYPE_CODE);
-    puts("-------------------------------------------------------------------------------\n\n");
-
     return i;
 }
 
@@ -657,7 +636,6 @@ pnode_s *getpnode_nterm_copy(pna_s *pn, char *lexeme, unsigned index)
     
     for (i = 0, j = 1; i < pn->size; i++) {
         if (!strcmp(pn->array[i].token->lexeme, lexeme)) {
-            printf("passed: %u %u\n", i, index);
             if (j == index)
                 return &pn->array[i];
             i++;
@@ -688,7 +666,6 @@ sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, s
     result.str_ = NULL;
     if(op != OPTYPE_NOP) {
         if(v1.type == ATTYPE_NULL) {
-            puts("COMPARING A NULL");
             if(op == OPTYPE_EQ) {
                 result.type = ATTYPE_NUMINT;
                 result.int_ = ((v2.type == ATTYPE_NOT_EVALUATED) || (v2.type == ATTYPE_NULL));
@@ -701,7 +678,6 @@ sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, s
             return result;
         }
         if(v2.type == ATTYPE_NULL) {
-            puts("COMPARING A NULL");
             if(op == OPTYPE_EQ) {
                 result.type = ATTYPE_NUMINT;
                 result.int_ = ((v1.type == ATTYPE_NOT_EVALUATED) || (v1.type == ATTYPE_NULL));
@@ -716,7 +692,6 @@ sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, s
         if (v1.type == ATTYPE_NOT_EVALUATED || v2.type == ATTYPE_NOT_EVALUATED) {
             result.type = ATTYPE_NOT_EVALUATED;
             result.str_ = "null";
-            puts("Not Evaluated");
             result.tok = tok_lastmatched;
             return result;
         }
@@ -724,7 +699,6 @@ sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, s
             result.type = ATTYPE_NULL;
             result.str_ = "null";
             result.tok = tok_lastmatched;
-      //      puts("Not Evaluated");
             return result;
         }
     }
@@ -884,7 +858,6 @@ sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, s
                 result.int_ = (v2.type == ATTYPE_ARRAY && v1.low == v2.low && v1.high == v2.high);
             }
             else if((v1.type == ATTYPE_ARGLIST_FORMAL || v1.type == ATTYPE_ARGLIST_ACTUAL) || (v2.type == ATTYPE_ARGLIST_FORMAL || v2.type == ATTYPE_ARGLIST_ACTUAL)) {
-                printf("\ntypes: %u %u v1: %u -- v2: %u\n", ATTYPE_ARGLIST_ACTUAL, ATTYPE_ARGLIST_FORMAL, v1.type, v2.type);
                 if(v1.type == ATTYPE_ARGLIST_FORMAL)
                     result.int_ = arglist_cmp(curr, parse, tok, v1, v2);
                 else
@@ -953,7 +926,6 @@ sem_type_s sem_op(token_s **curr, parse_s *parse, token_s *tok, sem_type_s v1, s
             break;
     }
     result.tok = tok_lastmatched;
-    putchar('\n');
     return result;
 }
 
@@ -1498,7 +1470,6 @@ sem_factor_s sem_factor(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda
                     factor.value.type = ATTYPE_NUMINT;
                     break;
                 case ATTYPE_NULL:
-                    printf("null value\n");
                     break;
                 default:
                     perror("Illegal State");
@@ -1798,7 +1769,7 @@ bool sem_match(token_s **curr, int type)
         return true;
     }
     fprintf(stderr, "Syntax Error at line %d: Got %s\n", (*curr)->lineno, (*curr)->lexeme);
-    asm("hlt");
+    assert(false);
     return false;
 }
 
@@ -1847,10 +1818,8 @@ sem_type_s getatt(semantics_s *s, char *id)
         return dummy;
     
     data = hashlookup(s->table, id);
-    if (!data) {
-        puts("Access to unitialized attribute.");
+    if (!data)
         return dummy;
-    }
     return *data;
 }
 
@@ -2049,12 +2018,10 @@ void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
 {
     if(!eval)
         return NULL;
-    
     printf("Halt Called in %s\n", pda->nterm->lexeme);
     fflush(stderr);
     fflush(stdout);
-  //  assert(false);
-    asm("hlt");
+    assert(false);
 }
 
 void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
@@ -2073,7 +2040,6 @@ void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s 
         if((type.type == ATTYPE_NULL || !check_id(p->matched->lexeme).isfound) && eval && isfinal) {
             add_semerror(parse, p->matched, "undeclared identifier");
         }
-        print_semtype(type);
         return alloc_semt(type);
     }
     return NULL;
@@ -2092,21 +2058,14 @@ void *sem_print(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
         node = llpop(&params.pstack);
         val = node->ptr;
         free(node);
-        
-        printf("%u %u %u %u\n", val->type, ATTYPE_NUMINT, ATTYPE_NUMREAL, ATTYPE_ID);
-        
-        print_semtype(*val);
-        putchar('\n');
         free(val);
     }
-    printf("exiting sem print\n");
     return NULL;
 }
 
 void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
     llist_s *node;
-    pnode_s *pnode;
     sem_type_s *t, *id;
     token_s *temp;
     bool declared;
@@ -2142,8 +2101,6 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
     else {
         t->tok = id->tok;
         if(!declared) {
-            printf("%u %u %u %u\n", ATTYPE_NOT_EVALUATED, ATTYPE_NULL, ATTYPE_ARGLIST_FORMAL, ATTYPE_ARGLIST_ACTUAL);
-            fflush(stdout);
            if(t->type != ATTYPE_ARGLIST_FORMAL)
                 add_id(id->lexeme, *t, true);
         }
@@ -2158,7 +2115,6 @@ void *sem_addtype(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s
 void *sem_addarg(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s *p, sem_paramlist_s params, unsigned pass, sem_type_s *type, bool eval, bool isfinal)
 {
     llist_s *node;
-    pnode_s *pnode;
     sem_type_s *t, *id, test;
     token_s *temp;
     bool declared;
@@ -2177,10 +2133,6 @@ void *sem_addarg(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, parse_s
     id = node->ptr;
     free(node);
     
-    //  pnode = getpnode_nterm_copy(pn, id->str_, 1);
-    //print_semtype(*t);
-    putchar('\n');
-    //for(;;)printf("%s\n", t->lexeme);
     declared = check_redeclared(id->lexeme);
     test = gettype(p->lex, id->lexeme);
     if(declared && (test.type != ATTYPE_NOT_EVALUATED && test.type != ATTYPE_NULL)) {
@@ -2221,22 +2173,7 @@ void *sem_listappend(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pna, par
     arglist = listparam->ptr;
     free(listparam);
     
-    printf("enqueing: %p to %p in ", arg, arglist->q);
-    if(arglist->type == ATTYPE_ARGLIST_ACTUAL)
-        puts("actual paramater.");
-    else
-        puts("formal parameter.");
-    
-    
     enqueue(arglist->q, arg);
-    
-    llist_s *iter = arglist->q->head;
-    for(; iter; iter = iter->next) {
-        print_semtype(*(sem_type_s *)iter->ptr);
-        printf(", ");
-    }
-    puts("");
-
     hashinsert(grammar_stack->ptr, *curr, *curr);
     
     return NULL;
@@ -2545,7 +2482,6 @@ sem_action_f get_semaction(char *str)
 {
     ftable_s *rec;
     
-    printf("%lu, %lu\n", FTABLE_SIZE, sizeof(ftable[0]));
     rec = bsearch(str, ftable, FTABLE_SIZE, sizeof(*ftable), (int (*)(const void *, const void *))ftable_strcmp);
     if (!rec) {
         fprintf(stderr, "Error: Undefined function: %s\n", str);
