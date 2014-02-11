@@ -6,15 +6,15 @@ var d : array[1..11] of integer;
 var e : real;
 var f : array[1..10] of real;
 begin
-    c := d;
+    c := c;
     b := f;
     while a + b[a] <= 10 do
     begin
-        a := a + b[a];
+        a := a + c[a+1];
         if a = e then
             begin
                 e := c[32];
-                c[31] := e
+                c[31] := d[e <> 2]
             end
         else
             e := c[31];
