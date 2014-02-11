@@ -1,4 +1,5 @@
 __bob:
+	_begin_program
 	_t5 := 3.300000
 	_t4 := _t5
 	_t3 := _t4
@@ -20,11 +21,6 @@ __bob:
 	_t25 := _t27 int - 1
 	_t26 := _t25 int * 8
 	_t24 := herp[_t26]
-	_t23 := _t24
-	_t21 := inttoreal _t23
-	_t7 := _t7 real + _t23
-	_t7 := _t7 real + _t14
-	_t7 := _t8 real + _t11
 	_t6 := _t7
 	k[_t2] := _t6
 	_t5 := tom
@@ -39,10 +35,6 @@ __bob:
 	_t10 := _t10 int + _t17
 	_t23 := 432
 	_t10 := _t10 int + _t23
-	_t32 := 3 int * 3
-	_t39 := inttoreal _t32
-	_t32 := _t39 real * 3.300000
-	_t32 := 3 real * 3
 	_t31 := _t32
 	_t30 := _t31
 	_t28 := _t30 int - 1
@@ -90,7 +82,6 @@ __bob:
 	_t4 := _t6 int - 1
 	_t5 := _t4 int * 4
 	_t3 := KimJongUn[_t5]
-	_t2 := _t3 int * tom
 	_t1 := _t2
 	_t0 := _t1
 	push _t0
@@ -129,7 +120,6 @@ __bob:
 	_t38 := _t40 int - 1
 	_t39 := _t38 int * 4
 	_t37 := KimJongUn[_t39]
-	_t36 := _t37 int * tom
 	_t35 := _t36
 	_t34 := _t35
 	_t32 := _t34 int - 1
@@ -171,14 +161,8 @@ __bob:
 __bob_lolwut:
 	_beginfunc
 	_t5 := b
-	_t18 := inttoreal 4
-	_t11 := c real * _t18
-	_t22 := inttoreal 3
-	_t11 := _t11 real * _t22
 	_t24 := inttoreal 3
 	_t11 := _t11 / _t24
-	_t4 := _t5 real + _t11
-	_t4 := _t5 int + _t11
 	_t3 := _t4
 	a := _t3
 	_t5 := b
@@ -275,7 +259,6 @@ __bob_lolwat_lulwut:
 	_t22 := 33
 	_t21 := _t22
 	_t15 := _t16 <> _t21
-	_t2 := _t3 real and _t15
 	_t1 := _t2
 	_t0 := _t1
 	if _t0 goto _L0

@@ -999,6 +999,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
     sem_paramlist_s params;
     semantics_s *in = NULL;
     test_s test;
+    token_s *ct;
     
     switch((*curr)->type.val) {
         case SEMTYPE_NONTERM:
@@ -1009,29 +1010,11 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             id = idsuffix.dot.id;
             sem_match(curr, SEMTYPE_ASSIGNOP);
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result, isfinal);
-            
             if (evaluate.result && evaluate.evaluated && expression.value.type != ATTYPE_NOT_EVALUATED) {
-
                 if(!strcmp(pda->nterm->lexeme, nterm) && !idsuffix.factor_.isset) {
                     if(syn) {
                         setatt(syn, id, alloc_semt(expression.value));
                     }
-                    else {
-                        //Nasty hack to fix the attribute system when assigning data to the current nonterminal production.
-                      /*  if(pn->curr) {
-                            if(!pn->curr->in) {
-                                pn->curr->in = semantics_s_(parse, NULL);
-                                pn->curr->in->n = malloc(sizeof(*pn->curr->in->n));
-                                if(!pn->curr->in->n) {
-                                    perror("Memory Allocation Error");
-                                    exit(EXIT_FAILURE);
-                                }
-                                pn->curr->in->n->token = pda->nterm;
-                            }
-                            setatt(pn->curr->in, id, alloc_semt(expression.value));
-                        }*/
-                    }
-                    
                 }
                 else {
                     /* Setting inherited attributes */
@@ -1049,6 +1032,7 @@ sem_statement_s sem_statement(parse_s *parse, token_s **curr, llist_s **il, pda_
             }
             break;
         case SEMTYPE_IF:
+            ct = *curr;
             *curr = (*curr)->next;
             expression = sem_expression(parse, curr, il, pda, prod, pn, syn, pass, evaluate.evaluated && evaluate.result, isfinal);
             sem_match(curr, SEMTYPE_THEN);
@@ -1105,7 +1089,7 @@ sem_elif_s sem_elif(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, pr
     sem_match(curr, SEMTYPE_THEN);
     test = test_semtype(expression.value);
     sem_statements(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated && evaluate.result, .result = evaluate.result && test.result && !elprev}, false, isfinal);
-    sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result}, test.result || elprev, isfinal);
+    sem_else(parse, curr, il, pda, prod, pn, syn, pass, (test_s){.evaluated = test.evaluated && evaluate.evaluated, .result = evaluate.result && test.result}, test.result || elprev, isfinal);
 }
 
 sem_expression_s sem_expression(parse_s *parse, token_s **curr, llist_s **il, pda_s *pda, production_s *prod, pna_s *pn, semantics_s *syn, unsigned pass, bool eval, bool isfinal)

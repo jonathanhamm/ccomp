@@ -1,6 +1,8 @@
 program bob (input, output);
 var a : integer; var c : real; var d : array[2332..3232] of real;
 var torquemada : array[32..2332] of integer; var putin : array[333..32322] of real;
+var kimjongun : array[13..1000] of real;
+var bosstweed : array[1..1000] of real;
 procedure lolwut (a : integer; b : real; c : real; kimjongil : array[14..1000] of real; bosstweed : array[1..1000] of real);
     begin
         if a <> b then
@@ -39,6 +41,7 @@ end;
                         call lolwut(2332+32+32+a+c, 32*a*c*putin[32+32]);
                         putin[3232] := 2332+a
                     end;
-                call lolwut(a+888.888)
+                call lolwut(a+888.888);
+                call lolwut(1, 1.1, 3.3, kimjongun, bosstweed)
             end
 end.

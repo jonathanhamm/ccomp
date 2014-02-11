@@ -1938,13 +1938,13 @@ void print_frame(FILE *f, scope_s *s)
     scope_entry_s entries[s->nentries];
     
     print_indent(f);
-    fputs("==========================================\n", f);
+    fputs("=================================================\n", f);
     print_indent(f);
-    fputs("==========================================\n", f);
+    fputs("=================================================\n", f);
     print_indent(f);
     fprintf(f, "\tPrinting Addresses for Frame: %s\n", s->id);
     print_indent(f);
-    fputs("==========================================\n", f);
+    fputs("=================================================\n", f);
     for(i = 0; i < s->nentries; i++)
         entries[i] = s->entries[i];
     qsort(entries, s->nentries, sizeof(*entries), entry_cmp);
@@ -1955,25 +1955,25 @@ void print_frame(FILE *f, scope_s *s)
         fprintf(f, "\t%16s: %8d\n", entries[i].entry, entries[i].address);
         if(i + 1  < s->nentries && entries[i+1].address == 0){
             print_indent(f);
-            fputs("==========================================\n", f);
+            fputs("=================================================\n", f);
         }
         else{
             print_indent(f);
-            fputs("------------------------------------------\n", f);
+            fputs("-------------------------------------------------\n", f);
         }
     }
     print_indent(f);
     fputs("\t\t<Frame Pointer>\n", f);
     print_indent(f);
-    fputs("==========================================\n", f);
+    fputs("=================================================\n", f);
     while(i < s->nentries) {
         print_indent(f);
         fprintf(f, "\t%16s:  %8d\n", entries[i].entry, entries[i].address);
         print_indent(f);
         if(i < s->nentries-1)
-            fputs("------------------------------------------\n", f);
+            fputs("-------------------------------------------------\n", f);
         else
-            fputs("==========================================\n", f);
+            fputs("=================================================\n", f);
         i++;
     }
 }
