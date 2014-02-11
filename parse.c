@@ -122,7 +122,7 @@ parse_s *build_parse(const char *file, lextok_s lextok)
 {
     lex_s *semantics;
     parse_s *parse;
-    token_s *list, *head, *iter;
+    token_s *list, *head;
     llist_s *firsts;
     FILE *fptable, *firfol;
     
@@ -148,7 +148,6 @@ parse_s *build_parse(const char *file, lextok_s lextok)
     fclose(fptable);
     fclose(firfol);
     match_phase(lextok, head);
-    print_listing(semantics->listing, stdout);
     parse->lex = lextok.lex;
     return parse;
 }
@@ -182,7 +181,6 @@ void match_phase(lextok_s regex, token_s *cfg)
             if (type.val != LEXTYPE_ERROR)
                 cfg->type.val = type.val;
         }
-        //assert(cfg->type.val < 100);
     }
 }
 

@@ -574,7 +574,7 @@ void prx_tokens_(lex_s *lex, token_s **curr, int *count)
         free(mcurr);
     }
 }
-/*********************************** EXPERIMENTAL NEW ROUTINES *************************************/
+
 static inline nfa_s *nfa_(void)
 {
     return calloc(1, sizeof(nfa_s));
@@ -1748,8 +1748,6 @@ void push_scope(char *id)
     scope_s *s;
     sem_type_s init = {0};
     
-    
-    printf("scope pushed: %s\n", id);
     init.type = ATTYPE_NOT_EVALUATED;
     s = calloc(1, sizeof(*s));
     if(!s) {
