@@ -456,6 +456,12 @@
             error(addop, "Invalid type used in addop expression")
             <term>.fplace := <term>.place
         end
+        if addop.entry = "or" then
+            if (<simple_expression'>.in <> integer) or (<term>.type <> integer) then
+                error(addop, "Non-integer type used in logical or")
+            end
+        end
+
         if <simple_expression'>[1].type <> void then
             <simple_expression'>.type := <simple_expression'>[1].type
         end
@@ -548,6 +554,12 @@
                     <factor>.fplace := <factor>.place
                 end
             end
+            if mulop.entry = "and" then
+                if (<term'>.in <> integer) or (<factor>.type <> integer) then
+                    error(addop, "Non-integer type used in logical and")
+                end
+            end
+
             if <term'>[1].type <> void then
                 <term'>.type := <term'>[1].type
                 print(<term'>[1].type)
