@@ -897,6 +897,7 @@ void parse(parse_s *parse, lextok_s lex, FILE *out)
         sprintf(synerr, SYNERR_PREFIX "EOF but got %s", lex.tokens->lineno, lex.tokens->lexeme);
         synerr[errsize-1] = '\n';
         adderror(parse->listing, synerr, lex.tokens->lineno);
+        panic_recovery(parse->start->follows, &lex.tokens);
     }
     write_code();
 }
@@ -966,12 +967,12 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                     result = get_production(parse->parse_table, nterm, curr);
                     if (result < 0) {
                         adderror(parse->listing, make_synerr(nterm, curr), (*curr)->lineno);
-                        success = NULL;
+                        panic_recovery(pda->follows, curr);
                         if ((*curr)->type.val == LEXTYPE_EOF) {
                             grstack_pop();
                             return NULL;
                         }
-                        *curr = (*curr)->next;
+                        panic_recovery(pda->follows, curr);
                     }
                     else {
                         /*
@@ -981,12 +982,6 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                         pcp->curr = &pcp->array[i];
                         child_inll = sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass, false);
                         child_in = llremove_(&child_inll, find_in, pnode);
-                        if(child_in) {
-                            //print_hash(child_in->table, print_pnode_hash);
-                            //puts("\n--\n");
-                            //print_pnode_hash
-                        }
-                        
                         pcp->curr->syn = nonterm(parse, child_in, pnode, machs, curr, nterm, result);
                         pnode->pass = true;
                         sem_start(NULL, parse, machs, pda, &pda->productions[index], pcp, synhash, ++pass, false);
@@ -1008,12 +1003,11 @@ semantics_s *nonterm(parse_s *parse, semantics_s *in, pnode_s *pnterm, mach_s *m
                         sprintf(synerr, SYNERR_PREFIX "%s but got %s", (*curr)->lineno, pnode->token->lexeme, (*curr)->lexeme);
                         synerr[errsize-1] = '\n';
                         adderror(parse->listing, synerr, (*curr)->lineno);
-                        success = false;
                         if ((*curr)->type.val == LEXTYPE_EOF) {
                             grstack_pop();
                             return NULL;
                         }
-                        *curr = (*curr)->next;
+                        panic_recovery(pda->follows, curr);
                     }
                 }
             }
