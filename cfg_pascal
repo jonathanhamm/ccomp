@@ -575,7 +575,6 @@
                 if <term'>.type = integer then
                     if mulop.entry = mod then
                         emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.fplace)
-                        <term'>.hit := true
                      else
                         emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
                     end
@@ -588,9 +587,6 @@
                 else
                     if mulop.entry = mod then
                         emit(<term'>.place1, " := ", <term'>.place2, " ", mulop.entry, " ", <factor>.fplace)
-                        if <term'>.hit = true then
-                            halt()
-                        end
                     else
                         emit(<term'>.place1, " := ", <term'>.place2, " int ", mulop.entry, " ", <factor>.fplace)
                     end

@@ -1850,7 +1850,6 @@ void *sem_array(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *
 void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
 {
     int c;
-    size_t lsize = 32;
     char *out = NULL;
     size_t len;
     llist_s *iter;
@@ -1868,7 +1867,6 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
         while((iter = llpop(&params.pstack))) {
             val = iter->ptr;
             free(iter);
-            
             
             if(!gotfirst) {
                 if(val->type == ATTYPE_ID) {
@@ -2020,7 +2018,8 @@ void *sem_halt(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
     printf("Halt Called in %s\n", pda->nterm->lexeme);
     fflush(stderr);
     fflush(stdout);
-    assert(false);
+    //assert(false);
+    asm("hlt");
 }
 
 void *sem_lookup(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *parse, sem_paramlist_s params, unsigned pass, void *fill, bool eval, bool isfinal)
