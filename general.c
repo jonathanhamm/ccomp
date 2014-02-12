@@ -26,6 +26,7 @@ static void printline(char *buf, FILE *stream);
 static void llpush_(llist_s **list, llist_s *node);
 static bool default_eq(void *k1, void *k2);
 static int ndouble_digits(double val);
+static int nint_digits(long val);
 
 long safe_atol (char *str)
 {
@@ -570,11 +571,10 @@ void safe_addstring(char **buf, char *str)
 
 void safe_addint(char **buf, long val)
 {
-    int i;
     char *base;
     size_t currlen, newlen;
     
-    newlen = FS_INTWIDTH_DEC(val)+1;
+    newlen = nint_digits(val)+1;
     if(!*buf) {
         currlen = 0;
         *buf = malloc(newlen);
@@ -599,7 +599,6 @@ void safe_addint(char **buf, long val)
 
 void safe_adddouble(char **buf, double val)
 {
-    int i;
     char *base;
     size_t currlen, newlen;
     
@@ -631,6 +630,13 @@ int ndouble_digits(double val)
     char buf[128];
     
     return sprintf(buf, "%f", val);
+}
+
+int nint_digits(long val)
+{
+    char buf[128];
+    
+    return sprintf(buf, "%ld", val);
 }
 
 queue_s *queue_s_(void)

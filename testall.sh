@@ -1,3 +1,5 @@
+make
+
 sources=$(find samples | grep '\.pas$')
 
 for i in $sources; do
