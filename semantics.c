@@ -321,7 +321,6 @@ static sem_type_s sem_newlabel(token_s **curr);
 static char *scoped_label(void);
 
 static void write_code_(scope_s *s);
-
 extern void print_semtype(sem_type_s value);
 
 /* Must be alphabetized */
@@ -1887,7 +1886,6 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                 safe_addstring(&line, "\t");
                 gotfirst = true;
             }
-            
             switch(val->type) {
                 case ATTYPE_CODE:
                     len = strlen(val->str_);
