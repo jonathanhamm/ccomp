@@ -28,7 +28,7 @@ __bomb:
 	return
 
 
-Feb 12 11:32 2014 samples/lex_error1.pas.tac Page 1
+Feb 12 14:24 2014 samples/lex_error1.pas.tac Page 1
 
 
 __bomb:					    _t3 := _t4
