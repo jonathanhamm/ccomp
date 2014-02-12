@@ -31,7 +31,7 @@ __bob:
 	_t5 := tom
 	_t4 := _t5
 	_t3 := _t4
-	_t1 := _t3 int -1
+	_t1 := _t3 int - 1
 	_t2 := _t1 int * 8
 	_t11 := 1
 	_t14 := 32
@@ -303,7 +303,7 @@ _L2:
 	return
 
 
-Feb 12 16:40 2014 samples/smallworking.pas.tac Page 1
+Feb 12 16:52 2014 samples/smallworking.pas.tac Page 1
 
 
 __bob:					    _t10 := _t11 real + _t14
@@ -339,7 +339,7 @@ __bob:					    _t10 := _t11 real + _t14
 	_t5 := tom			    _t8 := 3
 	_t4 := _t5			    _t11 := 3
 	_t3 := _t4			    _t7 := _t8 int + _t11
-	_t1 := _t3 int -1		    _t6 := _t7
+	_t1 := _t3 int - 1		    _t6 := _t7
 	_t2 := _t1 int * 8		    _t4 := _t6 int - 1
 	_t11 := 1			    _t5 := _t4 int * 4
 	_t14 := 32			    _t3 := KimJongUn[_t5]
@@ -369,7 +369,7 @@ __bob:					    _t10 := _t11 real + _t14
 
 
 
-Feb 12 16:40 2014 samples/smallworking.pas.tac Page 2
+Feb 12 16:52 2014 samples/smallworking.pas.tac Page 2
 
 
 	_t57 := _t56 int * 4		    _t0 := _t1
@@ -435,7 +435,7 @@ Feb 12 16:40 2014 samples/smallworking.pas.tac Page 2
 
 
 
-Feb 12 16:40 2014 samples/smallworking.pas.tac Page 3
+Feb 12 16:52 2014 samples/smallworking.pas.tac Page 3
 
 
 	_t4 := _t5			    _t2 := _t3 int and _t15
@@ -463,7 +463,7 @@ Feb 12 16:40 2014 samples/smallworking.pas.tac Page 3
 	_t2 := 32.230000		    return
 	_t1 := _t2
 	_t0 := _t1
-	push _t0		    Feb 12 16:40 2014 samples/smallwork
+	push _t0		    Feb 12 16:52 2014 samples/smallwork
 	call __bob_lolwat_lulwut
 	return
 				    __bob:
@@ -501,7 +501,7 @@ __bob_lolwat_lulwut:			    _begin_program
 
 
 
-Feb 12 16:40 2014 samples/smallworking.pas.tac Page 4
+Feb 12 16:52 2014 samples/smallworking.pas.tac Page 4
 
 
 	_t6 := _t7			    _t47 := _t48
@@ -509,7 +509,7 @@ Feb 12 16:40 2014 samples/smallworking.pas.tac Page 4
 	_t5 := tom			    _t44 := _t46 int - 1
 	_t4 := _t5			    _t45 := _t44 int * 4
 	_t3 := _t4			    _t43 := KimJongUn[_t45]
-	_t1 := _t3 int -1		    _t42 := _t43
+	_t1 := _t3 int - 1		    _t42 := _t43
 	_t2 := _t1 int * 8		    _t41 := _t42
 	_t11 := 1			    _t40 := _t41
 	_t14 := 32			    _t38 := _t40 int - 1
@@ -539,7 +539,7 @@ Feb 12 16:40 2014 samples/smallworking.pas.tac Page 4
 					    _t3 := _t4
 					    tom := _t3
 					    _t18 := 2
-Feb 12 16:40 2014 samples/smallwork	    _t17 := _t18
+Feb 12 16:52 2014 samples/smallwork	    _t17 := _t18
 					    _t16 := _t17
 					    _t14 := _t16 int - 1
 	_t57 := _t56 int * 4		    _t15 := _t14 int * 4

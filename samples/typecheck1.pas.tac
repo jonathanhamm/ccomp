@@ -6,7 +6,6 @@ __bob:
 	a := _t3
 	_t5 := a int * 32
 	_t5 := _t5 mod 4
-	_t5 := _t5 mod 4
 	_t4 := _t5
 	_t3 := _t4
 	_t2 := _t3
@@ -128,7 +127,7 @@ _L9:
 	_t5 := 2
 	_t4 := _t5
 	_t3 := _t4
-	_t1 := _t3 int -2332
+	_t1 := _t3 int - 2332
 	_t2 := _t1 int * 8
 	_t8 := 32
 	_t7 := _t8
@@ -140,7 +139,7 @@ _L10:
 	_t5 := _t5 int * a
 	_t4 := _t5
 	_t3 := _t4
-	_t1 := _t3 int -333
+	_t1 := _t3 int - 333
 	_t2 := _t1 int * 8
 	_t19 := 23.132000
 	_t24 := inttoreal 32
@@ -150,7 +149,6 @@ _L10:
 	_t29 := 342
 	_t28 := inttoreal _t29
 	_t18 := _t18 real + _t28
-	_t35 := 3 mod 44
 	_t35 := 3 mod 44
 	_t34 := _t35
 	_t33 := _t34
@@ -177,7 +175,6 @@ _L12:
 	_t36 := 2332
 	_t39 := 32
 	_t35 := _t36 int + _t39
-	_t45 := 8 mod 4
 	_t45 := 8 mod 4
 	_t44 := _t45
 	_t43 := _t44
@@ -264,7 +261,7 @@ _L13:
 	_t5 := 3232
 	_t4 := _t5
 	_t3 := _t4
-	_t1 := _t3 int -333
+	_t1 := _t3 int - 333
 	_t2 := _t1 int * 8
 	_t8 := 2332
 	_t11 := a
@@ -347,7 +344,7 @@ _L2:
 	_t18 := a
 	_t4 := _t5 int + _t18
 	_t3 := _t4
-	_t1 := _t3 int -14
+	_t1 := _t3 int - 14
 	_t2 := _t1 int * 8
 	_t24 := 333 int * 34
 	_t23 := _t24
@@ -381,17 +378,16 @@ _L2:
 	return
 
 
-Feb 12 16:40 2014 samples/typecheck1.pas.tac Page 1
+Feb 12 16:52 2014 samples/typecheck1.pas.tac Page 1
 
 
-__bob:					    _t3 := _t4
-	_begin_program			    a := _t3
-	_t5 := 3			    _t5 := a int * 23
-	_t4 := _t5			    _t5 := _t5 int * 23
-	_t3 := _t4			    _t18 := inttoreal 4
-	a := _t3			    _t5 := _t5 / _t18
-	_t5 := a int * 32		    _t24 := inttoreal 32
-	_t5 := _t5 mod 4		    _t5 := _t5 real * _t24
+__bob:					    a := _t3
+	_begin_program			    _t5 := a int * 23
+	_t5 := 3			    _t5 := _t5 int * 23
+	_t4 := _t5			    _t18 := inttoreal 4
+	_t3 := _t4			    _t5 := _t5 / _t18
+	a := _t3			    _t24 := inttoreal 32
+	_t5 := a int * 32		    _t5 := _t5 real * _t24
 	_t5 := _t5 mod 4		    _t26 := inttoreal 23
 	_t4 := _t5			    _t5 := _t5 / _t26
 	_t3 := _t4			    _t5 := _t5 real * 23
@@ -440,6 +436,7 @@ _L7:					    _t46 := a
 	_t5 := _t15 real * c		    _t65 := 32
 	_t5 := a real * 32		    _t64 := inttoreal _t65
 	_t4 := _t5			    _t45 := _t45 real + _t64
+	_t3 := _t4			    _t73 := 32
 
 
 
@@ -447,78 +444,75 @@ _L7:					    _t46 := a
 
 
 
-Feb 12 16:40 2014 samples/typecheck1.pas.tac Page 2
+Feb 12 16:52 2014 samples/typecheck1.pas.tac Page 2
 
 
-	_t73 := 32			    _t11 := inttoreal a
-	_t72 := _t73			    _t5 := _t11 real * _t13
-	_t71 := _t72			    _t21 := 3
-	_t69 := _t71 int - 333		    _t20 := inttoreal _t21
-	_t70 := _t69 int * 8		    _t4 := _t5 real + _t20
-	_t68 := putin[_t70]		    _t23 := 32
-	_t67 := _t68			    _t22 := _t23
-	_t66 := _t67			    _t3 := _t4 <> _t22
-	_t44 := _t45 <= _t66		    _t36 := 2332
-	_t43 := _t44			    _t39 := 32
-	_t1 := _t2 int or _t43		    _t35 := _t36 int + _t39
-	_t0 := _t1			    _t45 := 8 mod 4
-	if _t0 goto _L9			    _t45 := 8 mod 4
-	goto _L10			    _t44 := _t45
-_L9:					    _t43 := _t44
-	_t5 := 2			    _t42 := _t43
-	_t4 := _t5			    _t35 := _t35 int + _t42
-	_t3 := _t4			    _t34 := _t35
-	_t1 := _t3 int -2332		    _t32 := _t34 int - 32
-	_t2 := _t1 int * 8		    _t33 := _t32 int * 4
-	_t8 := 32			    _t31 := torquemada[_t33]
-	_t7 := _t8			    _t30 := _t31
-	_t6 := _t7			    _t29 := _t30
-	d[_t2] := _t6			    _t57 := 2323
-	goto _L11			    _t56 := _t57
-_L10:					    _t55 := _t56
-	_t5 := 88 int * 88		    _t53 := _t55 int - 333
-	_t5 := _t5 int * a		    _t54 := _t53 int * 8
-	_t4 := _t5			    _t52 := putin[_t54]
-	_t3 := _t4			    _t51 := _t52
-	_t1 := _t3 int -333		    _t50 := _t51
-	_t2 := _t1 int * 8		    _t28 := _t29 <> _t50
-	_t19 := 23.132000		    _t2 := _t3 int and _t28
-	_t24 := inttoreal 32		    _t69 := 32
-	_t22 := 32 / _t24		    _t68 := _t69
-	_t21 := inttoreal _t22		    _t67 := _t68
-	_t18 := _t19 real + _t21	    _t65 := _t67 int - 333
-	_t29 := 342			    _t66 := _t65 int * 8
-	_t28 := inttoreal _t29		    _t64 := putin[_t66]
-	_t18 := _t18 real + _t28	    _t63 := _t64
-	_t35 := 3 mod 44		    _t62 := _t63
-	_t35 := 3 mod 44		    _t71 := 2332
-	_t34 := _t35			    _t70 := _t71
-	_t33 := _t34			    _t61 := _t62 >= _t70
-	_t32 := _t33			    _t60 := _t61
-	_t31 := inttoreal _t32		    _t1 := _t2 int or _t60
-	_t18 := _t18 real + _t31	    _t83 := 3223
-	_t17 := _t18			    _t86 := 3
-	putin[_t2] := _t17		    _t82 := _t83 int + _t86
-_L12:					    _t81 := _t82
-	_t18 := 2222			    _t79 := _t81 int - 32
-	_t17 := _t18			    _t80 := _t79 int * 4
-	_t16 := _t17			    _t78 := torquemada[_t80]
-	_t14 := _t16 int - 2332		    _t77 := _t78
-	_t15 := _t14 int * 8		    _t76 := _t77
-	_t13 := d[_t15]			    _t88 := 2323
-
-
-
+	_t72 := _t73			    _t21 := 3
+	_t71 := _t72			    _t20 := inttoreal _t21
+	_t69 := _t71 int - 333		    _t4 := _t5 real + _t20
+	_t70 := _t69 int * 8		    _t23 := 32
+	_t68 := putin[_t70]		    _t22 := _t23
+	_t67 := _t68			    _t3 := _t4 <> _t22
+	_t66 := _t67			    _t36 := 2332
+	_t44 := _t45 <= _t66		    _t39 := 32
+	_t43 := _t44			    _t35 := _t36 int + _t39
+	_t1 := _t2 int or _t43		    _t45 := 8 mod 4
+	_t0 := _t1			    _t44 := _t45
+	if _t0 goto _L9			    _t43 := _t44
+	goto _L10			    _t42 := _t43
+_L9:					    _t35 := _t35 int + _t42
+	_t5 := 2			    _t34 := _t35
+	_t4 := _t5			    _t32 := _t34 int - 32
+	_t3 := _t4			    _t33 := _t32 int * 4
+	_t1 := _t3 int - 2332		    _t31 := torquemada[_t33]
+	_t2 := _t1 int * 8		    _t30 := _t31
+	_t8 := 32			    _t29 := _t30
+	_t7 := _t8			    _t57 := 2323
+	_t6 := _t7			    _t56 := _t57
+	d[_t2] := _t6			    _t55 := _t56
+	goto _L11			    _t53 := _t55 int - 333
+_L10:					    _t54 := _t53 int * 8
+	_t5 := 88 int * 88		    _t52 := putin[_t54]
+	_t5 := _t5 int * a		    _t51 := _t52
+	_t4 := _t5			    _t50 := _t51
+	_t3 := _t4			    _t28 := _t29 <> _t50
+	_t1 := _t3 int - 333		    _t2 := _t3 int and _t28
+	_t2 := _t1 int * 8		    _t69 := 32
+	_t19 := 23.132000		    _t68 := _t69
+	_t24 := inttoreal 32		    _t67 := _t68
+	_t22 := 32 / _t24		    _t65 := _t67 int - 333
+	_t21 := inttoreal _t22		    _t66 := _t65 int * 8
+	_t18 := _t19 real + _t21	    _t64 := putin[_t66]
+	_t29 := 342			    _t63 := _t64
+	_t28 := inttoreal _t29		    _t62 := _t63
+	_t18 := _t18 real + _t28	    _t71 := 2332
+	_t35 := 3 mod 44		    _t70 := _t71
+	_t34 := _t35			    _t61 := _t62 >= _t70
+	_t33 := _t34			    _t60 := _t61
+	_t32 := _t33			    _t1 := _t2 int or _t60
+	_t31 := inttoreal _t32		    _t83 := 3223
+	_t18 := _t18 real + _t31	    _t86 := 3
+	_t17 := _t18			    _t82 := _t83 int + _t86
+	putin[_t2] := _t17		    _t81 := _t82
+_L12:					    _t79 := _t81 int - 32
+	_t18 := 2222			    _t80 := _t79 int * 4
+	_t17 := _t18			    _t78 := torquemada[_t80]
+	_t16 := _t17			    _t77 := _t78
+	_t14 := _t16 int - 2332		    _t76 := _t77
+	_t15 := _t14 int * 8		    _t88 := 2323
+	_t13 := d[_t15]			    _t87 := _t88
+	_t11 := inttoreal a		    _t75 := _t76 < _t87
+	_t5 := _t11 real * _t13		    _t74 := _t75
 
 
 
 
-Feb 12 16:40 2014 samples/typecheck1.pas.tac Page 3
 
 
-	_t87 := _t88			    push _t0
-	_t75 := _t76 < _t87		    call __bob_lolwut
-	_t74 := _t75			    _t2 := 1
+
+Feb 12 16:52 2014 samples/typecheck1.pas.tac Page 3
+
+
 	_t1 := _t1 int or _t74		    _t1 := _t2
 	_t0 := _t1			    _t0 := _t1
 	if _t0 goto _L13		    push _t0
@@ -558,7 +552,7 @@ _L13:					    _t4 := _t5
 	_t5 := 3232			    push _t11
 	_t4 := _t5			    _t19 := b
 	_t3 := _t4			    _t18 := _t19
-	_t1 := _t3 int -333		    _t17 := _t18
+	_t1 := _t3 int - 333		    _t17 := _t18
 	_t2 := _t1 int * 8		    push _t17
 	_t8 := 2332			    _t25 := c
 	_t11 := a			    _t24 := _t25
@@ -572,6 +566,9 @@ _L14:				    _L1:
 	_t6 := inttoreal _t8		    _t1 := _t2
 	_t1 := _t2 real + _t8		    _t0 := _t1
 	_t0 := _t1			    push _t0
+	push _t0			    _t8 := c
+	call __bob_lolwut		    _t7 := _t8
+	_t2 := 1			    _t6 := _t7
 
 
 
@@ -579,65 +576,65 @@ _L14:				    _L1:
 
 
 
-Feb 12 16:40 2014 samples/typecheck1.pas.tac Page 4
+Feb 12 16:52 2014 samples/typecheck1.pas.tac Page 4
 
 
-	_t8 := c			    _t5 := a int * 32
-	_t7 := _t8			    _t5 := _t5 mod 4
-	_t6 := _t7			    _t5 := _t5 mod 4
-	push _t6			    _t4 := _t5
-	_t14 := b			    _t3 := _t4
-	_t13 := _t14			    _t2 := _t3
-	_t12 := _t13			    _t1 := _t2
-	push _t12			    _t18 := c
-	call __bob_lolwut		    _t17 := _t18
-	_t5 := a int * a		    _t0 := _t1 <> _t17
-	_t18 := a			    if _t0 goto _L3
-	_t4 := _t5 int + _t18		    goto _L4
-	_t3 := _t4		    _L3:
-	_t1 := _t3 int -14		    _t24 := 234
-	_t2 := _t1 int * 8		    _t23 := _t24
-	_t24 := 333 int * 34		    _t22 := _t23
-	_t23 := _t24			    push _t22
-	_t22 := _t23			    _t27 := 32
-	kimjongil[_t2] := _t22		    _t26 := _t27
-	_t5 := c real * b		    _t25 := _t26
-	_t19 := inttoreal a		    push _t25
-	_t5 := _t5 real * _t19		    _t30 := 23
-	_t5 := _t5 real * c		    _t29 := _t30
-	_t31 := inttoreal 3		    _t28 := _t29
-	_t5 := _t5 / _t31		    push _t28
-	_t4 := _t5			    _t33 := 23
-	_t3 := _t4			    _t32 := _t33
-	b := _t3			    _t31 := _t32
-	_t5 := bosstweed		    push _t31
-	_t4 := _t5			    _t36 := 23
-	_t3 := _t4			    _t35 := _t36
-	kimjongil := _t3		    _t34 := _t35
-	call __bob_lolwut		    push _t34
-	_t17 := inttoreal a		    call __bob_lolwut
-	_t11 := _t17 real * b		    goto _L5
-	_t10 := _t11		    _L4:
-	_t9 := _t10		    _L6:
-	_t7 := _t9 int - 14		    _t2 := a
-	_t8 := _t7 int * 8		    _t1 := _t2
-	_t6 := kimjongil[_t8]		    _t7 := c
-	_t5 := _t6			    _t6 := _t7
-	_t4 := _t5			    _t0 := _t1 < _t6
-	_t3 := _t4			    if _t0 goto _L7
-	c := _t3			    goto _L8
-	return			    _L7:
-					    _t5 := a int * 32
+	push _t6			    _t3 := _t4
+	_t14 := b			    _t2 := _t3
+	_t13 := _t14			    _t1 := _t2
+	_t12 := _t13			    _t18 := c
+	push _t12			    _t17 := _t18
+	call __bob_lolwut		    _t0 := _t1 <> _t17
+	_t5 := a int * a		    if _t0 goto _L3
+	_t18 := a			    goto _L4
+	_t4 := _t5 int + _t18	    _L3:
+	_t3 := _t4			    _t24 := 234
+	_t1 := _t3 int - 14		    _t23 := _t24
+	_t2 := _t1 int * 8		    _t22 := _t23
+	_t24 := 333 int * 34		    push _t22
+	_t23 := _t24			    _t27 := 32
+	_t22 := _t23			    _t26 := _t27
+	kimjongil[_t2] := _t22		    _t25 := _t26
+	_t5 := c real * b		    push _t25
+	_t19 := inttoreal a		    _t30 := 23
+	_t5 := _t5 real * _t19		    _t29 := _t30
+	_t5 := _t5 real * c		    _t28 := _t29
+	_t31 := inttoreal 3		    push _t28
+	_t5 := _t5 / _t31		    _t33 := 23
+	_t4 := _t5			    _t32 := _t33
+	_t3 := _t4			    _t31 := _t32
+	b := _t3			    push _t31
+	_t5 := bosstweed		    _t36 := 23
+	_t4 := _t5			    _t35 := _t36
+	_t3 := _t4			    _t34 := _t35
+	kimjongil := _t3		    push _t34
+	call __bob_lolwut		    call __bob_lolwut
+	_t17 := inttoreal a		    goto _L5
+	_t11 := _t17 real * b	    _L4:
+	_t10 := _t11		    _L6:
+	_t9 := _t10			    _t2 := a
+	_t7 := _t9 int - 14		    _t1 := _t2
+	_t8 := _t7 int * 8		    _t7 := c
+	_t6 := kimjongil[_t8]		    _t6 := _t7
+	_t5 := _t6			    _t0 := _t1 < _t6
+	_t4 := _t5			    if _t0 goto _L7
+	_t3 := _t4			    goto _L8
+	c := _t3		    _L7:
+	return				    _t5 := a int * 32
 					    _t15 := inttoreal _t5
-Feb 12 16:40 2014 samples/typecheck	    _t5 := _t15 real * c
-					    _t5 := a real * 32
+					    _t5 := _t15 real * c
+Feb 12 16:52 2014 samples/typecheck	    _t5 := a real * 32
 					    _t4 := _t5
+					    _t3 := _t4
 __bob:
 	_begin_program
 	_t5 := 3
 	_t4 := _t5
 	_t3 := _t4
 	a := _t3
+	_t5 := a int * 32
+	_t5 := _t5 mod 4	    Feb 12 16:52 2014 samples/typecheck
+	_t4 := _t5
 
 
 
@@ -645,37 +642,37 @@ __bob:
 
 
 
-Feb 12 16:40 2014 samples/typecheck1.pas.tac Page 5
+Feb 12 16:52 2014 samples/typecheck1.pas.tac Page 5
 
 
-					    goto _L11
-Feb 12 16:40 2014 samples/typecheck _L10:
-					    _t5 := 88 int * 88
 					    _t5 := _t5 int * a
-	_t73 := 32			    _t4 := _t5
-	_t72 := _t73			    _t3 := _t4
-	_t71 := _t72			    _t1 := _t3 int -333
-	_t69 := _t71 int - 333		    _t2 := _t1 int * 8
-	_t70 := _t69 int * 8		    _t19 := 23.132000
-	_t68 := putin[_t70]		    _t24 := inttoreal 32
-	_t67 := _t68			    _t22 := 32 / _t24
-	_t66 := _t67			    _t21 := inttoreal _t22
-	_t44 := _t45 <= _t66		    _t18 := _t19 real + _t21
-	_t43 := _t44			    _t29 := 342
-	_t1 := _t2 int or _t43		    _t28 := inttoreal _t29
-	_t0 := _t1			    _t18 := _t18 real + _t28
-	if _t0 goto _L9			    _t35 := 3 mod 44
+	_t72 := _t73			    _t4 := _t5
+	_t71 := _t72			    _t3 := _t4
+	_t69 := _t71 int - 333		    _t1 := _t3 int - 333
+	_t70 := _t69 int * 8		    _t2 := _t1 int * 8
+	_t68 := putin[_t70]		    _t19 := 23.132000
+	_t67 := _t68			    _t24 := inttoreal 32
+	_t66 := _t67			    _t22 := 32 / _t24
+	_t44 := _t45 <= _t66		    _t21 := inttoreal _t22
+	_t43 := _t44			    _t18 := _t19 real + _t21
+	_t1 := _t2 int or _t43		    _t29 := 342
+	_t0 := _t1			    _t28 := inttoreal _t29
+	if _t0 goto _L9			    _t18 := _t18 real + _t28
 	goto _L10			    _t35 := 3 mod 44
 _L9:					    _t34 := _t35
 	_t5 := 2			    _t33 := _t34
 	_t4 := _t5			    _t32 := _t33
 	_t3 := _t4			    _t31 := inttoreal _t32
-	_t1 := _t3 int -2332		    _t18 := _t18 real + _t31
+	_t1 := _t3 int - 2332		    _t18 := _t18 real + _t31
 	_t2 := _t1 int * 8		    _t17 := _t18
 	_t8 := 32			    putin[_t2] := _t17
 	_t7 := _t8		    _L12:
 	_t6 := _t7			    _t18 := 2222
 	d[_t2] := _t6			    _t17 := _t18
+	goto _L11			    _t16 := _t17
+_L10:					    _t14 := _t16 int - 2332
+	_t5 := 88 int * 88
+
 
 
 

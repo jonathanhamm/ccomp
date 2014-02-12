@@ -275,7 +275,7 @@ __test_proc1:
 	_t5 := a
 	_t4 := _t5
 	_t3 := _t4
-	_t1 := _t3 int -1
+	_t1 := _t3 int - 1
 	_t2 := _t1 int * 4
 	_t11 := 4
 	_t10 := _t11
@@ -284,7 +284,7 @@ __test_proc1:
 	_t5 := 3
 	_t4 := _t5
 	_t3 := _t4
-	_t1 := _t3 int -1
+	_t1 := _t3 int - 1
 	_t2 := _t1 int * 4
 	_t8 := 3
 	_t7 := _t8
@@ -332,7 +332,6 @@ __test_proc2:
 	_t4 := _t5 real + _t10
 	_t3 := _t4
 	e := _t3
-	_t8 := a mod 4
 	_t8 := a mod 4
 	_t7 := _t8
 	_t6 := _t7
@@ -420,7 +419,7 @@ __test_proc2_proc3_proc4:
 	return
 
 
-Feb 12 16:40 2014 samples/check1.pas.tac Page 1
+Feb 12 16:52 2014 samples/check1.pas.tac Page 1
 
 
 __test:					    _t5 := _t4 int * 4
@@ -486,7 +485,7 @@ __test:					    _t5 := _t4 int * 4
 
 
 
-Feb 12 16:40 2014 samples/check1.pas.tac Page 2
+Feb 12 16:52 2014 samples/check1.pas.tac Page 2
 
 
 	_t15 := _t16			    _t2 := _t3
@@ -552,7 +551,7 @@ Feb 12 16:40 2014 samples/check1.pas.tac Page 2
 
 
 
-Feb 12 16:40 2014 samples/check1.pas.tac Page 3
+Feb 12 16:52 2014 samples/check1.pas.tac Page 3
 
 
 	_t2 := _t3			    _t10 := _t11
@@ -561,7 +560,7 @@ Feb 12 16:40 2014 samples/check1.pas.tac Page 3
 	if _t0 goto _L3			    _t5 := 3
 	goto _L4			    _t4 := _t5
 _L3:					    _t3 := _t4
-	_t16 := 1			    _t1 := _t3 int -1
+	_t16 := 1			    _t1 := _t3 int - 1
 	_t15 := _t16			    _t2 := _t1 int * 4
 	_t14 := _t15			    _t8 := 3
 	a := _t14			    _t7 := _t8
@@ -608,9 +607,9 @@ __test_proc1:				    _t10 := _t11
 	_t5 := a			    _t10 := inttoreal _t11
 	_t4 := _t5			    _t4 := _t5 real + _t10
 	_t3 := _t4			    _t3 := _t4
-	_t1 := _t3 int -1		    e := _t3
+	_t1 := _t3 int - 1		    e := _t3
 	_t2 := _t1 int * 4		    _t8 := a mod 4
-	_t11 := 4			    _t8 := a mod 4
+	_t11 := 4			    _t7 := _t8
 
 
 
@@ -618,10 +617,9 @@ __test_proc1:				    _t10 := _t11
 
 
 
-Feb 12 16:40 2014 samples/check1.pas.tac Page 4
+Feb 12 16:52 2014 samples/check1.pas.tac Page 4
 
 
-	_t7 := _t8		    _L2:
 	_t6 := _t7			    return
 	_t4 := _t5
 	_t3 := _t4		    __test_proc2_proc3:
@@ -651,7 +649,7 @@ _L0:					    _t5 := e
 	_t39 := _t40 = _t45		    return
 	_t38 := not _t39
 	_t37 := _t38
-	_t36 := _t37		    Feb 12 16:40 2014 samples/check1.pa
+	_t36 := _t37		    Feb 12 16:52 2014 samples/check1.pa
 	_t35 := _t36
 	_t34 := _t35
 	_t19 := _t20 int or _t34    __test:
@@ -677,6 +675,7 @@ _L1:					    _t0 := _t1
 	_t3 := _t4			    _t9 := _t10
 	a := _t3			    push _t9
 	goto _L0			    _t20 := 5
+_L2:					    _t19 := _t20
 
 
 
@@ -684,10 +683,9 @@ _L1:					    _t0 := _t1
 
 
 
-Feb 12 16:40 2014 samples/check1.pas.tac Page 5
+Feb 12 16:52 2014 samples/check1.pas.tac Page 5
 
 
-	_t19 := _t20			    _t3 := c[_t5]
 	_t18 := _t19			    _t2 := _t3
 	push _t18			    _t1 := _t2
 	call __test_proc2		    _t0 := _t1
@@ -727,7 +725,7 @@ Feb 12 16:40 2014 samples/check1.pas.tac Page 5
 					    _t8 := 4
 					    _t7 := _t8
 					    _t6 := _t7
-Feb 12 16:40 2014 samples/check1.pa	    _t4 := _t6 int - 1
+Feb 12 16:52 2014 samples/check1.pa	    _t4 := _t6 int - 1
 					    _t5 := _t4 int * 4
 					    _t3 := c[_t5]
 	_t15 := _t16
@@ -737,12 +735,13 @@ Feb 12 16:40 2014 samples/check1.pa	    _t4 := _t6 int - 1
 	_t11 := _t12
 	_t10 := _t11
 	_t9 := _t10
-	push _t9		    Feb 12 16:40 2014 samples/check1.pa
+	push _t9		    Feb 12 16:52 2014 samples/check1.pa
 	_t8 := 4
 	_t7 := _t8
 	_t6 := _t7			    _t2 := _t3
 	_t4 := _t6 int - 1		    _t1 := _t2
 	_t5 := _t4 int * 4		    _t0 := _t1
+	_t3 := c[_t5]			    if _t0 goto _L3
 
 
 
@@ -750,65 +749,65 @@ Feb 12 16:40 2014 samples/check1.pa	    _t4 := _t6 int - 1
 
 
 
-Feb 12 16:40 2014 samples/check1.pas.tac Page 6
+Feb 12 16:52 2014 samples/check1.pas.tac Page 6
 
 
-	if _t0 goto _L3
 	goto _L4
 _L3:
 	_t16 := 1
-	_t15 := _t16		    Feb 12 16:40 2014 samples/check1.pa
+	_t15 := _t16		    Feb 12 16:52 2014 samples/check1.pa
 	_t14 := _t15
 	a := _t14
-	goto _L5			    _t7 := _t8
-_L4:					    _t6 := _t7
-	_t22 := a			    _t4 := _t5
-	_t28 := 2			    _t3 := _t4
-	_t21 := _t22 int + _t28		    a := _t3
-	_t20 := _t21		    _L0:
-	a := _t20			    _t8 := a
-_L5:					    _t7 := _t8
-	_t5 := b			    _t13 := 4
-	_t4 := _t5			    _t12 := _t13
-	_t10 := 4.200000		    _t6 := _t7 >= _t12
-	_t9 := _t10			    _t23 := b
-	_t3 := _t4 > _t9		    _t22 := _t23
-	_t2 := _t3			    _t28 := e
-	_t1 := _t2			    _t27 := _t28
-	_t0 := _t1			    _t21 := _t22 <= _t27
-	if _t0 goto _L6			    _t20 := _t21
-	goto _L7			    _t41 := a
-_L6:					    _t40 := _t41
-	_t22 := a			    _t52 := a
-	_t21 := _t22			    _t51 := _t52
-	_t20 := _t21			    _t50 := _t51
-	_t18 := _t20 int - 1		    _t48 := _t50 int - 1
-	_t19 := _t18 int * 4		    _t49 := _t48 int * 4
-	_t17 := c[_t19]			    _t47 := c[_t49]
-	_t16 := _t17			    _t46 := _t47
-	_t15 := _t16			    _t45 := _t46
-	_t14 := _t15			    _t39 := _t40 = _t45
-	a := _t14			    _t38 := not _t39
-	goto _L8			    _t37 := _t38
-_L7:					    _t36 := _t37
-_L8:					    _t35 := _t36
-	return				    _t34 := _t35
-					    _t19 := _t20 int or _t34
-__test_proc1:				    _t18 := _t19
-	_beginfunc			    _t5 := _t6 int and _t18
-	_t5 := 2			    _t4 := _t5
-	_t4 := _t5			    _t3 := _t4
-	_t3 := _t4			    _t2 := _t3
-	a := _t3			    _t1 := _t2
-	_t5 := a			    _t0 := _t1
-	_t4 := _t5			    if _t0 goto _L1
-	_t3 := _t4			    goto _L2
-	_t1 := _t3 int -1	    _L1:
-	_t2 := _t1 int * 4		    _t11 := a
-	_t11 := 4			    _t10 := _t11
-					    _t9 := _t10
+	goto _L5			    _t6 := _t7
+_L4:					    _t4 := _t5
+	_t22 := a			    _t3 := _t4
+	_t28 := 2			    a := _t3
+	_t21 := _t22 int + _t28	    _L0:
+	_t20 := _t21			    _t8 := a
+	a := _t20			    _t7 := _t8
+_L5:					    _t13 := 4
+	_t5 := b			    _t12 := _t13
+	_t4 := _t5			    _t6 := _t7 >= _t12
+	_t10 := 4.200000		    _t23 := b
+	_t9 := _t10			    _t22 := _t23
+	_t3 := _t4 > _t9		    _t28 := e
+	_t2 := _t3			    _t27 := _t28
+	_t1 := _t2			    _t21 := _t22 <= _t27
+	_t0 := _t1			    _t20 := _t21
+	if _t0 goto _L6			    _t41 := a
+	goto _L7			    _t40 := _t41
+_L6:					    _t52 := a
+	_t22 := a			    _t51 := _t52
+	_t21 := _t22			    _t50 := _t51
+	_t20 := _t21			    _t48 := _t50 int - 1
+	_t18 := _t20 int - 1		    _t49 := _t48 int * 4
+	_t19 := _t18 int * 4		    _t47 := c[_t49]
+	_t17 := c[_t19]			    _t46 := _t47
+	_t16 := _t17			    _t45 := _t46
+	_t15 := _t16			    _t39 := _t40 = _t45
+	_t14 := _t15			    _t38 := not _t39
+	a := _t14			    _t37 := _t38
+	goto _L8			    _t36 := _t37
+_L7:					    _t35 := _t36
+_L8:					    _t34 := _t35
+	return				    _t19 := _t20 int or _t34
+					    _t18 := _t19
+__test_proc1:				    _t5 := _t6 int and _t18
+	_beginfunc			    _t4 := _t5
+	_t5 := 2			    _t3 := _t4
+	_t4 := _t5			    _t2 := _t3
+	_t3 := _t4			    _t1 := _t2
+	a := _t3			    _t0 := _t1
+	_t5 := a			    if _t0 goto _L1
+	_t4 := _t5			    goto _L2
+	_t3 := _t4		    _L1:
+	_t1 := _t3 int - 1		    _t11 := a
+	_t2 := _t1 int * 4		    _t10 := _t11
+	_t11 := 4			    _t9 := _t10
 					    _t7 := _t9 int - 1
 					    _t8 := _t7 int * 4
+					    _t6 := c[_t8]
+					    _t5 := _t6
 
 
 
@@ -816,29 +815,29 @@ __test_proc1:				    _t18 := _t19
 
 
 
-Feb 12 16:40 2014 samples/check1.pas.tac Page 7
+Feb 12 16:52 2014 samples/check1.pas.tac Page 7
 
 
-	_t6 := c[_t8]			    call __test_proc2
-	_t5 := _t6			    _t8 := 4
 	_t17 := 1			    _t7 := _t8
 	_t4 := _t5 int + _t17		    _t6 := _t7
 	_t3 := _t4			    _t4 := _t6 int - 1
 	a := _t3			    _t5 := _t4 int * 4
 	goto _L0			    _t3 := c[_t5]
-					    _t2 := _t3
+_L2:					    _t2 := _t3
 					    _t1 := _t2
 					    _t0 := _t1
 					    push _t0
 					    _t17 := 5
 					    _t16 := _t17
 					    _t15 := _t16
-Feb 12 16:40 2014 samples/check1.pa	    _t13 := _t15 int - 1
-					    _t14 := _t13 int * 4
+					    _t13 := _t15 int - 1
+Feb 12 16:52 2014 samples/check1.pa	    _t14 := _t13 int * 4
 					    _t12 := c[_t14]
-	_t19 := _t20			    _t11 := _t12
+					    _t11 := _t12
 	_t18 := _t19			    _t10 := _t11
 	push _t18			    _t9 := _t10
+	call __test_proc2		    push _t9
+	_t8 := 4
 
 
 

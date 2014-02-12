@@ -10,7 +10,6 @@ _L9:
 	goto _L11
 _L10:
 	_t42 := 3 mod 4
-	_t42 := 3 mod 4
 	_t41 := _t42
 	_t40 := _t41
 	_t38 := _t40 int - 23
@@ -104,7 +103,6 @@ _L21:
 	_t11 := inttoreal 32
 	_t2 := _t2 / _t11
 	_t2 := _t2 mod 3343
-	_t2 := _t2 mod 3343
 	_t1 := _t2
 	_t0 := _t1
 	push _t0
@@ -137,7 +135,7 @@ _L24:
 	_t23 := 24 / _t25
 	_t22 := _t23
 	_t21 := _t22
-	_t19 := _t21 int -23
+	_t19 := _t21 int - 23
 	_t20 := _t19 int * 8
 	_t29 := _t30
 	_t28 := _t29
@@ -232,7 +230,7 @@ _L2:
 	_t5 := 32
 	_t4 := _t5
 	_t3 := _t4
-	_t1 := _t3 int -23
+	_t1 := _t3 int - 23
 	_t2 := _t1 int * 8
 	_t14 := 32
 	_t13 := _t14
@@ -294,7 +292,6 @@ _L8:
 	goto _L3
 _L5:
 	_t5 := derp mod c
-	_t5 := derp mod c
 	_t23 := inttoreal a
 	_t18 := b / _t23
 	_t4 := _t5 real + _t18
@@ -312,21 +309,20 @@ _L5:
 	return
 
 
-Feb 12 16:40 2014 samples/synerrortest.pas.tac Page 1
+Feb 12 16:52 2014 samples/synerrortest.pas.tac Page 1
 
 
-__bob:					    _t34 := _t35
-	_begin_program			    _t33 := _t34
-_L9:					    push _t33
-	_t2 := zomg			    _t38 := 33.100000
-	_t1 := _t2			    _t37 := _t38
-	_t7 := omg			    _t36 := _t37
-	_t6 := _t7			    push _t36
-	_t0 := _t1 <> _t6		    _t40 := _t41
-	if _t0 goto _L10		    _t39 := _t40
-	goto _L11			    push _t39
-_L10:					    call __bob_bob
-	_t42 := 3 mod 4			    goto _L20
+__bob:					    _t33 := _t34
+	_begin_program			    push _t33
+_L9:					    _t38 := 33.100000
+	_t2 := zomg			    _t37 := _t38
+	_t1 := _t2			    _t36 := _t37
+	_t7 := omg			    push _t36
+	_t6 := _t7			    _t40 := _t41
+	_t0 := _t1 <> _t6		    _t39 := _t40
+	if _t0 goto _L10		    push _t39
+	goto _L11			    call __bob_bob
+_L10:					    goto _L20
 	_t42 := 3 mod 4		    _L19:
 	_t41 := _t42			    goto _L17
 	_t40 := _t41		    _L16:
@@ -365,12 +361,13 @@ _L15:					    _t63 := _t64
 	_t21 := _t22			    _t11 := inttoreal 32
 	_t20 := _t21			    _t2 := _t2 / _t11
 	_t29 := omg			    _t2 := _t2 mod 3343
-	_t28 := _t29			    _t2 := _t2 mod 3343
-	_t19 := _t20 = _t28		    _t1 := _t2
-	if _t19 goto _L18		    _t0 := _t1
-	goto _L19			    push _t0
-_L18:					    _t20 := 32.100000
-	_t35 := 3			    _t23 := omg
+	_t28 := _t29			    _t1 := _t2
+	_t19 := _t20 = _t28		    _t0 := _t1
+	if _t19 goto _L18		    push _t0
+	goto _L19			    _t20 := 32.100000
+_L18:					    _t23 := omg
+	_t35 := 3			    _t19 := _t20 int + _t23
+	_t34 := _t35			    _t18 := _t19
 
 
 
@@ -378,11 +375,9 @@ _L18:					    _t20 := 32.100000
 
 
 
-Feb 12 16:40 2014 samples/synerrortest.pas.tac Page 2
+Feb 12 16:52 2014 samples/synerrortest.pas.tac Page 2
 
 
-	_t19 := _t20 int + _t23		    _t18 := _t19
-	_t18 := _t19			    push _t18
 	push _t18			    _t23 := 33.200000
 	_t29 := 32.100000		    _t22 := _t23
 	_t28 := _t29			    _t21 := _t22
@@ -408,7 +403,7 @@ _L24:					    _t2 := 43
 	_t23 := 24 / _t25		    _t10 := 32 int * 32
 	_t22 := _t23			    _t9 := _t10
 	_t21 := _t22			    _t8 := _t9
-	_t19 := _t21 int -23		    _t7 := _t6 int * 0
+	_t19 := _t21 int - 23		    _t7 := _t6 int * 0
 	_t20 := _t19 int * 8		    _t5 := herp[_t7]
 	_t29 := _t30			    _t4 := _t5
 	_t28 := _t29			    _t3 := _t4
@@ -437,6 +432,8 @@ _L25:					    goto _L1
 _L27:					    _t4 := _t5
 	_t20 := 3			    _t3 := _t4
 	_t19 := _t20			    derp := _t3
+	_t18 := _t19			    _t5 := 32.200000
+	push _t18			    _t4 := uminus _t5
 
 
 
@@ -444,37 +441,35 @@ _L27:					    _t4 := _t5
 
 
 
-Feb 12 16:40 2014 samples/synerrortest.pas.tac Page 3
+Feb 12 16:52 2014 samples/synerrortest.pas.tac Page 3
 
 
-	_t5 := 32.200000		    _t0 := _t1 <> _t6
-	_t4 := uminus _t5		    if _t0 goto _L4
-	_t8 := 3			    goto _L5
-	_t7 := inttoreal _t8	    _L4:
-	_t4 := _t5 real + _t7		    _t5 := d
-	_t3 := _t4			    _t11 := 1
-	zomg := _t3			    _t3 := _t4
-	_t5 := 32			    ted := _t3
-	_t4 := _t5			    _t2 := d
-	_t3 := _t4			    _t1 := _t2
-	_t1 := _t3 int -23		    _t7 := 3
-	_t2 := _t1 int * 8		    _t6 := _t7
-	_t14 := 32			    _t0 := _t1 = _t6
-	_t13 := _t14			    if _t0 goto _L6
-	_t12 := _t13			    goto _L7
-	_t10 := _t12 int - 23	    _L6:
-	_t11 := _t10 int * 8		    _t4 := _t5
-	_t9 := omg[_t11]		    _t3 := _t4
-	_t8 := _t9			    ted := _t3
-	_t7 := uminus _t8		    _t4 := _t5
-	_t7 := _t8			    _t3 := _t4
-	_t6 := _t7			    tom := _t3
-	omg[_t2] := _t6			    goto _L8
-	_t8 := inttoreal 22	    _L7:
-	_t5 := _t8 real * 23232.30  _L8:
-	_t4 := _t5			    goto _L3
-	_t3 := _t4		    _L5:
-	_t2 := _t1 int * 0		    _t5 := derp mod c
+	_t8 := 3			    if _t0 goto _L4
+	_t7 := inttoreal _t8		    goto _L5
+	_t4 := _t5 real + _t7	    _L4:
+	_t3 := _t4			    _t5 := d
+	zomg := _t3			    _t11 := 1
+	_t5 := 32			    _t3 := _t4
+	_t4 := _t5			    ted := _t3
+	_t3 := _t4			    _t2 := d
+	_t1 := _t3 int - 23		    _t1 := _t2
+	_t2 := _t1 int * 8		    _t7 := 3
+	_t14 := 32			    _t6 := _t7
+	_t13 := _t14			    _t0 := _t1 = _t6
+	_t12 := _t13			    if _t0 goto _L6
+	_t10 := _t12 int - 23		    goto _L7
+	_t11 := _t10 int * 8	    _L6:
+	_t9 := omg[_t11]		    _t4 := _t5
+	_t8 := _t9			    _t3 := _t4
+	_t7 := uminus _t8		    ted := _t3
+	_t7 := _t8			    _t4 := _t5
+	_t6 := _t7			    _t3 := _t4
+	omg[_t2] := _t6			    tom := _t3
+	_t8 := inttoreal 22		    goto _L8
+	_t5 := _t8 real * 23232.30  _L7:
+	_t4 := _t5		    _L8:
+	_t3 := _t4			    goto _L3
+	_t2 := _t1 int * 0	    _L5:
 	_t18 := 23			    _t5 := derp mod c
 	_t17 := _t18			    _t23 := inttoreal a
 	_t16 := _t17			    _t18 := b / _t23
@@ -491,6 +486,8 @@ _L3:					    _t4 := _t4 real - _t31
 	_t1 := _t2			    _t3 := _t4
 	_t7 := ted			    derp := _t3
 	_t6 := _t7			    return
+	_t0 := _t1 <> _t6
+
 
 
 

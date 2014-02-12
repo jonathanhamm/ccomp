@@ -13,7 +13,7 @@ __bob:
 	_t7 := 32
 	_t6 := _t7
 	_t3 := _t4 <> _t6
-	_t1 := _t3 int -1
+	_t1 := _t3 int - 1
 	_t2 := _t1 int * 8
 	_t10 := 23
 	_t9 := _t10
@@ -69,7 +69,7 @@ _L3:
 	_t5 := 31
 	_t4 := _t5
 	_t3 := _t4
-	_t1 := _t3 int -1
+	_t1 := _t3 int - 1
 	_t2 := _t1 int * 4
 	_t14 := e
 	_t13 := _t14
@@ -99,7 +99,7 @@ _L5:
 	_t5 := 10
 	_t4 := _t5
 	_t3 := _t4
-	_t1 := _t3 int -1
+	_t1 := _t3 int - 1
 	_t2 := _t1 int * 4
 	_t26 := 3 mod 4
 	_t26 := _t26 mod 8
@@ -108,7 +108,6 @@ _L5:
 	_t43 := 0.023300
 	_t42 := _t43
 	_t39 := _t40 <= _t42
-	_t26 := _t26 mod _t39
 	_t26 := _t26 mod _t39
 	_t25 := _t26
 	_t24 := _t25
@@ -136,7 +135,7 @@ _L2:
 	return
 
 
-Feb 12 16:40 2014 samples/simple_working.pas.tac Page 1
+Feb 12 16:52 2014 samples/simple_working.pas.tac Page 1
 
 
 __bob:					    goto _L4
@@ -154,7 +153,7 @@ __bob:					    goto _L4
 	_t7 := 32			    _t5 := 31
 	_t6 := _t7			    _t4 := _t5
 	_t3 := _t4 <> _t6		    _t3 := _t4
-	_t1 := _t3 int -1		    _t1 := _t3 int -1
+	_t1 := _t3 int - 1		    _t1 := _t3 int - 1
 	_t2 := _t1 int * 8		    _t2 := _t1 int * 4
 	_t10 := 23			    _t14 := e
 	_t9 := _t10			    _t13 := _t14
@@ -184,7 +183,7 @@ _L1:					    _t5 := _t6
 	_t15 := _t16			    _t5 := 10
 	_t13 := _t15 int - 1		    _t4 := _t5
 	_t14 := _t13 int * 4		    _t3 := _t4
-	_t12 := c[_t14]			    _t1 := _t3 int -1
+	_t12 := c[_t14]			    _t1 := _t3 int - 1
 	_t11 := _t12			    _t2 := _t1 int * 4
 	_t4 := _t5 int + _t11		    _t26 := 3 mod 4
 	_t3 := _t4			    _t26 := _t26 mod 8
@@ -194,7 +193,7 @@ _L1:					    _t5 := _t6
 	_t7 := e			    _t42 := _t43
 	_t6 := _t7			    _t39 := _t40 <= _t42
 	_t0 := _t1 = _t6		    _t26 := _t26 mod _t39
-	if _t0 goto _L3			    _t26 := _t26 mod _t39
+	if _t0 goto _L3			    _t25 := _t26
 
 
 
@@ -202,10 +201,9 @@ _L1:					    _t5 := _t6
 
 
 
-Feb 12 16:40 2014 samples/simple_working.pas.tac Page 2
+Feb 12 16:52 2014 samples/simple_working.pas.tac Page 2
 
 
-	_t25 := _t26			    _t13 := _t14
 	_t24 := _t25			    _t12 := _t13
 	_t22 := _t24 int - 1		    _t10 := _t12 int - 1
 	_t23 := _t22 int * 4		    _t11 := _t10 int * 4
@@ -217,6 +215,7 @@ Feb 12 16:40 2014 samples/simple_working.pas.tac Page 2
 	_t17 := _t16 int * 4		    goto _L0
 	_t15 := d[_t17]		    _L2:
 	_t14 := _t15			    return
+	_t13 := _t14
 
 
 
