@@ -47,6 +47,8 @@
 #define ATTYPE_GE   4
 #define ATTYPE_G    5
 
+//#define MANGLE_LOCALS
+
 #define TYPE_ERROR_PREFIX "      --Semantics Error at line %u: "
 #define TYPE_ERROR_SUFFIX " at token %s"
 
@@ -319,6 +321,7 @@ static void add_semerror(parse_s *p, token_s *t, char *message);
 static sem_type_s sem_newtemp(token_s **curr);
 static sem_type_s sem_newlabel(token_s **curr);
 static char *scoped_label(void);
+static char *scoped_id(char *id);
 
 static void write_code_(scope_s *s);
 extern void print_semtype(sem_type_s value);
@@ -1906,6 +1909,10 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                     safe_adddouble(&line, val->real_);
                     break;
                 case ATTYPE_ID:
+#ifdef MANGLE_LOCALS
+                    safe_addstring(&line, scoped_id(val->str_));
+                    break;
+#endif
                 case ATTYPE_TEMP:
                 case ATTYPE_LABEL:
                     if(gotlabelf) {
@@ -1915,7 +1922,6 @@ void *sem_emit(token_s **curr, semantics_s *s, pda_s *pda, pna_s *pn, parse_s *p
                     else {
                         safe_addstring(&line, val->str_);
                     }
-                    
                     break;
                 default:
                     break;
@@ -2658,6 +2664,30 @@ char *scoped_label(void)
         }
         safe_addstring(&label, str);
     }
+    return label;
+}
+
+char *scoped_id(char *id)
+{
+    bool gotfirst = false;
+    char *str, *label = NULL;
+    llist_s *l = NULL, *node = NULL;
+    scope_s *s;
+    
+    for(s = scope_tree; s; s = s->parent)
+        llpush(&l, s->id);
+    
+    while((node = llpop(&l)))  {
+        str = node->ptr;
+        free(node);
+        
+        if(gotfirst)
+            safe_addstring(&label, "_");
+        gotfirst = true;
+        safe_addstring(&label, str);
+    }
+    safe_addstring(&label, "_");
+    safe_addstring(&label, id);
     return label;
 }
 

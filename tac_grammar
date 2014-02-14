@@ -1,0 +1,52 @@
+<tac>->
+    label
+    beginprogram
+    <statements>
+
+<statements>->
+    <statement> <statements>
+    |
+    ε
+
+<statement>->
+    <lval> assignop <rval>
+    |
+    if <rval> <goto>
+    |
+    <goto>
+    |
+    label
+    |
+    push <lval>
+    |
+    begin
+    |
+    return
+
+<goto>->
+    goto label
+
+<id>->
+    temp | varname
+
+<lval>->
+    <id> | <id>[<id>]
+    
+<rval>->
+    <rval'> <rval''>
+    |
+    |
+    unop <rval'>
+
+<rval''>->
+    <binop> <rval'>
+    |
+    ε
+
+<rval'>->
+    <lval> | num
+
+<binop>->
+    optype op
+    |
+    op

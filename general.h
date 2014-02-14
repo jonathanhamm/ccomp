@@ -122,7 +122,7 @@ enum atypes {
 
 extern long safe_atol (char *str);
 extern double safe_atod (char *str);
-extern char *readfile (const char *file);
+extern char *readfile(const char *file);
 
 extern llist_s *llist_ (void *iptr);
 extern void free_llist (void *list);
